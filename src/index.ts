@@ -2,7 +2,6 @@ import { app, ipcMain, clipboard, Menu, net } from 'electron';
 import { createWindow, showWindow, minimizeWindow, closeWindow } from './main/window';
 import { createTray } from './main/tray';
 import { registerShortcuts, unregisterShortcuts } from './main/shortcuts';
-import { getSettings, setSettings } from './main/settings';
 import { checkOllamaConnection } from './main/healthCheck';
 import { aiTranslatorService } from './services/ai/AITranslatorService';
 import { OllamaModel } from './models/OllamaModel';
@@ -28,10 +27,10 @@ app.on('ready', async () => {
   }
 
   // Health check on startup
-  const settings = getSettings();
-  const isConnected = await checkOllamaConnection(settings.ollamaUrl);
+  const ollamaUrl = 'http://localhost:11434';
+  const isConnected = await checkOllamaConnection(ollamaUrl);
   if (!isConnected) {
-    console.warn('Ollama is not available at', settings.ollamaUrl);
+    console.warn('Ollama is not available at', ollamaUrl);
   }
 });
 
@@ -76,24 +75,19 @@ ipcMain.handle('window:focus', () => {
   showWindow();
 });
 
-ipcMain.handle('settings:get', () => {
-  return getSettings();
-});
-
-ipcMain.handle('settings:set', (_event, settings: any) => {
-  setSettings(settings);
-});
-
 ipcMain.handle('ollama:check', (_event, url: string) => {
   return checkOllamaConnection(url);
 });
 
 // Translation IPC Handlers
-ipcMain.handle('translate:persian-to-english', async (_event, { text, model, ollamaUrl, temperature }) => {
+ipcMain.handle('translate:persian-to-english', async (event, { text, model, ollamaUrl, temperature }) => {
   try {
     const result = await aiTranslatorService.translatePersianToEnglish(text, model as OllamaModel, {
       ollamaUrl,
       temperature,
+      onProgress: (progress: number) => {
+        event.sender.send('translation:progress', progress);
+      },
     });
     return { success: true, data: result };
   } catch (error: any) {
@@ -101,11 +95,14 @@ ipcMain.handle('translate:persian-to-english', async (_event, { text, model, oll
   }
 });
 
-ipcMain.handle('translate:english-to-persian', async (_event, { text, model, ollamaUrl, temperature }) => {
+ipcMain.handle('translate:english-to-persian', async (event, { text, model, ollamaUrl, temperature }) => {
   try {
     const result = await aiTranslatorService.translateEnglishToPersian(text, model as OllamaModel, {
       ollamaUrl,
       temperature,
+      onProgress: (progress: number) => {
+        event.sender.send('translation:progress', progress);
+      },
     });
     return { success: true, data: result };
   } catch (error: any) {
@@ -113,11 +110,14 @@ ipcMain.handle('translate:english-to-persian', async (_event, { text, model, oll
   }
 });
 
-ipcMain.handle('translate:grammar', async (_event, { text, model, ollamaUrl, temperature }) => {
+ipcMain.handle('translate:grammar', async (event, { text, model, ollamaUrl, temperature }) => {
   try {
     const result = await aiTranslatorService.correctGrammar(text, model as OllamaModel, {
       ollamaUrl,
       temperature,
+      onProgress: (progress: number) => {
+        event.sender.send('translation:progress', progress);
+      },
     });
     return { success: true, data: result };
   } catch (error: any) {

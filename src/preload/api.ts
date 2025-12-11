@@ -11,10 +11,6 @@ export const electronAPI = {
   show: () => ipcRenderer.invoke('window:show'),
   focus: () => ipcRenderer.invoke('window:focus'),
 
-  // Settings
-  getSettings: () => ipcRenderer.invoke('settings:get'),
-  setSettings: (settings: any) => ipcRenderer.invoke('settings:set', settings),
-
   // Shortcuts
   onShortcut: (callback: (shortcut: { type: string; text: string }) => void) => {
     ipcRenderer.on('shortcut', (_event, shortcut) => callback(shortcut));
@@ -27,6 +23,9 @@ export const electronAPI = {
   translatePersianToEnglish: (params: any) => ipcRenderer.invoke('translate:persian-to-english', params),
   translateEnglishToPersian: (params: any) => ipcRenderer.invoke('translate:english-to-persian', params),
   translateGrammar: (params: any) => ipcRenderer.invoke('translate:grammar', params),
+  onTranslationProgress: (callback: (progress: number) => void) => {
+    ipcRenderer.on('translation:progress', (_event, progress) => callback(progress));
+  },
 
   // TTS
   fetchTTSAudio: (url: string) => ipcRenderer.invoke('tts:fetch-audio', url),

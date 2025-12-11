@@ -27,7 +27,6 @@ interface TranslationState {
   setPersianToEnglishInput: (text: string) => void;
   setEnglishToPersianInput: (text: string) => void;
   setGrammarInput: (text: string) => void;
-  clearInputs: () => void;
   setResults: (results: TranslationResult) => void;
   setSelectedResult: (index: number | null) => void;
   setEditedResults: (results: Partial<TranslationResult>) => void;
@@ -74,23 +73,15 @@ export const useTranslationStore = create<TranslationState>((set) => ({
       persianToEnglishInput: '',
       englishToPersianInput: '',
     }),
-  clearInputs: () =>
-    set({
-      persianToEnglishInput: '',
-      englishToPersianInput: '',
-      grammarInput: '',
-    }),
   setResults: (results) =>
     set({
       results,
       selectedResult: 1,
-      isLoading: false,
-      loadingProgress: 100,
       error: null,
     }),
   setSelectedResult: (index) => set({ selectedResult: index }),
   setEditedResults: (results) => set({ editedResults: results }),
-  setLoading: (loading) => set({ isLoading: loading, loadingProgress: 0 }),
+  setLoading: (loading) => set({ isLoading: loading }),
   setLoadingProgress: (progress) => set({ loadingProgress: progress }),
   setError: (error, details) =>
     set({

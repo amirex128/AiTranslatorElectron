@@ -1,19 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslationStore } from '../stores/translationStore';
-import { useSettingsStore } from '../stores/settingsStore';
 import { useHistoryStore } from '../stores/historyStore';
-import { useTTSStore } from '../stores/ttsStore';
 import { TranslationInput } from '../components/translation/TranslationInput/TranslationInput';
 import { TranslationResult } from '../components/translation/TranslationResult/TranslationResult';
 import { ModelSelector } from '../components/translation/ModelSelector/ModelSelector';
 import { Button } from '../components/ui/Button/Button';
-import { Loading } from '../components/ui/Loading/Loading';
 import { ErrorDisplay } from '../components/ui/ErrorDisplay/ErrorDisplay';
 import { Toast } from '../components/ui/Toast/Toast';
 import { HistoryPanel } from '../components/history/HistoryPanel/HistoryPanel';
 import { aiTranslatorServiceIPC, TranslatorResponse } from '../services/ai/AITranslatorServiceIPC';
 import { writeClipboard } from '../utils/clipboard';
 import { OllamaModel } from '../models/OllamaModel';
+import { APP_CONFIG } from '../constants/appConfig';
 
 export const MainPage: React.FC = () => {
   const {
@@ -30,7 +28,6 @@ export const MainPage: React.FC = () => {
     setPersianToEnglishInput,
     setEnglishToPersianInput,
     setGrammarInput,
-    clearInputs,
     setResults,
     setSelectedResult,
     setLoading,
@@ -41,21 +38,13 @@ export const MainPage: React.FC = () => {
     cancelRequest,
   } = useTranslationStore();
 
-  const {
-    selectedModel,
-    ollamaUrl,
-    temperature,
-    fontSize,
-  } = useSettingsStore();
-
   const { addEntry } = useHistoryStore();
 
+  const [selectedModel, setSelectedModel] = useState<OllamaModel>(APP_CONFIG.selectedModel);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [showHistory, setShowHistory] = useState(false);
 
   useEffect(() => {
-    // Load settings on mount
-    useSettingsStore.getState().loadSettings();
     // Always enable dark mode
     document.documentElement.classList.add('dark');
   }, []);
@@ -81,6 +70,15 @@ export const MainPage: React.FC = () => {
       // Cleanup if needed
     };
   }, [setPersianToEnglishInput, setEnglishToPersianInput, setGrammarInput]);
+
+  // Listen for translation progress
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.electronAPI && window.electronAPI.onTranslationProgress) {
+      window.electronAPI.onTranslationProgress((progress: number) => {
+        setLoadingProgress(progress);
+      });
+    }
+  }, [setLoadingProgress]);
 
   const handleTranslate = async () => {
     let input = '';
@@ -120,12 +118,9 @@ export const MainPage: React.FC = () => {
       setError(null);
 
       const response = await translateFn(input, selectedModel, {
-        ollamaUrl,
-        temperature,
+        ollamaUrl: APP_CONFIG.ollamaUrl,
+        temperature: APP_CONFIG.temperature,
         abortSignal: abortController.signal,
-        onProgress: (progress: number) => {
-          setLoadingProgress(progress);
-        },
       });
 
       setResults(response.result);
@@ -180,7 +175,7 @@ export const MainPage: React.FC = () => {
 
         <ModelSelector
           selectedModel={selectedModel}
-          onModelChange={(model) => useSettingsStore.getState().setSelectedModel(model)}
+          onModelChange={setSelectedModel}
         />
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -208,28 +203,27 @@ export const MainPage: React.FC = () => {
         </div>
 
         <div className="flex gap-2 justify-center flex-wrap">
-          <Button
-            variant="primary"
-            onClick={handleTranslate}
-            disabled={!canTranslate || isLoading}
-            isLoading={isLoading}
-          >
-            ترجمه
-          </Button>
-          <Button variant="secondary" onClick={clearInputs}>
-            پاک کردن
-          </Button>
-          <Button variant="ghost" onClick={() => setShowHistory(!showHistory)}>
+          {isLoading ? (
+            <Button
+              variant="danger"
+              onClick={cancelRequest}
+              isLoading={true}
+            >
+              لغو
+            </Button>
+          ) : (
+            <Button
+              variant="primary"
+              onClick={handleTranslate}
+              disabled={!canTranslate}
+            >
+              ترجمه
+            </Button>
+          )}
+          <Button variant="ghost" onClick={() => setShowHistory(!showHistory)} disabled={isLoading}>
             تاریخچه
           </Button>
         </div>
-
-        {isLoading && (
-          <Loading
-            progress={loadingProgress}
-            onCancel={cancelRequest}
-          />
-        )}
 
         {error && (
           <ErrorDisplay
@@ -247,7 +241,7 @@ export const MainPage: React.FC = () => {
               selectedIndex={selectedResult}
               onSelect={setSelectedResult}
               onCopy={handleCopy}
-              fontSize={fontSize}
+              fontSize={APP_CONFIG.fontSize}
             />
           </div>
         )}

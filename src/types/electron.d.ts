@@ -5,13 +5,12 @@ export interface ElectronAPI {
   close: () => Promise<void>;
   show: () => Promise<void>;
   focus: () => Promise<void>;
-  getSettings: () => Promise<any>;
-  setSettings: (settings: any) => Promise<void>;
   onShortcut: (callback: (shortcut: { type: string; text: string }) => void) => void;
   checkOllama: (url: string) => Promise<boolean>;
   translatePersianToEnglish: (params: any) => Promise<{ success: boolean; data?: any; error?: string }>;
   translateEnglishToPersian: (params: any) => Promise<{ success: boolean; data?: any; error?: string }>;
   translateGrammar: (params: any) => Promise<{ success: boolean; data?: any; error?: string }>;
+  onTranslationProgress: (callback: (progress: number) => void) => void;
   fetchTTSAudio: (url: string) => Promise<{ success: boolean; data?: string; mimeType?: string; error?: string }>;
 }
 

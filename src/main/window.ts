@@ -1,24 +1,15 @@
 import { BrowserWindow } from 'electron';
-import Store from 'electron-store';
-
-interface StoreSchema {
-  windowSize?: { width: number; height: number };
-}
-
-const store = new Store<StoreSchema>() as any;
 
 export let mainWindow: BrowserWindow | null = null;
 let isQuitting = false;
 
+const DEFAULT_WINDOW_SIZE = { width: 800, height: 600 };
+
 export const createWindow = (): void => {
-  const savedSize = store.get('windowSize', { width: 800, height: 600 }) as {
-    width: number;
-    height: number;
-  };
 
   mainWindow = new BrowserWindow({
-    width: savedSize.width,
-    height: savedSize.height,
+    width: DEFAULT_WINDOW_SIZE.width,
+    height: DEFAULT_WINDOW_SIZE.height,
     minWidth: 600,
     minHeight: 400,
     webPreferences: {
@@ -54,14 +45,6 @@ export const createWindow = (): void => {
   });
 
   mainWindow.loadURL(MAIN_WINDOW_WEBPACK_ENTRY);
-
-  // Save window size on resize
-  mainWindow.on('resized', () => {
-    if (mainWindow) {
-      const [width, height] = mainWindow.getSize();
-      store.set('windowSize', { width, height });
-    }
-  });
 
   mainWindow.once('ready-to-show', () => {
     mainWindow?.show();
