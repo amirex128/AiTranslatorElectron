@@ -153,10 +153,12 @@ ipcMain.handle('tts:fetch-audio', async (_event, url: string) => {
         response.on('end', () => {
           const buffer = Buffer.concat(chunks);
           const base64 = buffer.toString('base64');
+          const contentType = response.headers['content-type'];
+          const mimeType = Array.isArray(contentType) ? contentType[0] : (contentType || 'audio/mpeg');
           resolve({ 
             success: true, 
             data: base64, 
-            mimeType: response.headers['content-type'] || 'audio/mpeg' 
+            mimeType
           });
         });
 
