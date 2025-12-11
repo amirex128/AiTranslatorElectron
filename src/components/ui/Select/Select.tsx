@@ -3,6 +3,7 @@ import React from 'react';
 interface SelectOption {
   value: string;
   label: string;
+  key?: string;
 }
 
 interface SelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> {
@@ -35,8 +36,8 @@ export const Select: React.FC<SelectProps> = ({
         } ${className}`}
         {...props}
       >
-        {options.map((option) => (
-          <option key={option.value} value={option.value}>
+        {options.map((option, index) => (
+          <option key={option.key || option.value || index} value={option.value}>
             {option.label}
           </option>
         ))}

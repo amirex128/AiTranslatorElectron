@@ -17,18 +17,28 @@ export const electronAPI = {
   },
 
   // Health check
-  checkOllama: (url: string) => ipcRenderer.invoke('ollama:check', url),
+  checkAIProvider: (url: string) => ipcRenderer.invoke('ai-provider:check', url),
 
   // Translation
   translatePersianToEnglish: (params: any) => ipcRenderer.invoke('translate:persian-to-english', params),
   translateEnglishToPersian: (params: any) => ipcRenderer.invoke('translate:english-to-persian', params),
   translateGrammar: (params: any) => ipcRenderer.invoke('translate:grammar', params),
-  onTranslationProgress: (callback: (progress: number) => void) => {
-    ipcRenderer.on('translation:progress', (_event, progress) => callback(progress));
-  },
 
   // TTS
   fetchTTSAudio: (url: string) => ipcRenderer.invoke('tts:fetch-audio', url),
+
+  // Cache
+  getCache: (params: { model: string; userInput: string; systemTemplate: string }) =>
+    ipcRenderer.invoke('cache:get', params),
+  setCache: (params: { model: string; userInput: string; systemTemplate: string; result: any }) =>
+    ipcRenderer.invoke('cache:set', params),
+  clearCache: () => ipcRenderer.invoke('cache:clear'),
+
+  // History
+  getAllHistory: () => ipcRenderer.invoke('history:getAll'),
+  addHistory: (entry: any) => ipcRenderer.invoke('history:add', entry),
+  deleteHistory: (id: string) => ipcRenderer.invoke('history:delete', id),
+  clearHistory: () => ipcRenderer.invoke('history:clear'),
 };
 
 contextBridge.exposeInMainWorld('electronAPI', electronAPI);

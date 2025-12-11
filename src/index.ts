@@ -2,9 +2,11 @@ import { app, ipcMain, clipboard, Menu, net } from 'electron';
 import { createWindow, showWindow, minimizeWindow, closeWindow } from './main/window';
 import { createTray } from './main/tray';
 import { registerShortcuts, unregisterShortcuts } from './main/shortcuts';
-import { checkOllamaConnection } from './main/healthCheck';
+import { checkAIProviderConnection } from './main/healthCheck';
 import { aiTranslatorService } from './services/ai/AITranslatorService';
-import { OllamaModel } from './models/OllamaModel';
+import { AIModel } from './models/AIModel';
+import { APP_CONFIG } from './constants/appConfig';
+import { databaseService } from './main/database/DatabaseService';
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (require('electron-squirrel-startup')) {
@@ -27,10 +29,9 @@ app.on('ready', async () => {
   }
 
   // Health check on startup
-  const ollamaUrl = 'http://localhost:11434';
-  const isConnected = await checkOllamaConnection(ollamaUrl);
+  const isConnected = await checkAIProviderConnection(APP_CONFIG.aiProviderUrl);
   if (!isConnected) {
-    console.warn('Ollama is not available at', ollamaUrl);
+    console.warn('AI Provider is not available at', APP_CONFIG.aiProviderUrl);
   }
 });
 
@@ -47,6 +48,7 @@ app.on('activate', () => {
 
 app.on('will-quit', () => {
   unregisterShortcuts();
+  databaseService.close();
 });
 
 // IPC Handlers - Register all handlers before app ready
@@ -75,19 +77,16 @@ ipcMain.handle('window:focus', () => {
   showWindow();
 });
 
-ipcMain.handle('ollama:check', (_event, url: string) => {
-  return checkOllamaConnection(url);
+ipcMain.handle('ai-provider:check', (_event, url: string) => {
+  return checkAIProviderConnection(url);
 });
 
 // Translation IPC Handlers
-ipcMain.handle('translate:persian-to-english', async (event, { text, model, ollamaUrl, temperature }) => {
+ipcMain.handle('translate:persian-to-english', async (_event, { text, model }) => {
   try {
-    const result = await aiTranslatorService.translatePersianToEnglish(text, model as OllamaModel, {
-      ollamaUrl,
-      temperature,
-      onProgress: (progress: number) => {
-        event.sender.send('translation:progress', progress);
-      },
+    const result = await aiTranslatorService.translatePersianToEnglish(text, model as AIModel, {
+      aiProviderUrl: APP_CONFIG.aiProviderUrl,
+      temperature: APP_CONFIG.temperature,
     });
     return { success: true, data: result };
   } catch (error: any) {
@@ -95,14 +94,11 @@ ipcMain.handle('translate:persian-to-english', async (event, { text, model, olla
   }
 });
 
-ipcMain.handle('translate:english-to-persian', async (event, { text, model, ollamaUrl, temperature }) => {
+ipcMain.handle('translate:english-to-persian', async (_event, { text, model }) => {
   try {
-    const result = await aiTranslatorService.translateEnglishToPersian(text, model as OllamaModel, {
-      ollamaUrl,
-      temperature,
-      onProgress: (progress: number) => {
-        event.sender.send('translation:progress', progress);
-      },
+    const result = await aiTranslatorService.translateEnglishToPersian(text, model as AIModel, {
+      aiProviderUrl: APP_CONFIG.aiProviderUrl,
+      temperature: APP_CONFIG.temperature,
     });
     return { success: true, data: result };
   } catch (error: any) {
@@ -110,14 +106,11 @@ ipcMain.handle('translate:english-to-persian', async (event, { text, model, olla
   }
 });
 
-ipcMain.handle('translate:grammar', async (event, { text, model, ollamaUrl, temperature }) => {
+ipcMain.handle('translate:grammar', async (_event, { text, model }) => {
   try {
-    const result = await aiTranslatorService.correctGrammar(text, model as OllamaModel, {
-      ollamaUrl,
-      temperature,
-      onProgress: (progress: number) => {
-        event.sender.send('translation:progress', progress);
-      },
+    const result = await aiTranslatorService.correctGrammar(text, model as AIModel, {
+      aiProviderUrl: APP_CONFIG.aiProviderUrl,
+      temperature: APP_CONFIG.temperature,
     });
     return { success: true, data: result };
   } catch (error: any) {
@@ -170,5 +163,70 @@ ipcMain.handle('tts:fetch-audio', async (_event, url: string) => {
     });
   } catch (error: any) {
     return { success: false, error: error.message || 'Failed to fetch audio' };
+  }
+});
+
+// Cache IPC Handlers
+ipcMain.handle('cache:get', (_event, { model, userInput, systemTemplate }) => {
+  try {
+    const result = databaseService.getCache(model, userInput, systemTemplate);
+    return { success: true, data: result };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('cache:set', (_event, { model, userInput, systemTemplate, result }) => {
+  try {
+    databaseService.setCache(model, userInput, systemTemplate, result);
+    return { success: true };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('cache:clear', () => {
+  try {
+    databaseService.clearCache();
+    return { success: true };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+});
+
+// History IPC Handlers
+ipcMain.handle('history:getAll', () => {
+  try {
+    const entries = databaseService.getAllHistory();
+    return { success: true, data: entries };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('history:add', (_event, entry) => {
+  try {
+    databaseService.addHistoryEntry(entry);
+    return { success: true };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('history:delete', (_event, id: string) => {
+  try {
+    databaseService.deleteHistoryEntry(id);
+    return { success: true };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('history:clear', () => {
+  try {
+    databaseService.clearHistory();
+    return { success: true };
+  } catch (error: any) {
+    return { success: false, error: error.message };
   }
 });

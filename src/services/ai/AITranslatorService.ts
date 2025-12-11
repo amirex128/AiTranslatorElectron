@@ -1,5 +1,6 @@
-import { OllamaModel } from '../../models/OllamaModel';
+import { AIModel } from '../../models/AIModel';
 import { TranslationResult } from '../../utils/validation';
+import { APP_CONFIG } from '../../constants/appConfig';
 import {
   getPersianToEnglishPrompt,
   getEnglishToPersianPrompt,
@@ -9,7 +10,7 @@ import { aiChatService } from './AIChatService';
 import { AIChatOptions } from './types';
 
 export interface TranslatorOptions {
-  ollamaUrl?: string;
+  aiProviderUrl?: string;
   temperature?: number;
   abortSignal?: AbortSignal;
   onProgress?: (progress: number) => void;
@@ -22,7 +23,7 @@ export interface TranslatorResponse {
 class AITranslatorService {
   async translatePersianToEnglish(
     text: string,
-    model: OllamaModel,
+    model: AIModel,
     options: TranslatorOptions = {}
   ): Promise<TranslatorResponse> {
     const systemTemplate = getPersianToEnglishPrompt(text);
@@ -32,8 +33,8 @@ class AITranslatorService {
         systemTemplate,
         model,
         userInput: text,
-        ollamaUrl: options.ollamaUrl,
-        temperature: options.temperature,
+        aiProviderUrl: options.aiProviderUrl || APP_CONFIG.aiProviderUrl,
+        temperature: options.temperature ?? APP_CONFIG.temperature,
       },
       {
         abortSignal: options.abortSignal,
@@ -48,7 +49,7 @@ class AITranslatorService {
 
   async translateEnglishToPersian(
     text: string,
-    model: OllamaModel,
+    model: AIModel,
     options: TranslatorOptions = {}
   ): Promise<TranslatorResponse> {
     const systemTemplate = getEnglishToPersianPrompt(text);
@@ -58,8 +59,8 @@ class AITranslatorService {
         systemTemplate,
         model,
         userInput: text,
-        ollamaUrl: options.ollamaUrl,
-        temperature: options.temperature,
+        aiProviderUrl: options.aiProviderUrl || APP_CONFIG.aiProviderUrl,
+        temperature: options.temperature ?? APP_CONFIG.temperature,
       },
       {
         abortSignal: options.abortSignal,
@@ -74,7 +75,7 @@ class AITranslatorService {
 
   async correctGrammar(
     text: string,
-    model: OllamaModel,
+    model: AIModel,
     options: TranslatorOptions = {}
   ): Promise<TranslatorResponse> {
     const systemTemplate = getGrammarCorrectionPrompt(text);
@@ -84,8 +85,8 @@ class AITranslatorService {
         systemTemplate,
         model,
         userInput: text,
-        ollamaUrl: options.ollamaUrl,
-        temperature: options.temperature,
+        aiProviderUrl: options.aiProviderUrl || APP_CONFIG.aiProviderUrl,
+        temperature: options.temperature ?? APP_CONFIG.temperature,
       },
       {
         abortSignal: options.abortSignal,

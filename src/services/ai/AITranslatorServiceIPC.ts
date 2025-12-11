@@ -1,8 +1,8 @@
-import { OllamaModel } from '../../models/OllamaModel';
+import { AIModel } from '../../models/AIModel';
 import { TranslationResult } from '../../utils/validation';
 
 export interface TranslatorOptions {
-  ollamaUrl?: string;
+  aiProviderUrl?: string;
   temperature?: number;
   abortSignal?: AbortSignal;
   onProgress?: (progress: number) => void;
@@ -15,7 +15,7 @@ export interface TranslatorResponse {
 class AITranslatorServiceIPC {
   async translatePersianToEnglish(
     text: string,
-    model: OllamaModel,
+    model: AIModel,
     options: TranslatorOptions = {}
   ): Promise<TranslatorResponse> {
     if (typeof window === 'undefined' || !window.electronAPI) {
@@ -25,8 +25,6 @@ class AITranslatorServiceIPC {
     const response = await window.electronAPI.translatePersianToEnglish({
       text,
       model,
-      ollamaUrl: options.ollamaUrl,
-      temperature: options.temperature,
     });
 
     if (!response.success) {
@@ -38,7 +36,7 @@ class AITranslatorServiceIPC {
 
   async translateEnglishToPersian(
     text: string,
-    model: OllamaModel,
+    model: AIModel,
     options: TranslatorOptions = {}
   ): Promise<TranslatorResponse> {
     if (typeof window === 'undefined' || !window.electronAPI) {
@@ -48,8 +46,6 @@ class AITranslatorServiceIPC {
     const response = await window.electronAPI.translateEnglishToPersian({
       text,
       model,
-      ollamaUrl: options.ollamaUrl,
-      temperature: options.temperature,
     });
 
     if (!response.success) {
@@ -61,7 +57,7 @@ class AITranslatorServiceIPC {
 
   async correctGrammar(
     text: string,
-    model: OllamaModel,
+    model: AIModel,
     options: TranslatorOptions = {}
   ): Promise<TranslatorResponse> {
     if (typeof window === 'undefined' || !window.electronAPI) {
@@ -71,8 +67,6 @@ class AITranslatorServiceIPC {
     const response = await window.electronAPI.translateGrammar({
       text,
       model,
-      ollamaUrl: options.ollamaUrl,
-      temperature: options.temperature,
     });
 
     if (!response.success) {

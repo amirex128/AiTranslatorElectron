@@ -1,5 +1,5 @@
 import Store from 'electron-store';
-import { OllamaModel } from '../models/OllamaModel';
+import { AIModel } from '../models/AIModel';
 
 interface StoreSchema {
   settings?: Partial<AppSettings>;
@@ -8,15 +8,15 @@ interface StoreSchema {
 const store = new Store<StoreSchema>() as any;
 
 export interface AppSettings {
-  selectedModel: OllamaModel;
-  ollamaUrl: string;
+  selectedModel: AIModel;
+  aiProviderUrl: string;
   temperature: number;
   fontSize: number;
 }
 
 const defaultSettings: AppSettings = {
-  selectedModel: OllamaModel.QWEN3_8B,
-  ollamaUrl: 'http://localhost:11434',
+  selectedModel: AIModel.QWEN3_8B,
+  aiProviderUrl: 'http://localhost:11434',
   temperature: 0.7,
   fontSize: 16,
 };

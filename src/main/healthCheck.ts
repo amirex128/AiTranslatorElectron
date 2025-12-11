@@ -1,6 +1,6 @@
 import { Ollama } from 'ollama';
 
-export const checkOllamaConnection = async (
+export const checkAIProviderConnection = async (
   url: string = 'http://localhost:11434'
 ): Promise<boolean> => {
   try {
@@ -8,7 +8,7 @@ export const checkOllamaConnection = async (
     await client.list();
     return true;
   } catch (error) {
-    console.error('Ollama health check failed:', error);
+    console.error('AI Provider health check failed:', error);
     return false;
   }
 };

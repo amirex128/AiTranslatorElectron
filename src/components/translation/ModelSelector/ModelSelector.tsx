@@ -1,10 +1,10 @@
 import React from 'react';
 import { Select } from '../../ui/Select/Select';
-import { OllamaModel, OLLAMA_MODELS } from '../../../models/OllamaModel';
+import { AIModel, AI_MODELS } from '../../../models/AIModel';
 
 interface ModelSelectorProps {
-  selectedModel: OllamaModel;
-  onModelChange: (model: OllamaModel) => void;
+  selectedModel: AIModel;
+  onModelChange: (model: AIModel) => void;
   className?: string;
 }
 
@@ -13,7 +13,8 @@ export const ModelSelector: React.FC<ModelSelectorProps> = ({
   onModelChange,
   className = '',
 }) => {
-  const options = OLLAMA_MODELS.map((model) => ({
+  const options = AI_MODELS.map((model) => ({
+    key: model.key,
     value: model.value,
     label: model.label,
   }));
@@ -23,7 +24,7 @@ export const ModelSelector: React.FC<ModelSelectorProps> = ({
       label="مدل هوش مصنوعی"
       options={options}
       value={selectedModel}
-      onChange={(e) => onModelChange(e.target.value as OllamaModel)}
+      onChange={(e) => onModelChange(e.target.value as AIModel)}
       className={className}
     />
   );

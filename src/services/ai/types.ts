@@ -1,11 +1,11 @@
-import { OllamaModel } from '../../models/OllamaModel';
+import { AIModel } from '../../models/AIModel';
 import { TranslationResult } from '../../utils/validation';
 
 export interface AIChatRequest {
   systemTemplate: string;
-  model: OllamaModel;
+  model: AIModel;
   userInput: string;
-  ollamaUrl?: string;
+  aiProviderUrl?: string;
   temperature?: number;
 }
 

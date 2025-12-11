@@ -1,88 +1,110 @@
 import { create } from 'zustand';
 import { TranslationResult } from '../utils/validation';
-import { OllamaModel } from '../models/OllamaModel';
+import { AIModel } from '../models/AIModel';
 
 export interface HistoryEntry {
   id: string;
   timestamp: number;
   input: string;
   type: 'persian-to-english' | 'english-to-persian' | 'grammar';
-  model: OllamaModel;
+  model: AIModel;
   result: TranslationResult;
+  responseTime?: number; // Time in seconds
 }
 
 interface HistoryState {
   entries: HistoryEntry[];
   searchQuery: string;
+  isLoading: boolean;
 
   // Actions
-  addEntry: (entry: Omit<HistoryEntry, 'id' | 'timestamp'>) => void;
-  deleteEntry: (id: string) => void;
-  clearHistory: () => void;
+  loadEntries: () => Promise<void>;
+  addEntry: (entry: Omit<HistoryEntry, 'id' | 'timestamp'>) => Promise<void>;
+  deleteEntry: (id: string) => Promise<void>;
+  clearHistory: () => Promise<void>;
   setSearchQuery: (query: string) => void;
   getFilteredEntries: () => HistoryEntry[];
 }
 
-const MAX_HISTORY_ENTRIES = 10;
-const HISTORY_STORAGE_KEY = 'translation-history';
+const loadHistoryFromDatabase = async (): Promise<HistoryEntry[]> => {
+  if (typeof window === 'undefined' || !window.electronAPI) {
+    return [];
+  }
 
-const loadHistoryFromStorage = (): HistoryEntry[] => {
-  if (typeof window !== 'undefined' && window.localStorage) {
-    try {
-      const stored = localStorage.getItem(HISTORY_STORAGE_KEY);
-      if (stored) {
-        return JSON.parse(stored);
-      }
-    } catch (error) {
-      console.error('Error loading history from storage:', error);
+  try {
+    const response = await window.electronAPI.getAllHistory();
+    if (response.success && response.data) {
+      return response.data;
     }
+  } catch (error) {
+    console.error('Error loading history from database:', error);
   }
   return [];
 };
 
-const saveHistoryToStorage = (entries: HistoryEntry[]): void => {
-  if (typeof window !== 'undefined' && window.localStorage) {
-    try {
-      localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(entries));
-    } catch (error) {
-      console.error('Error saving history to storage:', error);
-    }
-  }
-};
-
 export const useHistoryStore = create<HistoryState>((set, get) => ({
-  entries: loadHistoryFromStorage(),
+  entries: [],
   searchQuery: '',
+  isLoading: false,
 
-  addEntry: (entry) => {
-    set((state) => {
-      const newEntry: HistoryEntry = {
-        ...entry,
-        id: `${Date.now()}-${Math.random()}`,
-        timestamp: Date.now(),
-      };
+  loadEntries: async () => {
+    set({ isLoading: true });
+    try {
+      const entries = await loadHistoryFromDatabase();
+      set({ entries, isLoading: false });
+    } catch (error) {
+      console.error('Error loading entries:', error);
+      set({ isLoading: false });
+    }
+  },
 
-      const updatedEntries = [newEntry, ...state.entries].slice(
-        0,
-        MAX_HISTORY_ENTRIES
-      );
+  addEntry: async (entry) => {
+    try {
+      if (typeof window === 'undefined' || !window.electronAPI) {
+        return;
+      }
 
-      saveHistoryToStorage(updatedEntries);
-      return { entries: updatedEntries };
-    });
+      await window.electronAPI.addHistory(entry);
+      
+      // Reload entries from database
+      const entries = await loadHistoryFromDatabase();
+      set({ entries });
+    } catch (error) {
+      console.error('Error adding history entry:', error);
+    }
   },
-  deleteEntry: (id) => {
-    set((state) => {
-      const updatedEntries = state.entries.filter((entry) => entry.id !== id);
-      saveHistoryToStorage(updatedEntries);
-      return { entries: updatedEntries };
-    });
+
+  deleteEntry: async (id) => {
+    try {
+      if (typeof window === 'undefined' || !window.electronAPI) {
+        return;
+      }
+
+      await window.electronAPI.deleteHistory(id);
+      
+      // Reload entries from database
+      const entries = await loadHistoryFromDatabase();
+      set({ entries });
+    } catch (error) {
+      console.error('Error deleting history entry:', error);
+    }
   },
-  clearHistory: () => {
-    saveHistoryToStorage([]);
-    set({ entries: [], searchQuery: '' });
+
+  clearHistory: async () => {
+    try {
+      if (typeof window === 'undefined' || !window.electronAPI) {
+        return;
+      }
+
+      await window.electronAPI.clearHistory();
+      set({ entries: [], searchQuery: '' });
+    } catch (error) {
+      console.error('Error clearing history:', error);
+    }
   },
+
   setSearchQuery: (query) => set({ searchQuery: query }),
+
   getFilteredEntries: () => {
     const { entries, searchQuery } = get();
     if (!searchQuery.trim()) {

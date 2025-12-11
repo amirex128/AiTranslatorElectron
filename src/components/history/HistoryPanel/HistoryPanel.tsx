@@ -3,6 +3,7 @@ import { useHistoryStore, HistoryEntry } from '../../../stores/historyStore';
 import { Button } from '../../ui/Button/Button';
 import { Input } from '../../ui/Input/Input';
 import { Accordion } from '../../ui/Accordion/Accordion';
+import { AIModel, AI_MODELS } from '../../../models/AIModel';
 
 interface HistoryPanelProps {
   onSelectEntry?: (entry: HistoryEntry) => void;
@@ -15,11 +16,16 @@ export const HistoryPanel: React.FC<HistoryPanelProps> = ({
   onSelectEntry,
   className = '',
 }) => {
-  const { entries, searchQuery, setSearchQuery, deleteEntry, getFilteredEntries } =
+  const { entries, searchQuery, setSearchQuery, deleteEntry, getFilteredEntries, loadEntries } =
     useHistoryStore();
 
   const filteredEntries = getFilteredEntries();
   const [currentPage, setCurrentPage] = useState(1);
+
+  // Load entries from database on mount
+  React.useEffect(() => {
+    loadEntries();
+  }, [loadEntries]);
 
   const totalPages = Math.ceil(filteredEntries.length / ITEMS_PER_PAGE);
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
@@ -35,9 +41,9 @@ export const HistoryPanel: React.FC<HistoryPanelProps> = ({
     }
   }, [totalPages, currentPage]);
 
-  const handleDelete = (id: string, e: React.MouseEvent) => {
+  const handleDelete = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    deleteEntry(id);
+    await deleteEntry(id);
   };
 
   const handleSelect = (entry: HistoryEntry) => {
@@ -50,13 +56,65 @@ export const HistoryPanel: React.FC<HistoryPanelProps> = ({
     setCurrentPage(page);
   };
 
+  const getModelLabel = (model: AIModel): string => {
+    const modelItem = AI_MODELS.find((m) => m.value === model);
+    return modelItem ? modelItem.label : model.toString();
+  };
+
+  const getTypeBadge = (type: HistoryEntry['type'], wordCount: number) => {
+    let badgeText = '';
+    let badgeColor = '';
+
+    switch (type) {
+      case 'persian-to-english':
+        badgeText = 'Fa→En';
+        badgeColor = 'bg-blue-500 dark:bg-blue-600';
+        break;
+      case 'english-to-persian':
+        badgeText = 'En→Fa';
+        badgeColor = 'bg-green-500 dark:bg-green-600';
+        break;
+      case 'grammar':
+        badgeText = 'Grammar';
+        badgeColor = 'bg-purple-500 dark:bg-purple-600';
+        break;
+    }
+
+    return (
+      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium text-white ${badgeColor}`}>
+        {badgeText}
+        <span className="bg-white/20 px-1 rounded">{wordCount}</span>
+      </span>
+    );
+  };
+
+  const formatTime = (seconds: number): string => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const countWords = (text: string): number => {
+    return text.trim().split(/\s+/).filter((word) => word.length > 0).length;
+  };
+
   const accordionItems = paginatedEntries.map((entry) => {
     const date = new Date(entry.timestamp);
     const dateStr = date.toLocaleString('fa-IR');
+    const modelLabel = getModelLabel(entry.model);
+    const wordCount = countWords(entry.input);
+    const responseTimeStr = entry.responseTime ? formatTime(entry.responseTime) : 'N/A';
 
     return {
       id: entry.id,
-      title: `${entry.type} - ${dateStr}`,
+      title: (
+        <div className="flex items-center gap-2 flex-wrap">
+          {getTypeBadge(entry.type, wordCount)}
+          <span className="text-xs text-gray-500 dark:text-gray-400">{modelLabel}</span>
+          <span className="text-xs text-gray-500 dark:text-gray-400">⏱ {responseTimeStr}</span>
+          <span className="text-xs text-gray-500 dark:text-gray-400">{dateStr}</span>
+        </div>
+      ),
       defaultOpen: false,
       content: (
         <div className="space-y-4">
@@ -130,7 +188,9 @@ export const HistoryPanel: React.FC<HistoryPanelProps> = ({
         <Button
           size="sm"
           variant="secondary"
-          onClick={() => useHistoryStore.getState().clearHistory()}
+          onClick={async () => {
+            await useHistoryStore.getState().clearHistory();
+          }}
           disabled={entries.length === 0}
         >
           پاک کردن همه

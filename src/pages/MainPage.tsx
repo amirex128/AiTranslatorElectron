@@ -8,9 +8,11 @@ import { Button } from '../components/ui/Button/Button';
 import { ErrorDisplay } from '../components/ui/ErrorDisplay/ErrorDisplay';
 import { Toast } from '../components/ui/Toast/Toast';
 import { HistoryPanel } from '../components/history/HistoryPanel/HistoryPanel';
+import { TimerButton } from '../components/ui/TimerButton/TimerButton';
+import { LastRequestTime } from '../components/ui/LastRequestTime/LastRequestTime';
 import { aiTranslatorServiceIPC, TranslatorResponse } from '../services/ai/AITranslatorServiceIPC';
 import { writeClipboard } from '../utils/clipboard';
-import { OllamaModel } from '../models/OllamaModel';
+import { AIModel } from '../models/AIModel';
 import { APP_CONFIG } from '../constants/appConfig';
 
 export const MainPage: React.FC = () => {
@@ -21,7 +23,6 @@ export const MainPage: React.FC = () => {
     results,
     selectedResult,
     isLoading,
-    loadingProgress,
     error,
     errorDetails,
     showErrorDetails,
@@ -31,18 +32,17 @@ export const MainPage: React.FC = () => {
     setResults,
     setSelectedResult,
     setLoading,
-    setLoadingProgress,
     setError,
     toggleErrorDetails,
-    setAbortController,
-    cancelRequest,
   } = useTranslationStore();
 
   const { addEntry } = useHistoryStore();
 
-  const [selectedModel, setSelectedModel] = useState<OllamaModel>(APP_CONFIG.selectedModel);
+  const [selectedModel, setSelectedModel] = useState<AIModel>(APP_CONFIG.selectedModel);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [showHistory, setShowHistory] = useState(false);
+  const [startTime, setStartTime] = useState<number | null>(null);
+  const [lastRequestTime, setLastRequestTime] = useState<number | null>(null);
 
   useEffect(() => {
     // Always enable dark mode
@@ -71,20 +71,11 @@ export const MainPage: React.FC = () => {
     };
   }, [setPersianToEnglishInput, setEnglishToPersianInput, setGrammarInput]);
 
-  // Listen for translation progress
-  useEffect(() => {
-    if (typeof window !== 'undefined' && window.electronAPI && window.electronAPI.onTranslationProgress) {
-      window.electronAPI.onTranslationProgress((progress: number) => {
-        setLoadingProgress(progress);
-      });
-    }
-  }, [setLoadingProgress]);
-
   const handleTranslate = async () => {
     let input = '';
     let translateFn: (
       text: string,
-      model: OllamaModel,
+      model: AIModel,
       options: any
     ) => Promise<TranslatorResponse>;
     let type: 'persian-to-english' | 'english-to-persian' | 'grammar';
@@ -110,44 +101,39 @@ export const MainPage: React.FC = () => {
       return;
     }
 
-    const abortController = new AbortController();
-    setAbortController(abortController);
-
     try {
       setLoading(true);
       setError(null);
+      const requestStartTime = Date.now(); // Start timer
+      setStartTime(requestStartTime);
 
-      const response = await translateFn(input, selectedModel, {
-        ollamaUrl: APP_CONFIG.ollamaUrl,
-        temperature: APP_CONFIG.temperature,
-        abortSignal: abortController.signal,
-      });
+      const response = await translateFn(input, selectedModel, {});
+      const endTime = Date.now();
+      const responseTime = Math.floor((endTime - requestStartTime) / 1000);
 
       setResults(response.result);
       setSelectedResult(1);
+      setLastRequestTime(responseTime);
 
       // Add to history
-      addEntry({
+      await addEntry({
         input,
         type,
         model: selectedModel,
         result: response.result,
+        responseTime,
       });
 
       setToast({ message: 'ترجمه با موفقیت انجام شد', type: 'success' });
     } catch (error: any) {
-      if (error.message === 'Request aborted') {
-        setError('درخواست لغو شد');
-      } else {
-        setError(
-          error.message || 'خطا در ترجمه. لطفاً دوباره تلاش کنید.',
-          error.stack
-        );
-      }
+      setError(
+        error.message || 'خطا در ترجمه. لطفاً دوباره تلاش کنید.',
+        error.stack
+      );
       setToast({ message: 'خطا در ترجمه', type: 'error' });
     } finally {
       setLoading(false);
-      setAbortController(null);
+      setStartTime(null); // Stop timer
     }
   };
 
@@ -169,7 +155,7 @@ export const MainPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6">
       <div className="max-w-4xl mx-auto space-y-6">
-        <h1 className="text-3xl bg-indigo-500 font-bold text-gray-900 dark:text-white text-center">
+        <h1 className="text-3xl rounded py-2 shadow bg-indigo-500 font-bold text-gray-900 dark:text-white text-center">
           مترجم هوش مصنوعی
         </h1>
 
@@ -206,10 +192,9 @@ export const MainPage: React.FC = () => {
           {isLoading ? (
             <Button
               variant="danger"
-              onClick={cancelRequest}
               isLoading={true}
             >
-              لغو
+              در حال پردازش...
             </Button>
           ) : (
             <Button
@@ -234,7 +219,7 @@ export const MainPage: React.FC = () => {
           />
         )}
 
-        {results && !isLoading && (
+        {results && (
           <div className="space-y-4">
             <TranslationResult
               result={results}
@@ -272,6 +257,8 @@ export const MainPage: React.FC = () => {
           />
         )}
       </div>
+      <TimerButton isActive={isLoading} startTime={startTime} />
+      <LastRequestTime elapsedTime={lastRequestTime} />
     </div>
   );
 };

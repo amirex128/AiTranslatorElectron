@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 
 interface AccordionItem {
   id: string;
-  title: string;
+  title: string | React.ReactNode;
   content: React.ReactNode;
   defaultOpen?: boolean;
 }
