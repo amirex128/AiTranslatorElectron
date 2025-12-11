@@ -10,9 +10,7 @@ import { Button } from '../components/ui/Button/Button';
 import { Loading } from '../components/ui/Loading/Loading';
 import { ErrorDisplay } from '../components/ui/ErrorDisplay/ErrorDisplay';
 import { Toast } from '../components/ui/Toast/Toast';
-import { TTSControls } from '../components/tts/TTSControls/TTSControls';
 import { HistoryPanel } from '../components/history/HistoryPanel/HistoryPanel';
-import { SettingsPanel } from '../components/settings/SettingsPanel/SettingsPanel';
 import { aiTranslatorServiceIPC, TranslatorResponse } from '../services/ai/AITranslatorServiceIPC';
 import { writeClipboard } from '../utils/clipboard';
 import { OllamaModel } from '../models/OllamaModel';
@@ -41,7 +39,6 @@ export const MainPage: React.FC = () => {
     toggleErrorDetails,
     setAbortController,
     cancelRequest,
-    confidenceScore,
   } = useTranslationStore();
 
   const {
@@ -49,29 +46,19 @@ export const MainPage: React.FC = () => {
     ollamaUrl,
     temperature,
     fontSize,
-    rtlDirection,
-    darkMode,
   } = useSettingsStore();
 
   const { addEntry } = useHistoryStore();
-  const { currentText, setCurrentText } = useTTSStore();
 
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [showHistory, setShowHistory] = useState(false);
-  const [showSettings, setShowSettings] = useState(false);
 
   useEffect(() => {
     // Load settings on mount
     useSettingsStore.getState().loadSettings();
+    // Always enable dark mode
+    document.documentElement.classList.add('dark');
   }, []);
-
-  useEffect(() => {
-    if (darkMode) {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-  }, [darkMode]);
 
   // Handle keyboard shortcuts from main process
   useEffect(() => {
@@ -141,7 +128,7 @@ export const MainPage: React.FC = () => {
         },
       });
 
-      setResults(response.result, response.confidenceScore);
+      setResults(response.result);
       setSelectedResult(1);
 
       // Add to history
@@ -178,22 +165,6 @@ export const MainPage: React.FC = () => {
     }
   };
 
-  const handleSwap = () => {
-    const temp = persianToEnglishInput;
-    setPersianToEnglishInput(englishToPersianInput);
-    setEnglishToPersianInput(temp);
-  };
-
-  const handleRead = () => {
-    if (!results || !selectedResult) {
-      setToast({ message: 'لطفاً ابتدا یک نتیجه را انتخاب کنید', type: 'error' });
-      return;
-    }
-
-    const englishKey = `english_${selectedResult}` as keyof typeof results;
-    const englishText = results[englishKey] as string;
-    setCurrentText(englishText);
-  };
 
   const canTranslate =
     persianToEnglishInput.trim() ||
@@ -203,7 +174,7 @@ export const MainPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6">
       <div className="max-w-4xl mx-auto space-y-6">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white text-center">
+        <h1 className="text-3xl bg-indigo-500 font-bold text-gray-900 dark:text-white text-center">
           مترجم هوش مصنوعی
         </h1>
 
@@ -224,14 +195,14 @@ export const MainPage: React.FC = () => {
             label="انگلیسی به فارسی"
             value={englishToPersianInput}
             onChange={setEnglishToPersianInput}
-            placeholder="Enter English text..."
+            placeholder="متن انگلیسی را وارد کنید..."
             autoFocus={false}
           />
           <TranslationInput
             label="اصلاح گرامر"
             value={grammarInput}
             onChange={setGrammarInput}
-            placeholder="Enter English text to correct..."
+            placeholder="متن انگلیسی برای اصلاح را وارد کنید..."
             autoFocus={false}
           />
         </div>
@@ -248,16 +219,8 @@ export const MainPage: React.FC = () => {
           <Button variant="secondary" onClick={clearInputs}>
             پاک کردن
           </Button>
-          {(persianToEnglishInput || englishToPersianInput) && (
-            <Button variant="ghost" onClick={handleSwap}>
-              جابجایی
-            </Button>
-          )}
           <Button variant="ghost" onClick={() => setShowHistory(!showHistory)}>
             تاریخچه
-          </Button>
-          <Button variant="ghost" onClick={() => setShowSettings(!showSettings)}>
-            تنظیمات
           </Button>
         </div>
 
@@ -284,16 +247,8 @@ export const MainPage: React.FC = () => {
               selectedIndex={selectedResult}
               onSelect={setSelectedResult}
               onCopy={handleCopy}
-              confidenceScore={confidenceScore ?? undefined}
               fontSize={fontSize}
-              rtlDirection={rtlDirection}
             />
-            <div className="flex gap-2">
-              <Button variant="primary" onClick={handleRead}>
-                پخش صدا
-              </Button>
-            </div>
-            {currentText && <TTSControls text={currentText} />}
           </div>
         )}
 
@@ -312,12 +267,6 @@ export const MainPage: React.FC = () => {
                 setShowHistory(false);
               }}
             />
-          </div>
-        )}
-
-        {showSettings && (
-          <div className="mt-6">
-            <SettingsPanel onClose={() => setShowSettings(false)} />
           </div>
         )}
 

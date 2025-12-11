@@ -11,7 +11,6 @@ export interface AIChatRequest {
 
 export interface AIChatResponse {
   result: TranslationResult;
-  confidenceScore?: number;
 }
 
 export interface AIChatOptions {

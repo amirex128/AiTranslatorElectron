@@ -12,7 +12,6 @@ interface TranslationState {
   results: TranslationResult | null;
   selectedResult: number | null;
   editedResults: Partial<TranslationResult> | null;
-  confidenceScore: number | null;
 
   // Loading state
   isLoading: boolean;
@@ -29,7 +28,7 @@ interface TranslationState {
   setEnglishToPersianInput: (text: string) => void;
   setGrammarInput: (text: string) => void;
   clearInputs: () => void;
-  setResults: (results: TranslationResult, confidenceScore?: number) => void;
+  setResults: (results: TranslationResult) => void;
   setSelectedResult: (index: number | null) => void;
   setEditedResults: (results: Partial<TranslationResult>) => void;
   setLoading: (loading: boolean) => void;
@@ -49,7 +48,6 @@ export const useTranslationStore = create<TranslationState>((set) => ({
   results: null,
   selectedResult: null,
   editedResults: null,
-  confidenceScore: null,
   isLoading: false,
   loadingProgress: 0,
   error: null,
@@ -82,14 +80,13 @@ export const useTranslationStore = create<TranslationState>((set) => ({
       englishToPersianInput: '',
       grammarInput: '',
     }),
-  setResults: (results, confidenceScore) =>
+  setResults: (results) =>
     set({
       results,
       selectedResult: 1,
       isLoading: false,
       loadingProgress: 100,
       error: null,
-      confidenceScore: confidenceScore ?? null,
     }),
   setSelectedResult: (index) => set({ selectedResult: index }),
   setEditedResults: (results) => set({ editedResults: results }),
@@ -131,7 +128,6 @@ export const useTranslationStore = create<TranslationState>((set) => ({
       errorDetails: null,
       showErrorDetails: false,
       abortController: null,
-      confidenceScore: null,
     }),
 }));
 

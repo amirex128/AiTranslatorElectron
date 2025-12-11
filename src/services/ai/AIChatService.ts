@@ -32,7 +32,6 @@ class AIChatService {
     if (cachedResult) {
       return {
         result: cachedResult,
-        confidenceScore: this.calculateConfidenceScore(cachedResult),
       };
     }
 
@@ -64,7 +63,6 @@ class AIChatService {
 
           return {
             result,
-            confidenceScore: this.calculateConfidenceScore(result),
           };
         }
       } catch (error) {
@@ -155,28 +153,7 @@ class AIChatService {
           clearTimeout(timeoutId);
           reject(error);
         });
-    });
-  }
-
-  private calculateConfidenceScore(result: TranslationResult): number {
-    // Simple confidence score based on result completeness
-    let score = 0;
-    const fields = [
-      result.english_1,
-      result.persian_1,
-      result.english_2,
-      result.persian_2,
-      result.english_3,
-      result.persian_3,
-    ];
-
-    fields.forEach((field) => {
-      if (field && field.length > 0) {
-        score += 1;
-      }
-    });
-
-    return Math.round((score / fields.length) * 100);
+      });
   }
 }
 

@@ -25,8 +25,32 @@ export const createWindow = (): void => {
       preload: MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY,
       nodeIntegration: false,
       contextIsolation: true,
+      webSecurity: true,
     },
     show: false,
+  });
+
+  // Set basic CSP for security (TTS is handled via IPC, no need for Google TTS CSP)
+  const session = mainWindow.webContents.session;
+  session.webRequest.onHeadersReceived((details, callback) => {
+    const cspHeader = 
+      "default-src 'self' 'unsafe-inline' 'unsafe-eval' data:; " +
+      "media-src 'self' blob: data:; " +
+      "connect-src 'self' ws://localhost:* ws://0.0.0.0:* http://localhost:* http://0.0.0.0:*; " +
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval'; " +
+      "style-src 'self' 'unsafe-inline'; " +
+      "img-src 'self' data: https:; " +
+      "font-src 'self' data:;";
+
+    const responseHeaders: Record<string, string | string[]> = {
+      ...details.responseHeaders,
+    };
+
+    delete responseHeaders['Content-Security-Policy'];
+    delete responseHeaders['content-security-policy'];
+    responseHeaders['Content-Security-Policy'] = cspHeader;
+
+    callback({ responseHeaders });
   });
 
   mainWindow.loadURL(MAIN_WINDOW_WEBPACK_ENTRY);

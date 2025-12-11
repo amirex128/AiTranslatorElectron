@@ -27,6 +27,9 @@ export const electronAPI = {
   translatePersianToEnglish: (params: any) => ipcRenderer.invoke('translate:persian-to-english', params),
   translateEnglishToPersian: (params: any) => ipcRenderer.invoke('translate:english-to-persian', params),
   translateGrammar: (params: any) => ipcRenderer.invoke('translate:grammar', params),
+
+  // TTS
+  fetchTTSAudio: (url: string) => ipcRenderer.invoke('tts:fetch-audio', url),
 };
 
 contextBridge.exposeInMainWorld('electronAPI', electronAPI);

@@ -1,5 +1,5 @@
 import { app, Tray, Menu, nativeImage } from 'electron';
-import { showWindow, closeWindow } from './window';
+import { showWindow, closeWindow, mainWindow } from './window';
 
 let tray: Tray | null = null;
 
@@ -14,6 +14,18 @@ export const createTray = (): void => {
       label: 'نمایش',
       click: () => {
         showWindow();
+      },
+    },
+    {
+      type: 'separator',
+    },
+    {
+      label: 'Inspect',
+      click: () => {
+        if (mainWindow) {
+          mainWindow.webContents.openDevTools();
+          showWindow();
+        }
       },
     },
     {

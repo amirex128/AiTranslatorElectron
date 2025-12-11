@@ -12,8 +12,6 @@ export interface AppSettings {
   ollamaUrl: string;
   temperature: number;
   fontSize: number;
-  rtlDirection: boolean;
-  darkMode: boolean;
 }
 
 const defaultSettings: AppSettings = {
@@ -21,8 +19,6 @@ const defaultSettings: AppSettings = {
   ollamaUrl: 'http://localhost:11434',
   temperature: 0.7,
   fontSize: 16,
-  rtlDirection: false,
-  darkMode: false,
 };
 
 export const getSettings = (): AppSettings => {

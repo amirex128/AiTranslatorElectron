@@ -17,7 +17,6 @@ export interface TranslatorOptions {
 
 export interface TranslatorResponse {
   result: TranslationResult;
-  confidenceScore?: number;
 }
 
 class AITranslatorService {
@@ -44,7 +43,6 @@ class AITranslatorService {
 
     return {
       result: response.result,
-      confidenceScore: response.confidenceScore,
     };
   }
 
@@ -71,7 +69,6 @@ class AITranslatorService {
 
     return {
       result: response.result,
-      confidenceScore: response.confidenceScore,
     };
   }
 
@@ -98,7 +95,6 @@ class AITranslatorService {
 
     return {
       result: response.result,
-      confidenceScore: response.confidenceScore,
     };
   }
 }

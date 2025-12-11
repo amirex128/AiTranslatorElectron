@@ -20,14 +20,10 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
     ollamaUrl,
     temperature,
     fontSize,
-    rtlDirection,
-    darkMode,
     setSelectedModel,
     setOllamaUrl,
     setTemperature,
     setFontSize,
-    setRtlDirection,
-    setDarkMode,
   } = useSettingsStore();
 
   const [localOllamaUrl, setLocalOllamaUrl] = React.useState(ollamaUrl);
@@ -97,30 +93,6 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
           onChange={(e) => setLocalFontSize(e.target.value)}
           helperText="سایز فونت برای نمایش نتایج (12-24)"
         />
-
-        <div className="flex items-center justify-between">
-          <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-            جهت راست به چپ (RTL)
-          </label>
-          <input
-            type="checkbox"
-            checked={rtlDirection}
-            onChange={(e) => setRtlDirection(e.target.checked)}
-            className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
-          />
-        </div>
-
-        <div className="flex items-center justify-between">
-          <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-            حالت تاریک (Dark Mode)
-          </label>
-          <input
-            type="checkbox"
-            checked={darkMode}
-            onChange={(e) => setDarkMode(e.target.checked)}
-            className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
-          />
-        </div>
 
         <div className="flex gap-2 pt-4">
           <Button variant="primary" onClick={handleSave} className="flex-1">

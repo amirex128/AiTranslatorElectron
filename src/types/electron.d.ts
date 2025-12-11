@@ -12,6 +12,7 @@ export interface ElectronAPI {
   translatePersianToEnglish: (params: any) => Promise<{ success: boolean; data?: any; error?: string }>;
   translateEnglishToPersian: (params: any) => Promise<{ success: boolean; data?: any; error?: string }>;
   translateGrammar: (params: any) => Promise<{ success: boolean; data?: any; error?: string }>;
+  fetchTTSAudio: (url: string) => Promise<{ success: boolean; data?: string; mimeType?: string; error?: string }>;
 }
 
 declare global {

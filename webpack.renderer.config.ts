@@ -8,8 +8,23 @@ rules.push({
   use: [
     { loader: 'style-loader' },
     { loader: 'css-loader' },
-    { loader: 'postcss-loader' },
+    {
+      loader: 'postcss-loader',
+      options: {
+        postcssOptions: {
+          config: true,
+        },
+      },
+    },
   ],
+});
+
+rules.push({
+  test: /\.(woff|woff2|eot|ttf|otf)$/i,
+  type: 'asset/resource',
+  generator: {
+    filename: 'assets/fonts/[name][ext]',
+  },
 });
 
 export const rendererConfig: Configuration = {

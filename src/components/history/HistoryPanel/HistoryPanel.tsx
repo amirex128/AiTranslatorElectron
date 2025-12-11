@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useMemo } from 'react';
 import { useHistoryStore, HistoryEntry } from '../../../stores/historyStore';
 import { Button } from '../../ui/Button/Button';
 import { Input } from '../../ui/Input/Input';
@@ -9,6 +9,8 @@ interface HistoryPanelProps {
   className?: string;
 }
 
+const ITEMS_PER_PAGE = 5;
+
 export const HistoryPanel: React.FC<HistoryPanelProps> = ({
   onSelectEntry,
   className = '',
@@ -17,6 +19,21 @@ export const HistoryPanel: React.FC<HistoryPanelProps> = ({
     useHistoryStore();
 
   const filteredEntries = getFilteredEntries();
+  const [currentPage, setCurrentPage] = useState(1);
+
+  const totalPages = Math.ceil(filteredEntries.length / ITEMS_PER_PAGE);
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const endIndex = startIndex + ITEMS_PER_PAGE;
+  const paginatedEntries = useMemo(
+    () => filteredEntries.slice(startIndex, endIndex),
+    [filteredEntries, startIndex, endIndex]
+  );
+
+  React.useEffect(() => {
+    if (currentPage > totalPages && totalPages > 0) {
+      setCurrentPage(totalPages);
+    }
+  }, [totalPages, currentPage]);
 
   const handleDelete = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -29,7 +46,11 @@ export const HistoryPanel: React.FC<HistoryPanelProps> = ({
     }
   };
 
-  const accordionItems = filteredEntries.map((entry) => {
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
+
+  const accordionItems = paginatedEntries.map((entry) => {
     const date = new Date(entry.timestamp);
     const dateStr = date.toLocaleString('fa-IR');
 
@@ -43,7 +64,7 @@ export const HistoryPanel: React.FC<HistoryPanelProps> = ({
             <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 block">
               متن ورودی:
             </label>
-            <div className="p-2 bg-gray-50 dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700 text-sm">
+            <div className="p-2 bg-gray-50 dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700 text-sm text-gray-900 dark:text-gray-100">
               {entry.input}
             </div>
           </div>
@@ -51,16 +72,29 @@ export const HistoryPanel: React.FC<HistoryPanelProps> = ({
             {[1, 2, 3].map((index) => {
               const englishKey = `english_${index}` as keyof typeof entry.result;
               const persianKey = `persian_${index}` as keyof typeof entry.result;
+              const englishText = entry.result[englishKey] as string;
+              const persianText = entry.result[persianKey] as string;
+              
               return (
-                <div key={index} className="border border-gray-200 dark:border-gray-700 rounded p-2">
-                  <div className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                <div key={index} className="border border-gray-200 dark:border-gray-700 rounded p-2 space-y-2">
+                  <div className="text-xs font-medium text-gray-600 dark:text-gray-400">
                     ترجمه {index}
                   </div>
-                  <div className="text-sm mb-1">
-                    <strong>EN:</strong> {(entry.result[englishKey] as string).substring(0, 50)}...
+                  <div className="p-2 bg-gray-50 dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700">
+                    <div className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                      انگلیسی:
+                    </div>
+                    <div className="text-sm text-gray-900 dark:text-gray-100" dir="ltr">
+                      {englishText}
+                    </div>
                   </div>
-                  <div className="text-sm">
-                    <strong>FA:</strong> {(entry.result[persianKey] as string).substring(0, 50)}...
+                  <div className="p-2 bg-gray-50 dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700">
+                    <div className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                      فارسی:
+                    </div>
+                    <div className="text-sm text-gray-900 dark:text-gray-100" dir="rtl">
+                      {persianText}
+                    </div>
                   </div>
                 </div>
               );
@@ -107,7 +141,10 @@ export const HistoryPanel: React.FC<HistoryPanelProps> = ({
         <Input
           placeholder="جستجو در تاریخچه..."
           value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
+          onChange={(e) => {
+            setSearchQuery(e.target.value);
+            setCurrentPage(1);
+          }}
         />
       </div>
 
@@ -116,7 +153,43 @@ export const HistoryPanel: React.FC<HistoryPanelProps> = ({
           {searchQuery ? 'نتیجه‌ای یافت نشد' : 'تاریخچه خالی است'}
         </div>
       ) : (
-        <Accordion items={accordionItems} />
+        <>
+          <Accordion items={accordionItems} />
+          
+          {totalPages > 1 && (
+            <div className="flex items-center justify-center gap-2 mt-4">
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() => handlePageChange(currentPage - 1)}
+                disabled={currentPage === 1}
+              >
+                قبلی
+              </Button>
+              <div className="flex items-center gap-1">
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                  <Button
+                    key={page}
+                    size="sm"
+                    variant={currentPage === page ? 'primary' : 'secondary'}
+                    onClick={() => handlePageChange(page)}
+                    className="min-w-[2.5rem]"
+                  >
+                    {page}
+                  </Button>
+                ))}
+              </div>
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() => handlePageChange(currentPage + 1)}
+                disabled={currentPage === totalPages}
+              >
+                بعدی
+              </Button>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

@@ -1,17 +1,17 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { TranslationResult as TranslationResultType } from '../../../utils/validation';
 import { Accordion } from '../../ui/Accordion/Accordion';
 import { Button } from '../../ui/Button/Button';
 import { Textarea } from '../../ui/Textarea/Textarea';
+import { ttsService } from '../../../services/tts/TTSService';
+import { useTTSStore } from '../../../stores/ttsStore';
 
 interface TranslationResultProps {
   result: TranslationResultType;
   selectedIndex: number | null;
   onSelect: (index: number) => void;
   onCopy: (text: string) => void;
-  confidenceScore?: number;
   fontSize?: number;
-  rtlDirection?: boolean;
 }
 
 export const TranslationResult: React.FC<TranslationResultProps> = ({
@@ -19,14 +19,30 @@ export const TranslationResult: React.FC<TranslationResultProps> = ({
   selectedIndex,
   onSelect,
   onCopy,
-  confidenceScore,
   fontSize = 16,
-  rtlDirection = false,
 }) => {
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [editedTexts, setEditedTexts] = useState<
     Record<string, { english: string; persian: string }>
   >({});
+  const [playingIndex, setPlayingIndex] = useState<number | null>(null);
+  
+  const { isPlaying, progress, setIsPlaying, setProgress } = useTTSStore();
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (isPlaying && playingIndex !== null) {
+        const currentProgress = ttsService.getProgress();
+        setProgress(currentProgress);
+        if (currentProgress >= 100) {
+          setIsPlaying(false);
+          setPlayingIndex(null);
+        }
+      }
+    }, 100);
+
+    return () => clearInterval(interval);
+  }, [isPlaying, playingIndex, setProgress, setIsPlaying]);
 
   const handleEdit = (index: number, type: 'english' | 'persian') => {
     setEditingIndex(index);
@@ -64,6 +80,39 @@ export const TranslationResult: React.FC<TranslationResultProps> = ({
     return result[`${type}_${index}` as keyof TranslationResultType] as string;
   };
 
+  const handlePlay = async (index: number) => {
+    // اگر همین نتیجه در حال پخش است، آن را متوقف کن
+    if (playingIndex === index && isPlaying) {
+      ttsService.stop();
+      setIsPlaying(false);
+      setPlayingIndex(null);
+      return;
+    }
+
+    const englishText = getResultText(index, 'english');
+    if (!englishText) return;
+
+    try {
+      setPlayingIndex(index);
+      setIsPlaying(true);
+      setProgress(0);
+      await ttsService.speak(englishText, 1.0);
+      setIsPlaying(false);
+      setProgress(100);
+      setPlayingIndex(null);
+    } catch (error) {
+      console.error('TTS Error:', error);
+      setIsPlaying(false);
+      setPlayingIndex(null);
+    }
+  };
+
+  const handleCancel = () => {
+    ttsService.stop();
+    setIsPlaying(false);
+    setPlayingIndex(null);
+  };
+
   const items = [1, 2, 3].map((index) => {
     const englishText = getResultText(index, 'english');
     const persianText = getResultText(index, 'persian');
@@ -72,7 +121,7 @@ export const TranslationResult: React.FC<TranslationResultProps> = ({
 
     return {
       id: `result-${index}`,
-      title: `ترجمه ${index}${confidenceScore ? ` (امتیاز: ${confidenceScore}%)` : ''}`,
+      title: `ترجمه ${index}`,
       defaultOpen: index === 1,
       content: (
         <div className="space-y-4">
@@ -115,6 +164,25 @@ export const TranslationResult: React.FC<TranslationResultProps> = ({
                     >
                       کپی
                     </Button>
+                    {playingIndex === index && isPlaying ? (
+                      <Button
+                        size="sm"
+                        variant="danger"
+                        onClick={handleCancel}
+                        isLoading={true}
+                      >
+                        لغو
+                      </Button>
+                    ) : (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => handlePlay(index)}
+                        disabled={playingIndex !== null && playingIndex !== index}
+                      >
+                        پخش صدا
+                      </Button>
+                    )}
                   </>
                 )}
               </div>
@@ -132,11 +200,13 @@ export const TranslationResult: React.FC<TranslationResultProps> = ({
                   })
                 }
                 rows={3}
+                dir="ltr"
               />
             ) : (
               <div
-                className="p-3 bg-gray-50 dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700"
+                className="p-3 bg-gray-50 dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100"
                 style={{ fontSize: `${fontSize}px` }}
+                dir="ltr"
               >
                 {englishText}
               </div>
@@ -198,15 +268,15 @@ export const TranslationResult: React.FC<TranslationResultProps> = ({
                   })
                 }
                 rows={3}
-                dir={rtlDirection ? 'rtl' : 'ltr'}
+                dir="rtl"
               />
             ) : (
               <div
-                className="p-3 bg-gray-50 dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700"
+                className="p-3 bg-gray-50 dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100"
                 style={{
                   fontSize: `${fontSize}px`,
-                  direction: rtlDirection ? 'rtl' : 'ltr',
                 }}
+                dir="rtl"
               >
                 {persianText}
               </div>

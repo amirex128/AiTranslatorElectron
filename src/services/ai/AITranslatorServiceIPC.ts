@@ -10,7 +10,6 @@ export interface TranslatorOptions {
 
 export interface TranslatorResponse {
   result: TranslationResult;
-  confidenceScore?: number;
 }
 
 class AITranslatorServiceIPC {
