@@ -1,15 +1,16 @@
 import { BrowserWindow } from 'electron';
+import { settingsService } from './settings/SettingsService';
 
 export let mainWindow: BrowserWindow | null = null;
 let isQuitting = false;
 
-const DEFAULT_WINDOW_SIZE = { width: 800, height: 600 };
-
-export const createWindow = (): void => {
+export const createWindow = async (): Promise<void> => {
+  const settings = await settingsService.getSettings();
+  const windowSize = settings.windowSize;
 
   mainWindow = new BrowserWindow({
-    width: DEFAULT_WINDOW_SIZE.width,
-    height: DEFAULT_WINDOW_SIZE.height,
+    width: windowSize.width,
+    height: windowSize.height,
     minWidth: 600,
     minHeight: 400,
     webPreferences: {
@@ -77,6 +78,12 @@ export const closeWindow = (): void => {
   if (mainWindow) {
     isQuitting = true;
     mainWindow.close();
+  }
+};
+
+export const updateWindowSize = (width: number, height: number): void => {
+  if (mainWindow) {
+    mainWindow.setSize(width, height);
   }
 };
 

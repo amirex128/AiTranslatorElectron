@@ -18,6 +18,11 @@ export interface ElectronAPI {
   addHistory: (entry: any) => Promise<{ success: boolean; error?: string }>;
   deleteHistory: (id: string) => Promise<{ success: boolean; error?: string }>;
   clearHistory: () => Promise<{ success: boolean; error?: string }>;
+  getSettings: () => Promise<{ success: boolean; data?: any; error?: string }>;
+  updateSettings: (partial: any) => Promise<{ success: boolean; error?: string }>;
+  resetSettings: () => Promise<{ success: boolean; error?: string }>;
+  onSettingsChange: (callback: () => void) => void;
+  onSettingsOpenPage: (callback: () => void) => void;
 }
 
 declare global {

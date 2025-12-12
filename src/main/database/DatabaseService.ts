@@ -1,94 +1,96 @@
-import Database from 'better-sqlite3';
+import * as sqlite3 from 'sqlite3';
 import { app } from 'electron';
 import { join } from 'path';
 import { TranslationResult } from '../../utils/validation';
 import { AIModel } from '../../models/AIModel';
-
-interface CacheEntry {
-  id: string;
-  model: string;
-  userInput: string;
-  systemTemplate: string;
-  result: string; // JSON string of TranslationResult
-  timestamp: number;
-  cacheKey: string;
-}
-
-interface HistoryEntry {
-  id: string;
-  timestamp: number;
-  input: string;
-  type: 'persian-to-english' | 'english-to-persian' | 'grammar';
-  model: string;
-  result: string; // JSON string of TranslationResult
-  responseTime: number | null;
-}
+import { promisify } from 'util';
 
 export class DatabaseService {
-  private db: Database.Database | null = null;
+  private db: sqlite3.Database | null = null;
   private dbPath: string;
+  private initialized: boolean = false;
 
   constructor() {
     const userDataPath = app.getPath('userData');
     this.dbPath = join(userDataPath, 'translator.db');
   }
 
-  private getDatabase(): Database.Database {
+  private async getDatabase(): Promise<sqlite3.Database> {
     if (!this.db) {
-      this.db = new Database(this.dbPath);
-      this.initializeDatabase();
+      this.db = new sqlite3.Database(this.dbPath, (err: Error | null) => {
+        if (err) {
+          console.error('Error opening database:', err);
+        }
+      });
+      await this.initializeDatabase();
     }
     return this.db;
   }
 
-  private initializeDatabase(): void {
-    if (!this.db) return;
+  private async initializeDatabase(): Promise<void> {
+    if (this.initialized || !this.db) return;
 
-    // Create cache table
-    this.db.exec(`
-      CREATE TABLE IF NOT EXISTS cache (
-        id TEXT PRIMARY KEY,
-        model TEXT NOT NULL,
-        userInput TEXT NOT NULL,
-        systemTemplate TEXT NOT NULL,
-        result TEXT NOT NULL,
-        timestamp INTEGER NOT NULL,
-        cacheKey TEXT NOT NULL UNIQUE
-      )
-    `);
+    const run = promisify(this.db.run.bind(this.db));
 
-    // Create index on cacheKey for faster lookups
-    this.db.exec(`
-      CREATE INDEX IF NOT EXISTS idx_cache_key ON cache(cacheKey)
-    `);
+    try {
+      // Create cache table
+      await run(`
+        CREATE TABLE IF NOT EXISTS cache (
+          id TEXT PRIMARY KEY,
+          model TEXT NOT NULL,
+          userInput TEXT NOT NULL,
+          systemTemplate TEXT NOT NULL,
+          result TEXT NOT NULL,
+          timestamp INTEGER NOT NULL,
+          cacheKey TEXT NOT NULL UNIQUE
+        )
+      `);
 
-    // Create history table
-    this.db.exec(`
-      CREATE TABLE IF NOT EXISTS history (
-        id TEXT PRIMARY KEY,
-        timestamp INTEGER NOT NULL,
-        input TEXT NOT NULL,
-        type TEXT NOT NULL,
-        model TEXT NOT NULL,
-        result TEXT NOT NULL,
-        responseTime INTEGER
-      )
-    `);
+      // Create index on cacheKey for faster lookups
+      await run(`
+        CREATE INDEX IF NOT EXISTS idx_cache_key ON cache(cacheKey)
+      `);
 
-    // Create index on timestamp for faster sorting
-    this.db.exec(`
-      CREATE INDEX IF NOT EXISTS idx_history_timestamp ON history(timestamp DESC)
-    `);
+      // Create history table
+      await run(`
+        CREATE TABLE IF NOT EXISTS history (
+          id TEXT PRIMARY KEY,
+          timestamp INTEGER NOT NULL,
+          input TEXT NOT NULL,
+          type TEXT NOT NULL,
+          model TEXT NOT NULL,
+          result TEXT NOT NULL,
+          responseTime INTEGER
+        )
+      `);
+
+      // Create index on timestamp for faster sorting
+      await run(`
+        CREATE INDEX IF NOT EXISTS idx_history_timestamp ON history(timestamp DESC)
+      `);
+
+      // Create settings table
+      await run(`
+        CREATE TABLE IF NOT EXISTS settings (
+          key TEXT PRIMARY KEY,
+          value TEXT NOT NULL
+        )
+      `);
+
+      this.initialized = true;
+    } catch (error) {
+      console.error('Error initializing database:', error);
+    }
   }
 
   // Cache methods
-  getCache(model: string, userInput: string, systemTemplate: string): TranslationResult | null {
+  async getCache(model: string, userInput: string, systemTemplate: string): Promise<TranslationResult | null> {
     try {
-      const db = this.getDatabase();
+      const db = await this.getDatabase();
       const cacheKey = this.generateCacheKey(model, userInput, systemTemplate);
 
-      const stmt = db.prepare('SELECT result FROM cache WHERE cacheKey = ?');
-      const row = stmt.get(cacheKey) as { result: string } | undefined;
+      const get = promisify(db.get.bind(db));
+      const row = await get('SELECT result FROM cache WHERE cacheKey = ?', [cacheKey]) as { result: string } | undefined;
 
       if (row) {
         return JSON.parse(row.result) as TranslationResult;
@@ -101,47 +103,40 @@ export class DatabaseService {
     }
   }
 
-  setCache(
+  async setCache(
     model: string,
     userInput: string,
     systemTemplate: string,
     result: TranslationResult
-  ): void {
+  ): Promise<void> {
     try {
-      const db = this.getDatabase();
+      const db = await this.getDatabase();
       const cacheKey = this.generateCacheKey(model, userInput, systemTemplate);
       const id = `${Date.now()}-${Math.random()}`;
 
-      const stmt = db.prepare(`
-        INSERT OR REPLACE INTO cache (id, model, userInput, systemTemplate, result, timestamp, cacheKey)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-      `);
-
-      stmt.run(
-        id,
-        model,
-        userInput,
-        systemTemplate,
-        JSON.stringify(result),
-        Date.now(),
-        cacheKey
+      const run = promisify(db.run.bind(db));
+      await run(
+        `INSERT OR REPLACE INTO cache (id, model, userInput, systemTemplate, result, timestamp, cacheKey)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        [id, model, userInput, systemTemplate, JSON.stringify(result), Date.now(), cacheKey]
       );
     } catch (error) {
       console.error('Error writing cache to database:', error);
     }
   }
 
-  clearCache(): void {
+  async clearCache(): Promise<void> {
     try {
-      const db = this.getDatabase();
-      db.exec('DELETE FROM cache');
+      const db = await this.getDatabase();
+      const run = promisify(db.run.bind(db));
+      await run('DELETE FROM cache');
     } catch (error) {
       console.error('Error clearing cache:', error);
     }
   }
 
   // History methods
-  getAllHistory(): Array<{
+  async getAllHistory(): Promise<Array<{
     id: string;
     timestamp: number;
     input: string;
@@ -149,11 +144,11 @@ export class DatabaseService {
     model: AIModel;
     result: TranslationResult;
     responseTime?: number;
-  }> {
+  }>> {
     try {
-      const db = this.getDatabase();
-      const stmt = db.prepare('SELECT * FROM history ORDER BY timestamp DESC');
-      const rows = stmt.all() as Array<{
+      const db = await this.getDatabase();
+      const all = promisify(db.all.bind(db));
+      const rows = await all('SELECT * FROM history ORDER BY timestamp DESC') as Array<{
         id: string;
         timestamp: number;
         input: string;
@@ -178,53 +173,136 @@ export class DatabaseService {
     }
   }
 
-  addHistoryEntry(entry: {
+  async addHistoryEntry(entry: {
     input: string;
     type: 'persian-to-english' | 'english-to-persian' | 'grammar';
     model: AIModel;
     result: TranslationResult;
     responseTime?: number;
-  }): void {
+  }): Promise<void> {
     try {
-      const db = this.getDatabase();
+      const db = await this.getDatabase();
       const id = `${Date.now()}-${Math.random()}`;
       const timestamp = Date.now();
 
-      const stmt = db.prepare(`
-        INSERT INTO history (id, timestamp, input, type, model, result, responseTime)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-      `);
-
-      stmt.run(
-        id,
-        timestamp,
-        entry.input,
-        entry.type,
-        entry.model,
-        JSON.stringify(entry.result),
-        entry.responseTime ?? null
+      const run = promisify(db.run.bind(db));
+      await run(
+        `INSERT INTO history (id, timestamp, input, type, model, result, responseTime)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        [id, timestamp, entry.input, entry.type, entry.model, JSON.stringify(entry.result), entry.responseTime ?? null]
       );
     } catch (error) {
       console.error('Error adding history entry:', error);
     }
   }
 
-  deleteHistoryEntry(id: string): void {
+  async deleteHistoryEntry(id: string): Promise<void> {
     try {
-      const db = this.getDatabase();
-      const stmt = db.prepare('DELETE FROM history WHERE id = ?');
-      stmt.run(id);
+      const db = await this.getDatabase();
+      const run = promisify(db.run.bind(db));
+      await run('DELETE FROM history WHERE id = ?', [id]);
     } catch (error) {
       console.error('Error deleting history entry:', error);
     }
   }
 
-  clearHistory(): void {
+  async clearHistory(): Promise<void> {
     try {
-      const db = this.getDatabase();
-      db.exec('DELETE FROM history');
+      const db = await this.getDatabase();
+      const run = promisify(db.run.bind(db));
+      await run('DELETE FROM history');
     } catch (error) {
       console.error('Error clearing history:', error);
+    }
+  }
+
+  // Settings methods
+  async getSetting(key: string): Promise<string | null> {
+    try {
+      const db = await this.getDatabase();
+      const get = promisify(db.get.bind(db));
+      const row = await get('SELECT value FROM settings WHERE key = ?', [key]) as { value: string } | undefined;
+
+      if (row) {
+        return row.value;
+      }
+
+      return null;
+    } catch (error) {
+      console.error('Error reading setting from database:', error);
+      return null;
+    }
+  }
+
+  async setSetting(key: string, value: string): Promise<void> {
+    try {
+      const db = await this.getDatabase();
+      const run = promisify(db.run.bind(db));
+      await run('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)', [key, value]);
+    } catch (error) {
+      console.error('Error writing setting to database:', error);
+    }
+  }
+
+  async getAllSettings(): Promise<Record<string, string>> {
+    try {
+      const db = await this.getDatabase();
+      const all = promisify(db.all.bind(db));
+      const rows = await all('SELECT key, value FROM settings') as Array<{ key: string; value: string }>;
+
+      const settings: Record<string, string> = {};
+      rows.forEach((row) => {
+        settings[row.key] = row.value;
+      });
+
+      return settings;
+    } catch (error) {
+      console.error('Error reading all settings from database:', error);
+      return {};
+    }
+  }
+
+  async setAllSettings(settings: Record<string, string>): Promise<void> {
+    try {
+      const db = await this.getDatabase();
+      const run = promisify(db.run.bind(db));
+
+      // Use a transaction for better performance
+      await run('BEGIN TRANSACTION');
+      try {
+        for (const [key, value] of Object.entries(settings)) {
+          await run('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)', [key, value]);
+        }
+        await run('COMMIT');
+      } catch (error) {
+        await run('ROLLBACK');
+        throw error;
+      }
+    } catch (error) {
+      console.error('Error writing all settings to database:', error);
+    }
+  }
+
+  async initializeSettingsFromConfig(defaultConfig: Record<string, any>): Promise<void> {
+    try {
+      const existingSettings = await this.getAllSettings();
+
+      // Only initialize if settings table is empty
+      if (Object.keys(existingSettings).length === 0) {
+        const settingsToSave: Record<string, string> = {};
+        
+        for (const [key, value] of Object.entries(defaultConfig)) {
+          if (typeof value === 'object' && value !== null) {
+            settingsToSave[key] = JSON.stringify(value);
+          } else {
+            settingsToSave[key] = String(value);
+          }
+        }
+
+        await this.setAllSettings(settingsToSave);
+      }
+    } catch (error) {
+      console.error('Error initializing settings from config:', error);
     }
   }
 
@@ -240,13 +318,22 @@ export class DatabaseService {
     return Math.abs(hash).toString(36);
   }
 
-  close(): void {
-    if (this.db) {
-      this.db.close();
-      this.db = null;
-    }
+  async close(): Promise<void> {
+    return new Promise((resolve, reject) => {
+      if (this.db) {
+        this.db.close((err: Error | null) => {
+          if (err) {
+            reject(err);
+          } else {
+            this.db = null;
+            resolve();
+          }
+        });
+      } else {
+        resolve();
+      }
+    });
   }
 }
 
 export const databaseService = new DatabaseService();
-

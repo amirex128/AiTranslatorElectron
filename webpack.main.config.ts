@@ -17,4 +17,12 @@ export const mainConfig: Configuration = {
   resolve: {
     extensions: ['.js', '.ts', '.jsx', '.tsx', '.css', '.json'],
   },
+  externals: {
+    'sqlite3': 'commonjs sqlite3',
+  },
+  target: 'electron-main',
+  node: {
+    __dirname: false,
+    __filename: false,
+  },
 };

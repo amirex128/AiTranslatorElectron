@@ -39,6 +39,17 @@ export const electronAPI = {
   addHistory: (entry: any) => ipcRenderer.invoke('history:add', entry),
   deleteHistory: (id: string) => ipcRenderer.invoke('history:delete', id),
   clearHistory: () => ipcRenderer.invoke('history:clear'),
+
+  // Settings
+  getSettings: () => ipcRenderer.invoke('settings:get'),
+  updateSettings: (partial: any) => ipcRenderer.invoke('settings:update', partial),
+  resetSettings: () => ipcRenderer.invoke('settings:reset'),
+  onSettingsChange: (callback: () => void) => {
+    ipcRenderer.on('settings:changed', () => callback());
+  },
+  onSettingsOpenPage: (callback: () => void) => {
+    ipcRenderer.on('settings:openPage', () => callback());
+  },
 };
 
 contextBridge.exposeInMainWorld('electronAPI', electronAPI);

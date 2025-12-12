@@ -13,9 +13,13 @@ import { LastRequestTime } from '../components/ui/LastRequestTime/LastRequestTim
 import { aiTranslatorServiceIPC, TranslatorResponse } from '../services/ai/AITranslatorServiceIPC';
 import { writeClipboard } from '../utils/clipboard';
 import { AIModel } from '../models/AIModel';
-import { APP_CONFIG } from '../constants/appConfig';
+import { useSettingsStore } from '../stores/settingsStore';
 
-export const MainPage: React.FC = () => {
+interface MainPageProps {
+  onOpenSettings?: () => void;
+}
+
+export const MainPage: React.FC<MainPageProps> = ({ onOpenSettings }) => {
   const {
     persianToEnglishInput,
     englishToPersianInput,
@@ -37,8 +41,19 @@ export const MainPage: React.FC = () => {
   } = useTranslationStore();
 
   const { addEntry } = useHistoryStore();
+  const { settings, loadSettings } = useSettingsStore();
 
-  const [selectedModel, setSelectedModel] = useState<AIModel>(APP_CONFIG.selectedModel);
+  const [selectedModel, setSelectedModel] = useState<AIModel | null>(null);
+
+  useEffect(() => {
+    loadSettings();
+  }, [loadSettings]);
+
+  useEffect(() => {
+    if (settings) {
+      setSelectedModel(settings.selectedModel);
+    }
+  }, [settings]);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [showHistory, setShowHistory] = useState(false);
   const [startTime, setStartTime] = useState<number | null>(null);
@@ -72,6 +87,11 @@ export const MainPage: React.FC = () => {
   }, [setPersianToEnglishInput, setEnglishToPersianInput, setGrammarInput]);
 
   const handleTranslate = async () => {
+    if (!selectedModel || !settings) {
+      setError('تنظیمات بارگذاری نشده است');
+      return;
+    }
+
     let input = '';
     let translateFn: (
       text: string,
@@ -160,7 +180,7 @@ export const MainPage: React.FC = () => {
         </h1>
 
         <ModelSelector
-          selectedModel={selectedModel}
+          selectedModel={selectedModel || (settings?.selectedModel as AIModel)}
           onModelChange={setSelectedModel}
         />
 
@@ -226,7 +246,7 @@ export const MainPage: React.FC = () => {
               selectedIndex={selectedResult}
               onSelect={setSelectedResult}
               onCopy={handleCopy}
-              fontSize={APP_CONFIG.fontSize}
+              fontSize={settings?.fontSize || 16}
             />
           </div>
         )}

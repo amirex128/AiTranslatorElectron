@@ -1,12 +1,11 @@
 import { AIModel } from '../../models/AIModel';
 import { TranslationResult } from '../../utils/validation';
-import { APP_CONFIG } from '../../constants/appConfig';
 import {
   getPersianToEnglishPrompt,
   getEnglishToPersianPrompt,
   getGrammarCorrectionPrompt,
 } from './prompts';
-import { aiChatService } from './AIChatService';
+import { AIChatService, AIChatServiceConfig } from './AIChatService';
 import { AIChatOptions } from './types';
 
 export interface TranslatorOptions {
@@ -20,7 +19,15 @@ export interface TranslatorResponse {
   result: TranslationResult;
 }
 
-class AITranslatorService {
+export class AITranslatorService {
+  private config: AIChatServiceConfig;
+  private chatService: AIChatService;
+
+  constructor(config: AIChatServiceConfig) {
+    this.config = config;
+    this.chatService = new AIChatService(config);
+  }
+
   async translatePersianToEnglish(
     text: string,
     model: AIModel,
@@ -28,13 +35,13 @@ class AITranslatorService {
   ): Promise<TranslatorResponse> {
     const systemTemplate = getPersianToEnglishPrompt(text);
 
-    const response = await aiChatService.chat(
+    const response = await this.chatService.chat(
       {
         systemTemplate,
         model,
         userInput: text,
-        aiProviderUrl: options.aiProviderUrl || APP_CONFIG.aiProviderUrl,
-        temperature: options.temperature ?? APP_CONFIG.temperature,
+        aiProviderUrl: options.aiProviderUrl || this.config.aiProviderUrl,
+        temperature: options.temperature ?? this.config.temperature,
       },
       {
         abortSignal: options.abortSignal,
@@ -54,13 +61,13 @@ class AITranslatorService {
   ): Promise<TranslatorResponse> {
     const systemTemplate = getEnglishToPersianPrompt(text);
 
-    const response = await aiChatService.chat(
+    const response = await this.chatService.chat(
       {
         systemTemplate,
         model,
         userInput: text,
-        aiProviderUrl: options.aiProviderUrl || APP_CONFIG.aiProviderUrl,
-        temperature: options.temperature ?? APP_CONFIG.temperature,
+        aiProviderUrl: options.aiProviderUrl || this.config.aiProviderUrl,
+        temperature: options.temperature ?? this.config.temperature,
       },
       {
         abortSignal: options.abortSignal,
@@ -80,13 +87,13 @@ class AITranslatorService {
   ): Promise<TranslatorResponse> {
     const systemTemplate = getGrammarCorrectionPrompt(text);
 
-    const response = await aiChatService.chat(
+    const response = await this.chatService.chat(
       {
         systemTemplate,
         model,
         userInput: text,
-        aiProviderUrl: options.aiProviderUrl || APP_CONFIG.aiProviderUrl,
-        temperature: options.temperature ?? APP_CONFIG.temperature,
+        aiProviderUrl: options.aiProviderUrl || this.config.aiProviderUrl,
+        temperature: options.temperature ?? this.config.temperature,
       },
       {
         abortSignal: options.abortSignal,
@@ -100,5 +107,5 @@ class AITranslatorService {
   }
 }
 
-export const aiTranslatorService = new AITranslatorService();
+// aiTranslatorService will be initialized with config in index.ts
 

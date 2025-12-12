@@ -36,8 +36,6 @@ export const AI_MODELS = [
   { key: 'GLM_4_5_AIR_OPENROUTER2', value: AIModel.GLM_4_5_AIR_OPENROUTER2, label: 'GLM 4.5 Air (OpenRouter 2)' },
 ] as const;
 
-import { APP_CONFIG } from '../constants/appConfig';
-
 export const isOpenRouterModel = (model: AIModel): boolean => {
   const modelKey = Object.keys(AIModel).find(key => AIModel[key as keyof typeof AIModel] === model);
   return modelKey ? modelKey.includes('OPENROUTER') : false;
@@ -49,13 +47,13 @@ export const getOpenRouterModelName = (model: AIModel): string => {
   return modelName;
 };
 
-export const getOpenRouterApiKey = (model: AIModel): string => {
+export const getOpenRouterApiKey = (model: AIModel, apiKey1: string, apiKey2: string): string => {
   const modelKey = Object.keys(AIModel).find(key => AIModel[key as keyof typeof AIModel] === model);
   if (modelKey) {
     if (modelKey.endsWith('OPENROUTER1')) {
-      return APP_CONFIG.openRouterApiKey1;
+      return apiKey1;
     } else if (modelKey.endsWith('OPENROUTER2')) {
-      return APP_CONFIG.openRouterApiKey2;
+      return apiKey2;
     }
   }
   return '';

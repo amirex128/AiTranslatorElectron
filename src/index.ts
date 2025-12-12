@@ -3,10 +3,14 @@ import { createWindow, showWindow, minimizeWindow, closeWindow } from './main/wi
 import { createTray } from './main/tray';
 import { registerShortcuts, unregisterShortcuts } from './main/shortcuts';
 import { checkAIProviderConnection } from './main/healthCheck';
-import { aiTranslatorService } from './services/ai/AITranslatorService';
 import { AIModel } from './models/AIModel';
 import { APP_CONFIG } from './constants/appConfig';
 import { databaseService } from './main/database/DatabaseService';
+import { settingsService } from './main/settings/SettingsService';
+import { mainWindow } from './main/window';
+import { AITranslatorService } from './services/ai/AITranslatorService';
+
+let aiTranslatorService: AITranslatorService;
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (require('electron-squirrel-startup')) {
@@ -19,7 +23,22 @@ app.on('ready', async () => {
   // Remove default menu bar
   Menu.setApplicationMenu(null);
   
-  createWindow();
+  // Initialize settings from APP_CONFIG if database is empty
+  await databaseService.initializeSettingsFromConfig(APP_CONFIG);
+  
+  // Initialize AI services with settings
+  const settings = await settingsService.getSettings();
+  aiTranslatorService = new AITranslatorService({
+    aiProviderUrl: settings.aiProviderUrl,
+    temperature: settings.temperature,
+    openRouterBaseUrl: settings.openRouterBaseUrl,
+    openRouterApiKey1: settings.openRouterApiKey1,
+    openRouterApiKey2: settings.openRouterApiKey2,
+    openRouterReferer: settings.openRouterReferer,
+    openRouterSiteName: settings.openRouterSiteName,
+  });
+  
+  await createWindow();
   createTray();
   
   // Get mainWindow after it's created
@@ -29,9 +48,9 @@ app.on('ready', async () => {
   }
 
   // Health check on startup
-  const isConnected = await checkAIProviderConnection(APP_CONFIG.aiProviderUrl);
+  const isConnected = await checkAIProviderConnection(settings.aiProviderUrl);
   if (!isConnected) {
-    console.warn('AI Provider is not available at', APP_CONFIG.aiProviderUrl);
+    console.warn('AI Provider is not available at', settings.aiProviderUrl);
   }
 });
 
@@ -46,9 +65,9 @@ app.on('activate', () => {
   showWindow();
 });
 
-app.on('will-quit', () => {
+app.on('will-quit', async () => {
   unregisterShortcuts();
-  databaseService.close();
+  await databaseService.close();
 });
 
 // IPC Handlers - Register all handlers before app ready
@@ -84,10 +103,7 @@ ipcMain.handle('ai-provider:check', (_event, url: string) => {
 // Translation IPC Handlers
 ipcMain.handle('translate:persian-to-english', async (_event, { text, model }) => {
   try {
-    const result = await aiTranslatorService.translatePersianToEnglish(text, model as AIModel, {
-      aiProviderUrl: APP_CONFIG.aiProviderUrl,
-      temperature: APP_CONFIG.temperature,
-    });
+    const result = await aiTranslatorService.translatePersianToEnglish(text, model as AIModel, {});
     return { success: true, data: result };
   } catch (error: any) {
     return { success: false, error: error.message };
@@ -96,10 +112,7 @@ ipcMain.handle('translate:persian-to-english', async (_event, { text, model }) =
 
 ipcMain.handle('translate:english-to-persian', async (_event, { text, model }) => {
   try {
-    const result = await aiTranslatorService.translateEnglishToPersian(text, model as AIModel, {
-      aiProviderUrl: APP_CONFIG.aiProviderUrl,
-      temperature: APP_CONFIG.temperature,
-    });
+    const result = await aiTranslatorService.translateEnglishToPersian(text, model as AIModel, {});
     return { success: true, data: result };
   } catch (error: any) {
     return { success: false, error: error.message };
@@ -108,10 +121,7 @@ ipcMain.handle('translate:english-to-persian', async (_event, { text, model }) =
 
 ipcMain.handle('translate:grammar', async (_event, { text, model }) => {
   try {
-    const result = await aiTranslatorService.correctGrammar(text, model as AIModel, {
-      aiProviderUrl: APP_CONFIG.aiProviderUrl,
-      temperature: APP_CONFIG.temperature,
-    });
+    const result = await aiTranslatorService.correctGrammar(text, model as AIModel, {});
     return { success: true, data: result };
   } catch (error: any) {
     return { success: false, error: error.message };
@@ -167,27 +177,27 @@ ipcMain.handle('tts:fetch-audio', async (_event, url: string) => {
 });
 
 // Cache IPC Handlers
-ipcMain.handle('cache:get', (_event, { model, userInput, systemTemplate }) => {
+ipcMain.handle('cache:get', async (_event, { model, userInput, systemTemplate }) => {
   try {
-    const result = databaseService.getCache(model, userInput, systemTemplate);
+    const result = await databaseService.getCache(model, userInput, systemTemplate);
     return { success: true, data: result };
   } catch (error: any) {
     return { success: false, error: error.message };
   }
 });
 
-ipcMain.handle('cache:set', (_event, { model, userInput, systemTemplate, result }) => {
+ipcMain.handle('cache:set', async (_event, { model, userInput, systemTemplate, result }) => {
   try {
-    databaseService.setCache(model, userInput, systemTemplate, result);
+    await databaseService.setCache(model, userInput, systemTemplate, result);
     return { success: true };
   } catch (error: any) {
     return { success: false, error: error.message };
   }
 });
 
-ipcMain.handle('cache:clear', () => {
+ipcMain.handle('cache:clear', async () => {
   try {
-    databaseService.clearCache();
+    await databaseService.clearCache();
     return { success: true };
   } catch (error: any) {
     return { success: false, error: error.message };
@@ -195,36 +205,130 @@ ipcMain.handle('cache:clear', () => {
 });
 
 // History IPC Handlers
-ipcMain.handle('history:getAll', () => {
+ipcMain.handle('history:getAll', async () => {
   try {
-    const entries = databaseService.getAllHistory();
+    const entries = await databaseService.getAllHistory();
     return { success: true, data: entries };
   } catch (error: any) {
     return { success: false, error: error.message };
   }
 });
 
-ipcMain.handle('history:add', (_event, entry) => {
+ipcMain.handle('history:add', async (_event, entry) => {
   try {
-    databaseService.addHistoryEntry(entry);
+    await databaseService.addHistoryEntry(entry);
     return { success: true };
   } catch (error: any) {
     return { success: false, error: error.message };
   }
 });
 
-ipcMain.handle('history:delete', (_event, id: string) => {
+ipcMain.handle('history:delete', async (_event, id: string) => {
   try {
-    databaseService.deleteHistoryEntry(id);
+    await databaseService.deleteHistoryEntry(id);
     return { success: true };
   } catch (error: any) {
     return { success: false, error: error.message };
   }
 });
 
-ipcMain.handle('history:clear', () => {
+ipcMain.handle('history:clear', async () => {
   try {
-    databaseService.clearHistory();
+    await databaseService.clearHistory();
+    return { success: true };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+});
+
+// Settings IPC Handlers
+ipcMain.handle('settings:get', async () => {
+  try {
+    const settings = await settingsService.getSettings();
+    return { success: true, data: settings };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('settings:update', async (_event, partial) => {
+  try {
+    await settingsService.updateSettings(partial);
+    
+    // Reinitialize AI services with new settings
+    const updatedSettings = await settingsService.getSettings();
+    aiTranslatorService = new AITranslatorService({
+      aiProviderUrl: updatedSettings.aiProviderUrl,
+      temperature: updatedSettings.temperature,
+      openRouterBaseUrl: updatedSettings.openRouterBaseUrl,
+      openRouterApiKey1: updatedSettings.openRouterApiKey1,
+      openRouterApiKey2: updatedSettings.openRouterApiKey2,
+      openRouterReferer: updatedSettings.openRouterReferer,
+      openRouterSiteName: updatedSettings.openRouterSiteName,
+    });
+    
+    // If window size changed, update window
+    if (partial.windowSize && mainWindow) {
+      mainWindow.setSize(partial.windowSize.width, partial.windowSize.height);
+    }
+    
+    // Notify renderer about settings change
+    if (mainWindow) {
+      mainWindow.webContents.send('settings:changed');
+    }
+    
+    return { success: true };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('settings:reset', async () => {
+  try {
+    await settingsService.resetToDefaults();
+    
+    // Reinitialize AI services with default settings
+    const settings = await settingsService.getSettings();
+    aiTranslatorService = new AITranslatorService({
+      aiProviderUrl: settings.aiProviderUrl,
+      temperature: settings.temperature,
+      openRouterBaseUrl: settings.openRouterBaseUrl,
+      openRouterApiKey1: settings.openRouterApiKey1,
+      openRouterApiKey2: settings.openRouterApiKey2,
+      openRouterReferer: settings.openRouterReferer,
+      openRouterSiteName: settings.openRouterSiteName,
+    });
+    
+    // Update window size to default
+    if (mainWindow) {
+      mainWindow.setSize(settings.windowSize.width, settings.windowSize.height);
+    }
+    
+    // Notify renderer about settings change
+    if (mainWindow) {
+      mainWindow.webContents.send('settings:changed');
+    }
+    
+    return { success: true };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('settings:getWindowSize', async () => {
+  try {
+    const settings = await settingsService.getSettings();
+    return { success: true, data: settings.windowSize };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('settings:openPage', () => {
+  try {
+    if (mainWindow) {
+      mainWindow.webContents.send('settings:openPage');
+    }
     return { success: true };
   } catch (error: any) {
     return { success: false, error: error.message };

@@ -1,14 +1,28 @@
 import { Ollama } from 'ollama';
 import OpenAI from 'openai';
 import { AIModel, isOpenRouterModel, getOpenRouterModelName, getOpenRouterApiKey } from '../../models/AIModel';
-import { APP_CONFIG } from '../../constants/appConfig';
 import { validateTranslationResult, TranslationResult } from '../../utils/validation';
 import { cacheService } from '../cache/CacheService';
 import { AIChatRequest, AIChatResponse, AIChatOptions } from './types';
 
+export interface AIChatServiceConfig {
+  aiProviderUrl: string;
+  temperature: number;
+  openRouterBaseUrl: string;
+  openRouterApiKey1: string;
+  openRouterApiKey2: string;
+  openRouterReferer: string;
+  openRouterSiteName: string;
+}
+
 class AIChatService {
   private defaultTimeout = 120000; // 120 seconds
   private defaultMaxRetries = 3;
+  private config: AIChatServiceConfig;
+
+  constructor(config: AIChatServiceConfig) {
+    this.config = config;
+  }
 
   async chat(
     request: AIChatRequest,
@@ -53,7 +67,7 @@ class AIChatService {
             onProgress
           );
         } else {
-          const aiProviderUrl = request.aiProviderUrl || APP_CONFIG.aiProviderUrl;
+          const aiProviderUrl = request.aiProviderUrl || this.config.aiProviderUrl;
           const client = new Ollama({ host: aiProviderUrl });
           result = await this.makeRequest(
             client,
@@ -109,7 +123,7 @@ class AIChatService {
           prompt: request.userInput,
           system: request.systemTemplate,
           options: {
-            temperature: request.temperature ?? APP_CONFIG.temperature,
+            temperature: request.temperature ?? this.config.temperature,
           },
           stream: true,
         })
@@ -181,17 +195,17 @@ class AIChatService {
 
       const startTime = Date.now();
       const modelName = getOpenRouterModelName(request.model);
-      const apiKey = getOpenRouterApiKey(request.model);
+      const apiKey = getOpenRouterApiKey(request.model, this.config.openRouterApiKey1, this.config.openRouterApiKey2);
       
       // Debug: Log the model name being sent
       console.log('OpenRouter Model Name:', modelName);
 
       const openai = new OpenAI({
-        baseURL: APP_CONFIG.openRouterBaseUrl,
+        baseURL: this.config.openRouterBaseUrl,
         apiKey: apiKey,
         defaultHeaders: {
-          'HTTP-Referer': APP_CONFIG.openRouterReferer,
-          'X-Title': APP_CONFIG.openRouterSiteName,
+          'HTTP-Referer': this.config.openRouterReferer,
+          'X-Title': this.config.openRouterSiteName,
         },
       });
 
@@ -208,11 +222,11 @@ class AIChatService {
 
       openai.chat.completions
         .create({
-          model: modelName,
-          messages: messages,
-          temperature: request.temperature ?? APP_CONFIG.temperature,
-          stream: true,
-        })
+                model: modelName,
+                messages: messages,
+                temperature: request.temperature ?? this.config.temperature,
+                stream: true,
+              })
         .then(async (stream) => {
           let fullResponse = '';
 
@@ -281,5 +295,5 @@ class AIChatService {
   }
 }
 
-export const aiChatService = new AIChatService();
+export { AIChatService };
 

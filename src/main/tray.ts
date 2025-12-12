@@ -17,6 +17,15 @@ export const createTray = (): void => {
       },
     },
     {
+      label: 'تنظیمات',
+      click: () => {
+        if (mainWindow) {
+          showWindow();
+          mainWindow.webContents.send('settings:openPage');
+        }
+      },
+    },
+    {
       type: 'separator',
     },
     {
