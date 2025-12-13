@@ -1,104 +1,181 @@
-import * as sqlite3 from 'sqlite3';
 import { app } from 'electron';
 import { join } from 'path';
+import { existsSync, mkdirSync } from 'fs';
+import { promises as fs } from 'fs';
 import { TranslationResult } from '../../utils/validation';
 import { AIModel } from '../../models/AIModel';
-import { promisify } from 'util';
+
+interface CacheEntry {
+  id: string;
+  model: string;
+  userInput: string;
+  systemTemplate: string;
+  result: string;
+  timestamp: number;
+  cacheKey: string;
+}
+
+interface HistoryEntry {
+  id: string;
+  timestamp: number;
+  input: string;
+  type: string;
+  model: string;
+  result: string;
+  responseTime: number | null;
+}
+
+interface SettingEntry {
+  key: string;
+  value: string;
+}
 
 export class DatabaseService {
-  private db: sqlite3.Database | null = null;
-  private dbPath: string;
+  private assetsPath: string;
+  private cachePath: string;
+  private historyPath: string;
+  private settingsPath: string;
   private initialized: boolean = false;
 
   constructor() {
-    const userDataPath = app.getPath('userData');
-    this.dbPath = join(userDataPath, 'translator.db');
-  }
-
-  private async getDatabase(): Promise<sqlite3.Database> {
-    if (!this.db) {
-      this.db = new sqlite3.Database(this.dbPath, (err: Error | null) => {
-        if (err) {
-          console.error('Error opening database:', err);
-        }
-      });
-      await this.initializeDatabase();
+    // Always use src/assets folder for CSV files
+    const isDev = !app.isPackaged;
+    
+    let assetsPath: string;
+    if (isDev) {
+      // In development, use src/assets directly from project root
+      const appPath = app.getAppPath();
+      assetsPath = join(appPath, 'src', 'assets');
+    } else {
+      // In production, assets are unpacked from asar
+      // When files are unpacked, they go to app.asar.unpacked directory
+      const appPath = app.getAppPath();
+      
+      // Try app.asar.unpacked first (where unpacked files go)
+      let unpackedPath = appPath.replace('app.asar', 'app.asar.unpacked');
+      assetsPath = join(unpackedPath, 'src', 'assets');
+      
+      // If unpacked path doesn't exist, try resources/app/src/assets
+      if (!existsSync(assetsPath)) {
+        const resourcesPath = join(appPath, '..', '..', 'resources');
+        assetsPath = join(resourcesPath, 'app', 'src', 'assets');
+      }
+      
+      // Fallback: if the above doesn't work, use userData/assets
+      // This ensures the CSV files are always accessible and writable
+      if (!existsSync(assetsPath)) {
+        const userDataPath = app.getPath('userData');
+        assetsPath = join(userDataPath, 'assets');
+        console.log('Using userData/assets as fallback for CSV files');
+      }
     }
-    return this.db;
+    
+    // Ensure assets directory exists
+    if (!existsSync(assetsPath)) {
+      mkdirSync(assetsPath, { recursive: true });
+    }
+    
+    this.assetsPath = assetsPath;
+    this.cachePath = join(assetsPath, 'cache.csv');
+    this.historyPath = join(assetsPath, 'history.csv');
+    this.settingsPath = join(assetsPath, 'settings.csv');
+    
+    console.log('CSV files path:', assetsPath);
   }
 
-  private async initializeDatabase(): Promise<void> {
-    if (this.initialized || !this.db) return;
-
-    const run = promisify(this.db.run.bind(this.db));
+  private async initializeFiles(): Promise<void> {
+    if (this.initialized) return;
 
     try {
-      // Create cache table
-      await run(`
-        CREATE TABLE IF NOT EXISTS cache (
-          id TEXT PRIMARY KEY,
-          model TEXT NOT NULL,
-          userInput TEXT NOT NULL,
-          systemTemplate TEXT NOT NULL,
-          result TEXT NOT NULL,
-          timestamp INTEGER NOT NULL,
-          cacheKey TEXT NOT NULL UNIQUE
-        )
-      `);
+      // Initialize cache.csv if it doesn't exist
+      if (!existsSync(this.cachePath)) {
+        await fs.writeFile(this.cachePath, 'id,model,userInput,systemTemplate,result,timestamp,cacheKey\n', 'utf-8');
+      }
 
-      // Create index on cacheKey for faster lookups
-      await run(`
-        CREATE INDEX IF NOT EXISTS idx_cache_key ON cache(cacheKey)
-      `);
+      // Initialize history.csv if it doesn't exist
+      if (!existsSync(this.historyPath)) {
+        await fs.writeFile(this.historyPath, 'id,timestamp,input,type,model,result,responseTime\n', 'utf-8');
+      }
 
-      // Create history table
-      await run(`
-        CREATE TABLE IF NOT EXISTS history (
-          id TEXT PRIMARY KEY,
-          timestamp INTEGER NOT NULL,
-          input TEXT NOT NULL,
-          type TEXT NOT NULL,
-          model TEXT NOT NULL,
-          result TEXT NOT NULL,
-          responseTime INTEGER
-        )
-      `);
-
-      // Create index on timestamp for faster sorting
-      await run(`
-        CREATE INDEX IF NOT EXISTS idx_history_timestamp ON history(timestamp DESC)
-      `);
-
-      // Create settings table
-      await run(`
-        CREATE TABLE IF NOT EXISTS settings (
-          key TEXT PRIMARY KEY,
-          value TEXT NOT NULL
-        )
-      `);
+      // Initialize settings.csv if it doesn't exist
+      if (!existsSync(this.settingsPath)) {
+        await fs.writeFile(this.settingsPath, 'key,value\n', 'utf-8');
+      }
 
       this.initialized = true;
     } catch (error) {
-      console.error('Error initializing database:', error);
+      console.error('Error initializing CSV files:', error);
     }
+  }
+
+  // CSV Helper Methods
+  private escapeCsvField(field: string): string {
+    // If field contains comma, quote, or newline, wrap in quotes and escape quotes
+    if (field.includes(',') || field.includes('"') || field.includes('\n') || field.includes('\r')) {
+      return `"${field.replace(/"/g, '""')}"`;
+    }
+    return field;
+  }
+
+  private unescapeCsvField(field: string): string {
+    // Remove surrounding quotes if present and unescape double quotes
+    if (field.startsWith('"') && field.endsWith('"')) {
+      return field.slice(1, -1).replace(/""/g, '"');
+    }
+    return field;
+  }
+
+  private parseCsvLine(line: string): string[] {
+    const fields: string[] = [];
+    let currentField = '';
+    let inQuotes = false;
+    
+    for (let i = 0; i < line.length; i++) {
+      const char = line[i];
+      
+      if (char === '"') {
+        if (inQuotes && line[i + 1] === '"') {
+          // Escaped quote
+          currentField += '"';
+          i++; // Skip next quote
+        } else {
+          // Toggle quote state
+          inQuotes = !inQuotes;
+        }
+      } else if (char === ',' && !inQuotes) {
+        // Field separator
+        fields.push(this.unescapeCsvField(currentField));
+        currentField = '';
+      } else {
+        currentField += char;
+      }
+    }
+    
+    // Add last field
+    fields.push(this.unescapeCsvField(currentField));
+    return fields;
   }
 
   // Cache methods
   async getCache(model: string, userInput: string, systemTemplate: string): Promise<TranslationResult | null> {
     try {
-      const db = await this.getDatabase();
+      await this.initializeFiles();
       const cacheKey = this.generateCacheKey(model, userInput, systemTemplate);
-
-      const get = promisify(db.get.bind(db));
-      const row = await get('SELECT result FROM cache WHERE cacheKey = ?', [cacheKey]) as { result: string } | undefined;
-
-      if (row) {
-        return JSON.parse(row.result) as TranslationResult;
+      
+      const content = await fs.readFile(this.cachePath, 'utf-8');
+      const lines = content.split('\n').filter(line => line.trim());
+      
+      // Skip header
+      for (let i = 1; i < lines.length; i++) {
+        const fields = this.parseCsvLine(lines[i]);
+        if (fields.length >= 7 && fields[6] === cacheKey) {
+          return JSON.parse(fields[4]) as TranslationResult;
+        }
       }
-
+      
       return null;
     } catch (error) {
-      console.error('Error reading cache from database:', error);
+      console.error('Error reading cache from CSV:', error);
       return null;
     }
   }
@@ -110,26 +187,43 @@ export class DatabaseService {
     result: TranslationResult
   ): Promise<void> {
     try {
-      const db = await this.getDatabase();
+      await this.initializeFiles();
       const cacheKey = this.generateCacheKey(model, userInput, systemTemplate);
       const id = `${Date.now()}-${Math.random()}`;
-
-      const run = promisify(db.run.bind(db));
-      await run(
-        `INSERT OR REPLACE INTO cache (id, model, userInput, systemTemplate, result, timestamp, cacheKey)
-         VALUES (?, ?, ?, ?, ?, ?, ?)`,
-        [id, model, userInput, systemTemplate, JSON.stringify(result), Date.now(), cacheKey]
-      );
+      
+      // Read existing cache
+      const content = await fs.readFile(this.cachePath, 'utf-8');
+      const lines = content.split('\n').filter(line => line.trim());
+      
+      // Remove existing entry with same cacheKey if exists
+      const filteredLines = lines.filter((line, index) => {
+        if (index === 0) return true; // Keep header
+        const fields = this.parseCsvLine(line);
+        return fields.length >= 7 && fields[6] !== cacheKey;
+      });
+      
+      // Add new entry
+      const newEntry = [
+        id,
+        model,
+        userInput,
+        systemTemplate,
+        JSON.stringify(result),
+        Date.now().toString(),
+        cacheKey
+      ].map(field => this.escapeCsvField(field)).join(',');
+      
+      filteredLines.push(newEntry);
+      await fs.writeFile(this.cachePath, filteredLines.join('\n') + '\n', 'utf-8');
     } catch (error) {
-      console.error('Error writing cache to database:', error);
+      console.error('Error writing cache to CSV:', error);
     }
   }
 
   async clearCache(): Promise<void> {
     try {
-      const db = await this.getDatabase();
-      const run = promisify(db.run.bind(db));
-      await run('DELETE FROM cache');
+      await this.initializeFiles();
+      await fs.writeFile(this.cachePath, 'id,model,userInput,systemTemplate,result,timestamp,cacheKey\n', 'utf-8');
     } catch (error) {
       console.error('Error clearing cache:', error);
     }
@@ -146,29 +240,42 @@ export class DatabaseService {
     responseTime?: number;
   }>> {
     try {
-      const db = await this.getDatabase();
-      const all = promisify(db.all.bind(db));
-      const rows = await all('SELECT * FROM history ORDER BY timestamp DESC') as Array<{
+      await this.initializeFiles();
+      const content = await fs.readFile(this.historyPath, 'utf-8');
+      const lines = content.split('\n').filter(line => line.trim());
+      
+      const entries: Array<{
         id: string;
         timestamp: number;
         input: string;
-        type: string;
-        model: string;
-        result: string;
-        responseTime: number | null;
-      }>;
-
-      return rows.map((row) => ({
-        id: row.id,
-        timestamp: row.timestamp,
-        input: row.input,
-        type: row.type as 'persian-to-english' | 'english-to-persian' | 'grammar',
-        model: row.model as AIModel,
-        result: JSON.parse(row.result) as TranslationResult,
-        responseTime: row.responseTime ?? undefined,
-      }));
+        type: 'persian-to-english' | 'english-to-persian' | 'grammar';
+        model: AIModel;
+        result: TranslationResult;
+        responseTime?: number;
+      }> = [];
+      
+      // Skip header
+      for (let i = 1; i < lines.length; i++) {
+        const fields = this.parseCsvLine(lines[i]);
+        if (fields.length >= 7) {
+          entries.push({
+            id: fields[0],
+            timestamp: parseInt(fields[1], 10),
+            input: fields[2],
+            type: fields[3] as 'persian-to-english' | 'english-to-persian' | 'grammar',
+            model: fields[4] as AIModel,
+            result: JSON.parse(fields[5]) as TranslationResult,
+            responseTime: fields[6] ? parseInt(fields[6], 10) : undefined,
+          });
+        }
+      }
+      
+      // Sort by timestamp descending
+      entries.sort((a, b) => b.timestamp - a.timestamp);
+      
+      return entries;
     } catch (error) {
-      console.error('Error reading history from database:', error);
+      console.error('Error reading history from CSV:', error);
       return [];
     }
   }
@@ -181,16 +288,22 @@ export class DatabaseService {
     responseTime?: number;
   }): Promise<void> {
     try {
-      const db = await this.getDatabase();
+      await this.initializeFiles();
       const id = `${Date.now()}-${Math.random()}`;
       const timestamp = Date.now();
-
-      const run = promisify(db.run.bind(db));
-      await run(
-        `INSERT INTO history (id, timestamp, input, type, model, result, responseTime)
-         VALUES (?, ?, ?, ?, ?, ?, ?)`,
-        [id, timestamp, entry.input, entry.type, entry.model, JSON.stringify(entry.result), entry.responseTime ?? null]
-      );
+      
+      const newEntry = [
+        id,
+        timestamp.toString(),
+        entry.input,
+        entry.type,
+        entry.model,
+        JSON.stringify(entry.result),
+        entry.responseTime?.toString() || ''
+      ].map(field => this.escapeCsvField(field)).join(',');
+      
+      // Append to file
+      await fs.appendFile(this.historyPath, newEntry + '\n', 'utf-8');
     } catch (error) {
       console.error('Error adding history entry:', error);
     }
@@ -198,9 +311,18 @@ export class DatabaseService {
 
   async deleteHistoryEntry(id: string): Promise<void> {
     try {
-      const db = await this.getDatabase();
-      const run = promisify(db.run.bind(db));
-      await run('DELETE FROM history WHERE id = ?', [id]);
+      await this.initializeFiles();
+      const content = await fs.readFile(this.historyPath, 'utf-8');
+      const lines = content.split('\n').filter(line => line.trim());
+      
+      // Filter out the entry with matching id
+      const filteredLines = lines.filter((line, index) => {
+        if (index === 0) return true; // Keep header
+        const fields = this.parseCsvLine(line);
+        return fields.length > 0 && fields[0] !== id;
+      });
+      
+      await fs.writeFile(this.historyPath, filteredLines.join('\n') + '\n', 'utf-8');
     } catch (error) {
       console.error('Error deleting history entry:', error);
     }
@@ -208,9 +330,8 @@ export class DatabaseService {
 
   async clearHistory(): Promise<void> {
     try {
-      const db = await this.getDatabase();
-      const run = promisify(db.run.bind(db));
-      await run('DELETE FROM history');
+      await this.initializeFiles();
+      await fs.writeFile(this.historyPath, 'id,timestamp,input,type,model,result,responseTime\n', 'utf-8');
     } catch (error) {
       console.error('Error clearing history:', error);
     }
@@ -219,67 +340,90 @@ export class DatabaseService {
   // Settings methods
   async getSetting(key: string): Promise<string | null> {
     try {
-      const db = await this.getDatabase();
-      const get = promisify(db.get.bind(db));
-      const row = await get('SELECT value FROM settings WHERE key = ?', [key]) as { value: string } | undefined;
-
-      if (row) {
-        return row.value;
+      await this.initializeFiles();
+      const content = await fs.readFile(this.settingsPath, 'utf-8');
+      const lines = content.split('\n').filter(line => line.trim());
+      
+      // Skip header
+      for (let i = 1; i < lines.length; i++) {
+        const fields = this.parseCsvLine(lines[i]);
+        if (fields.length >= 2 && fields[0] === key) {
+          return fields[1];
+        }
       }
-
+      
       return null;
     } catch (error) {
-      console.error('Error reading setting from database:', error);
+      console.error('Error reading setting from CSV:', error);
       return null;
     }
   }
 
   async setSetting(key: string, value: string): Promise<void> {
     try {
-      const db = await this.getDatabase();
-      const run = promisify(db.run.bind(db));
-      await run('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)', [key, value]);
+      await this.initializeFiles();
+      const content = await fs.readFile(this.settingsPath, 'utf-8');
+      const lines = content.split('\n').filter(line => line.trim());
+      
+      // Remove existing entry with same key if exists
+      const filteredLines = lines.filter((line, index) => {
+        if (index === 0) return true; // Keep header
+        const fields = this.parseCsvLine(line);
+        return fields.length === 0 || fields[0] !== key;
+      });
+      
+      // Add new entry
+      const newEntry = [key, value].map(field => this.escapeCsvField(field)).join(',');
+      filteredLines.push(newEntry);
+      
+      await fs.writeFile(this.settingsPath, filteredLines.join('\n') + '\n', 'utf-8');
     } catch (error) {
-      console.error('Error writing setting to database:', error);
+      console.error('Error writing setting to CSV:', error);
     }
   }
 
   async getAllSettings(): Promise<Record<string, string>> {
     try {
-      const db = await this.getDatabase();
-      const all = promisify(db.all.bind(db));
-      const rows = await all('SELECT key, value FROM settings') as Array<{ key: string; value: string }>;
-
+      await this.initializeFiles();
+      const content = await fs.readFile(this.settingsPath, 'utf-8');
+      const lines = content.split('\n').filter(line => line.trim());
+      
       const settings: Record<string, string> = {};
-      rows.forEach((row) => {
-        settings[row.key] = row.value;
-      });
-
+      
+      // Skip header
+      for (let i = 1; i < lines.length; i++) {
+        const fields = this.parseCsvLine(lines[i]);
+        if (fields.length >= 2) {
+          settings[fields[0]] = fields[1];
+        }
+      }
+      
       return settings;
     } catch (error) {
-      console.error('Error reading all settings from database:', error);
+      console.error('Error reading all settings from CSV:', error);
       return {};
     }
   }
 
   async setAllSettings(settings: Record<string, string>): Promise<void> {
     try {
-      const db = await this.getDatabase();
-      const run = promisify(db.run.bind(db));
-
-      // Use a transaction for better performance
-      await run('BEGIN TRANSACTION');
-      try {
-        for (const [key, value] of Object.entries(settings)) {
-          await run('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)', [key, value]);
-        }
-        await run('COMMIT');
-      } catch (error) {
-        await run('ROLLBACK');
-        throw error;
+      await this.initializeFiles();
+      // Read existing settings to preserve any not in the new settings object
+      const existingSettings = await this.getAllSettings();
+      
+      // Merge with new settings (new settings override existing)
+      const mergedSettings = { ...existingSettings, ...settings };
+      
+      // Write all settings
+      const lines = ['key,value'];
+      for (const [key, value] of Object.entries(mergedSettings)) {
+        const entry = [key, value].map(field => this.escapeCsvField(field)).join(',');
+        lines.push(entry);
       }
+      
+      await fs.writeFile(this.settingsPath, lines.join('\n') + '\n', 'utf-8');
     } catch (error) {
-      console.error('Error writing all settings to database:', error);
+      console.error('Error writing all settings to CSV:', error);
     }
   }
 
@@ -287,7 +431,7 @@ export class DatabaseService {
     try {
       const existingSettings = await this.getAllSettings();
 
-      // Only initialize if settings table is empty
+      // Only initialize if settings are empty
       if (Object.keys(existingSettings).length === 0) {
         const settingsToSave: Record<string, string> = {};
         
@@ -319,20 +463,8 @@ export class DatabaseService {
   }
 
   async close(): Promise<void> {
-    return new Promise((resolve, reject) => {
-      if (this.db) {
-        this.db.close((err: Error | null) => {
-          if (err) {
-            reject(err);
-          } else {
-            this.db = null;
-            resolve();
-          }
-        });
-      } else {
-        resolve();
-      }
-    });
+    // No-op for CSV files, but keeping the method for API compatibility
+    return Promise.resolve();
   }
 }
 

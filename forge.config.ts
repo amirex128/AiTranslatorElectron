@@ -13,11 +13,21 @@ import { rendererConfig } from './webpack.renderer.config';
 
 const config: ForgeConfig = {
   packagerConfig: {
-    asar: true,
+    asar: {
+      // Unpack assets folder for CSV files
+      unpack: 'src/assets/**',
+    },
+    // Ensure assets folder is included in the package
+    extraResource: [],
   },
-  rebuildConfig: {},
   makers: [
-    new MakerSquirrel({}),
+    new MakerSquirrel({
+      name: 'aitranslatorelectron',
+      setupIcon: undefined, // Add icon path if you have one
+      // Configure for Windows EXE installer
+      authors: 'amir.shirdeli',
+      description: 'AI Translator Electron Application',
+    }),
     new MakerZIP({}, ['darwin']),
     new MakerRpm({}),
     new MakerDeb({}),
