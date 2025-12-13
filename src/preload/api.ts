@@ -1,6 +1,23 @@
 import { contextBridge, ipcRenderer } from 'electron';
+import { ElectronAPI } from '../types/electron';
+import { TranslationResult } from '../utils/validation';
+import { AIModel } from '../models/AIModel';
+import { AppSettings } from '../types/settings';
 
-export const electronAPI = {
+interface TranslationParams {
+  text: string;
+  model: AIModel;
+}
+
+interface HistoryEntry {
+  input: string;
+  type: 'persian-to-english' | 'english-to-persian' | 'grammar';
+  model: AIModel;
+  result: TranslationResult;
+  responseTime?: number;
+}
+
+export const electronAPI: ElectronAPI = {
   // Clipboard
   readClipboard: () => ipcRenderer.invoke('clipboard:read'),
   writeClipboard: (text: string) => ipcRenderer.invoke('clipboard:write', text),
@@ -20,9 +37,10 @@ export const electronAPI = {
   checkAIProvider: (url: string) => ipcRenderer.invoke('ai-provider:check', url),
 
   // Translation
-  translatePersianToEnglish: (params: any) => ipcRenderer.invoke('translate:persian-to-english', params),
-  translateEnglishToPersian: (params: any) => ipcRenderer.invoke('translate:english-to-persian', params),
-  translateGrammar: (params: any) => ipcRenderer.invoke('translate:grammar', params),
+  translatePersianToEnglish: (params: TranslationParams) => ipcRenderer.invoke('translate:persian-to-english', params),
+  translateEnglishToPersian: (params: TranslationParams) => ipcRenderer.invoke('translate:english-to-persian', params),
+  translateGrammar: (params: TranslationParams) => ipcRenderer.invoke('translate:grammar', params),
+  translateGrammarTeaching: (params: TranslationParams) => ipcRenderer.invoke('translate:grammar-teaching', params),
 
   // TTS
   fetchTTSAudio: (url: string) => ipcRenderer.invoke('tts:fetch-audio', url),
@@ -30,19 +48,19 @@ export const electronAPI = {
   // Cache
   getCache: (params: { model: string; userInput: string; systemTemplate: string }) =>
     ipcRenderer.invoke('cache:get', params),
-  setCache: (params: { model: string; userInput: string; systemTemplate: string; result: any }) =>
+  setCache: (params: { model: string; userInput: string; systemTemplate: string; result: TranslationResult }) =>
     ipcRenderer.invoke('cache:set', params),
   clearCache: () => ipcRenderer.invoke('cache:clear'),
 
   // History
   getAllHistory: () => ipcRenderer.invoke('history:getAll'),
-  addHistory: (entry: any) => ipcRenderer.invoke('history:add', entry),
+  addHistory: (entry: HistoryEntry) => ipcRenderer.invoke('history:add', entry),
   deleteHistory: (id: string) => ipcRenderer.invoke('history:delete', id),
   clearHistory: () => ipcRenderer.invoke('history:clear'),
 
   // Settings
   getSettings: () => ipcRenderer.invoke('settings:get'),
-  updateSettings: (partial: any) => ipcRenderer.invoke('settings:update', partial),
+  updateSettings: (partial: Partial<AppSettings>) => ipcRenderer.invoke('settings:update', partial),
   resetSettings: () => ipcRenderer.invoke('settings:reset'),
   onSettingsChange: (callback: () => void) => {
     ipcRenderer.on('settings:changed', () => callback());

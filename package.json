@@ -29,6 +29,7 @@
     "@electron-forge/plugin-webpack": "^7.10.2",
     "@electron/fuses": "^1.8.0",
     "@tailwindcss/postcss": "^4.1.17",
+    "@types/dotenv": "^6.1.1",
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
     "@typescript-eslint/eslint-plugin": "^5.62.0",
@@ -49,6 +50,7 @@
     "typescript": "~4.5.4"
   },
   "dependencies": {
+    "dotenv": "^17.2.3",
     "electron-squirrel-startup": "^1.0.1",
     "electron-store": "^11.0.2",
     "langchain": "^1.1.5",

@@ -1,23 +1,14 @@
 import { AIModel } from '../../models/AIModel';
-import { TranslationResult } from '../../utils/validation';
 import {
   getPersianToEnglishPrompt,
   getEnglishToPersianPrompt,
   getGrammarCorrectionPrompt,
+  getGrammarTeachingPrompt,
 } from './prompts';
 import { AIChatService, AIChatServiceConfig } from './AIChatService';
 import { AIChatOptions } from './types';
-
-export interface TranslatorOptions {
-  aiProviderUrl?: string;
-  temperature?: number;
-  abortSignal?: AbortSignal;
-  onProgress?: (progress: number) => void;
-}
-
-export interface TranslatorResponse {
-  result: TranslationResult;
-}
+import { TranslatorOptions, TranslatorResponse } from '../../types/translation';
+import { GrammarTeachingResult } from '../../utils/grammarTeachingValidation';
 
 export class AITranslatorService {
   private config: AIChatServiceConfig;
@@ -88,6 +79,32 @@ export class AITranslatorService {
     const systemTemplate = getGrammarCorrectionPrompt(text);
 
     const response = await this.chatService.chat(
+      {
+        systemTemplate,
+        model,
+        userInput: text,
+        aiProviderUrl: options.aiProviderUrl || this.config.aiProviderUrl,
+        temperature: options.temperature ?? this.config.temperature,
+      },
+      {
+        abortSignal: options.abortSignal,
+        onProgress: options.onProgress,
+      }
+    );
+
+    return {
+      result: response.result,
+    };
+  }
+
+  async teachGrammar(
+    text: string,
+    model: AIModel,
+    options: TranslatorOptions = {}
+  ): Promise<{ result: GrammarTeachingResult }> {
+    const systemTemplate = getGrammarTeachingPrompt(text);
+
+    const response = await this.chatService.chatForGrammarTeaching(
       {
         systemTemplate,
         model,

@@ -3,6 +3,7 @@ import { useTranslationStore } from '../stores/translationStore';
 import { useHistoryStore } from '../stores/historyStore';
 import { TranslationInput } from '../components/translation/TranslationInput/TranslationInput';
 import { TranslationResult } from '../components/translation/TranslationResult/TranslationResult';
+import { GrammarTeachingResultComponent } from '../components/grammar/GrammarTeachingResult/GrammarTeachingResult';
 import { ModelSelector } from '../components/translation/ModelSelector/ModelSelector';
 import { Button } from '../components/ui/Button/Button';
 import { ErrorDisplay } from '../components/ui/ErrorDisplay/ErrorDisplay';
@@ -10,10 +11,13 @@ import { Toast } from '../components/ui/Toast/Toast';
 import { HistoryPanel } from '../components/history/HistoryPanel/HistoryPanel';
 import { TimerButton } from '../components/ui/TimerButton/TimerButton';
 import { LastRequestTime } from '../components/ui/LastRequestTime/LastRequestTime';
-import { aiTranslatorServiceIPC, TranslatorResponse } from '../services/ai/AITranslatorServiceIPC';
+import { Switch } from '../components/ui/Switch/Switch';
+import { aiTranslatorServiceIPC } from '../services/ai/AITranslatorServiceIPC';
+import { TranslatorResponse, TranslatorOptions } from '../types/translation';
 import { writeClipboard } from '../utils/clipboard';
 import { AIModel } from '../models/AIModel';
 import { useSettingsStore } from '../stores/settingsStore';
+import { GrammarTeachingResult } from '../utils/grammarTeachingValidation';
 
 interface MainPageProps {
   onOpenSettings?: () => void;
@@ -58,6 +62,8 @@ export const MainPage: React.FC<MainPageProps> = ({ onOpenSettings }) => {
   const [showHistory, setShowHistory] = useState(false);
   const [startTime, setStartTime] = useState<number | null>(null);
   const [lastRequestTime, setLastRequestTime] = useState<number | null>(null);
+  const [grammarTeachingMode, setGrammarTeachingMode] = useState(false);
+  const [grammarTeachingResult, setGrammarTeachingResult] = useState<GrammarTeachingResult | null>(null);
 
   useEffect(() => {
     // Always enable dark mode
@@ -96,7 +102,7 @@ export const MainPage: React.FC<MainPageProps> = ({ onOpenSettings }) => {
     let translateFn: (
       text: string,
       model: AIModel,
-      options: any
+      options: TranslatorOptions
     ) => Promise<TranslatorResponse>;
     let type: 'persian-to-english' | 'english-to-persian' | 'grammar';
 
@@ -114,8 +120,35 @@ export const MainPage: React.FC<MainPageProps> = ({ onOpenSettings }) => {
       type = 'english-to-persian';
     } else if (grammarInput.trim()) {
       input = grammarInput.trim();
-      translateFn = aiTranslatorServiceIPC.correctGrammar.bind(aiTranslatorServiceIPC);
-      type = 'grammar';
+      if (grammarTeachingMode) {
+        // Use grammar teaching mode
+        try {
+          setLoading(true);
+          setError(null);
+          const requestStartTime = Date.now();
+          setStartTime(requestStartTime);
+
+          const response = await aiTranslatorServiceIPC.teachGrammar(input, selectedModel, {});
+          const endTime = Date.now();
+          const responseTime = Math.floor((endTime - requestStartTime) / 1000);
+
+          setGrammarTeachingResult(response.result);
+          setResults(null); // Clear regular results
+          setLastRequestTime(responseTime);
+
+          setToast({ message: 'آموزش گرامر با موفقیت انجام شد', type: 'success' });
+        } catch (err: unknown) {
+          const errorMessage = err instanceof Error ? err.message : 'خطا در آموزش گرامر';
+          setError(errorMessage);
+          setToast({ message: errorMessage, type: 'error' });
+        } finally {
+          setLoading(false);
+        }
+        return;
+      } else {
+        translateFn = aiTranslatorServiceIPC.correctGrammar.bind(aiTranslatorServiceIPC);
+        type = 'grammar';
+      }
     } else {
       setError('لطفاً متن را وارد کنید');
       return;
@@ -145,11 +178,10 @@ export const MainPage: React.FC<MainPageProps> = ({ onOpenSettings }) => {
       });
 
       setToast({ message: 'ترجمه با موفقیت انجام شد', type: 'success' });
-    } catch (error: any) {
-      setError(
-        error.message || 'خطا در ترجمه. لطفاً دوباره تلاش کنید.',
-        error.stack
-      );
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'خطا در ترجمه. لطفاً دوباره تلاش کنید.';
+      const errorStack = error instanceof Error ? error.stack : undefined;
+      setError(errorMessage, errorStack);
       setToast({ message: 'خطا در ترجمه', type: 'error' });
     } finally {
       setLoading(false);
@@ -199,13 +231,25 @@ export const MainPage: React.FC<MainPageProps> = ({ onOpenSettings }) => {
             placeholder="متن انگلیسی را وارد کنید..."
             autoFocus={false}
           />
-          <TranslationInput
-            label="اصلاح گرامر"
-            value={grammarInput}
-            onChange={setGrammarInput}
-            placeholder="متن انگلیسی برای اصلاح را وارد کنید..."
-            autoFocus={false}
-          />
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                اصلاح گرامر
+              </label>
+              <Switch
+                checked={grammarTeachingMode}
+                onChange={setGrammarTeachingMode}
+                label="حالت آموزش"
+              />
+            </div>
+            <TranslationInput
+              label=""
+              value={grammarInput}
+              onChange={setGrammarInput}
+              placeholder="متن انگلیسی برای اصلاح را وارد کنید..."
+              autoFocus={false}
+            />
+          </div>
         </div>
 
         <div className="flex gap-2 justify-center flex-wrap">
@@ -222,7 +266,7 @@ export const MainPage: React.FC<MainPageProps> = ({ onOpenSettings }) => {
               onClick={handleTranslate}
               disabled={!canTranslate}
             >
-              ترجمه
+              پردازش
             </Button>
           )}
           <Button variant="ghost" onClick={() => setShowHistory(!showHistory)} disabled={isLoading}>
@@ -239,7 +283,17 @@ export const MainPage: React.FC<MainPageProps> = ({ onOpenSettings }) => {
           />
         )}
 
-        {results && (
+        {grammarTeachingResult && (
+          <div className="space-y-4">
+            <GrammarTeachingResultComponent
+              result={grammarTeachingResult}
+              onCopy={handleCopy}
+              fontSize={settings?.fontSize || 16}
+            />
+          </div>
+        )}
+
+        {results && !grammarTeachingResult && (
           <div className="space-y-4">
             <TranslationResult
               result={results}

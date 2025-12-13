@@ -1,16 +1,6 @@
 import { AIModel } from '../../models/AIModel';
-import { TranslationResult } from '../../utils/validation';
-
-export interface TranslatorOptions {
-  aiProviderUrl?: string;
-  temperature?: number;
-  abortSignal?: AbortSignal;
-  onProgress?: (progress: number) => void;
-}
-
-export interface TranslatorResponse {
-  result: TranslationResult;
-}
+import { TranslatorOptions, TranslatorResponse } from '../../types/translation';
+import { GrammarTeachingResult } from '../../utils/grammarTeachingValidation';
 
 class AITranslatorServiceIPC {
   async translatePersianToEnglish(
@@ -28,7 +18,7 @@ class AITranslatorServiceIPC {
     });
 
     if (!response.success) {
-      throw new Error(response.error || 'Translation failed');
+      throw new Error('error' in response ? response.error : 'Translation failed');
     }
 
     return response.data;
@@ -49,7 +39,7 @@ class AITranslatorServiceIPC {
     });
 
     if (!response.success) {
-      throw new Error(response.error || 'Translation failed');
+      throw new Error('error' in response ? response.error : 'Translation failed');
     }
 
     return response.data;
@@ -70,7 +60,28 @@ class AITranslatorServiceIPC {
     });
 
     if (!response.success) {
-      throw new Error(response.error || 'Grammar correction failed');
+      throw new Error('error' in response ? response.error : 'Grammar correction failed');
+    }
+
+    return response.data;
+  }
+
+  async teachGrammar(
+    text: string,
+    model: AIModel,
+    options: TranslatorOptions = {}
+  ): Promise<{ result: GrammarTeachingResult }> {
+    if (typeof window === 'undefined' || !window.electronAPI) {
+      throw new Error('Electron API not available');
+    }
+
+    const response = await window.electronAPI.translateGrammarTeaching({
+      text,
+      model,
+    });
+
+    if (!response.success) {
+      throw new Error('error' in response ? response.error : 'Grammar teaching failed');
     }
 
     return response.data;

@@ -1,19 +1,6 @@
 import { create } from 'zustand';
-import { AIModel } from '../models/AIModel';
-import { APP_CONFIG } from '../constants/appConfig';
-
-export interface AppSettings {
-  selectedModel: AIModel;
-  aiProviderUrl: string;
-  openRouterBaseUrl: string;
-  openRouterApiKey1: string;
-  openRouterApiKey2: string;
-  openRouterReferer: string;
-  openRouterSiteName: string;
-  temperature: number;
-  fontSize: number;
-  windowSize: { width: number; height: number };
-}
+import { AppSettings } from '../types/settings';
+import { getDefaultSettings } from '../constants/defaultSettings';
 
 interface SettingsState {
   settings: AppSettings | null;
@@ -25,19 +12,8 @@ interface SettingsState {
 
 const loadSettingsFromIPC = async (): Promise<AppSettings> => {
   if (typeof window === 'undefined' || !window.electronAPI) {
-    // Fallback to APP_CONFIG if IPC not available
-    return {
-      selectedModel: APP_CONFIG.selectedModel,
-      aiProviderUrl: APP_CONFIG.aiProviderUrl,
-      openRouterBaseUrl: APP_CONFIG.openRouterBaseUrl,
-      openRouterApiKey1: APP_CONFIG.openRouterApiKey1,
-      openRouterApiKey2: APP_CONFIG.openRouterApiKey2,
-      openRouterReferer: APP_CONFIG.openRouterReferer,
-      openRouterSiteName: APP_CONFIG.openRouterSiteName,
-      temperature: APP_CONFIG.temperature,
-      fontSize: APP_CONFIG.fontSize,
-      windowSize: APP_CONFIG.windowSize,
-    };
+    // Fallback to defaults if IPC not available
+    return getDefaultSettings();
   }
 
   try {
@@ -49,19 +25,8 @@ const loadSettingsFromIPC = async (): Promise<AppSettings> => {
     console.error('Error loading settings from IPC:', error);
   }
 
-  // Fallback to APP_CONFIG on error
-  return {
-    selectedModel: APP_CONFIG.selectedModel,
-    aiProviderUrl: APP_CONFIG.aiProviderUrl,
-    openRouterBaseUrl: APP_CONFIG.openRouterBaseUrl,
-    openRouterApiKey1: APP_CONFIG.openRouterApiKey1,
-    openRouterApiKey2: APP_CONFIG.openRouterApiKey2,
-    openRouterReferer: APP_CONFIG.openRouterReferer,
-    openRouterSiteName: APP_CONFIG.openRouterSiteName,
-    temperature: APP_CONFIG.temperature,
-    fontSize: APP_CONFIG.fontSize,
-    windowSize: APP_CONFIG.windowSize,
-  };
+  // Fallback to defaults on error
+  return getDefaultSettings();
 };
 
 export const useSettingsStore = create<SettingsState>((set, get) => ({

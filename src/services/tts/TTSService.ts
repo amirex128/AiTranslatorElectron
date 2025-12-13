@@ -30,6 +30,33 @@ class TTSService {
   }
 
   private async speakWithGoogleTTS(text: string, speed: number): Promise<void> {
+    // Clean and prepare text for TTS - remove extra whitespace
+    const cleanText = text.trim().replace(/\s+/g, ' ');
+    
+    // Google TTS has a character limit (~200 chars), so we'll split long texts
+    if (cleanText.length > 200) {
+      // For long texts, try to split by sentences
+      const sentences = cleanText.match(/[^.!?]+[.!?]+/g) || [cleanText];
+      for (const sentence of sentences) {
+        const trimmedSentence = sentence.trim();
+        if (trimmedSentence) {
+          try {
+            await this.speakSingleText(trimmedSentence, speed);
+            // Small delay between sentences for better playback
+            await new Promise(resolve => setTimeout(resolve, 200));
+          } catch (error) {
+            // If one sentence fails, continue with next
+            console.warn('TTS error for sentence:', trimmedSentence, error);
+          }
+        }
+      }
+      return;
+    }
+
+    await this.speakSingleText(cleanText, speed);
+  }
+
+  private async speakSingleText(text: string, speed: number): Promise<void> {
     const encodedText = encodeURIComponent(text);
     const ttsUrl = `https://translate.google.com/translate_tts?ie=UTF-8&tl=en-US&client=tw-ob&q=${encodedText}`;
 
@@ -40,15 +67,18 @@ class TTSService {
     const response = await window.electronAPI.fetchTTSAudio(ttsUrl);
 
     if (!response.success || !response.data) {
-      throw new Error(response.error || 'Failed to fetch audio');
+      throw new Error('error' in response ? response.error : 'Failed to fetch audio');
     }
 
-    const binaryString = atob(response.data);
+    const audioData = response.data.data;
+    const mimeType = response.data.mimeType;
+
+    const binaryString = atob(audioData);
     const bytes = new Uint8Array(binaryString.length);
     for (let i = 0; i < binaryString.length; i++) {
       bytes[i] = binaryString.charCodeAt(i);
     }
-    const blob = new Blob([bytes], { type: response.mimeType || 'audio/mpeg' });
+    const blob = new Blob([bytes], { type: mimeType || 'audio/mpeg' });
     const blobUrl = URL.createObjectURL(blob);
 
     return new Promise((resolve, reject) => {

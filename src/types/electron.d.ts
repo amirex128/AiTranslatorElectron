@@ -1,3 +1,33 @@
+import { IPCResponse } from './errors';
+import { TranslatorResponse } from './translation';
+import { TranslationResult } from '../utils/validation';
+import { GrammarTeachingResult } from '../utils/grammarTeachingValidation';
+import { AIModel } from '../models/AIModel';
+import { AppSettings } from './settings';
+
+interface TranslationParams {
+  text: string;
+  model: AIModel;
+}
+
+interface HistoryEntry {
+  input: string;
+  type: 'persian-to-english' | 'english-to-persian' | 'grammar';
+  model: AIModel;
+  result: TranslationResult;
+  responseTime?: number;
+}
+
+interface HistoryEntryWithId extends HistoryEntry {
+  id: string;
+  timestamp: number;
+}
+
+interface TTSAudioData {
+  data: string;
+  mimeType: string;
+}
+
 export interface ElectronAPI {
   readClipboard: () => Promise<string>;
   writeClipboard: (text: string) => Promise<boolean>;
@@ -7,20 +37,21 @@ export interface ElectronAPI {
   focus: () => Promise<void>;
   onShortcut: (callback: (shortcut: { type: string; text: string }) => void) => void;
   checkAIProvider: (url: string) => Promise<boolean>;
-  translatePersianToEnglish: (params: any) => Promise<{ success: boolean; data?: any; error?: string }>;
-  translateEnglishToPersian: (params: any) => Promise<{ success: boolean; data?: any; error?: string }>;
-  translateGrammar: (params: any) => Promise<{ success: boolean; data?: any; error?: string }>;
-  fetchTTSAudio: (url: string) => Promise<{ success: boolean; data?: string; mimeType?: string; error?: string }>;
-  getCache: (params: { model: string; userInput: string; systemTemplate: string }) => Promise<{ success: boolean; data?: any; error?: string }>;
-  setCache: (params: { model: string; userInput: string; systemTemplate: string; result: any }) => Promise<{ success: boolean; error?: string }>;
-  clearCache: () => Promise<{ success: boolean; error?: string }>;
-  getAllHistory: () => Promise<{ success: boolean; data?: any[]; error?: string }>;
-  addHistory: (entry: any) => Promise<{ success: boolean; error?: string }>;
-  deleteHistory: (id: string) => Promise<{ success: boolean; error?: string }>;
-  clearHistory: () => Promise<{ success: boolean; error?: string }>;
-  getSettings: () => Promise<{ success: boolean; data?: any; error?: string }>;
-  updateSettings: (partial: any) => Promise<{ success: boolean; error?: string }>;
-  resetSettings: () => Promise<{ success: boolean; error?: string }>;
+  translatePersianToEnglish: (params: TranslationParams) => Promise<IPCResponse<TranslatorResponse>>;
+  translateEnglishToPersian: (params: TranslationParams) => Promise<IPCResponse<TranslatorResponse>>;
+  translateGrammar: (params: TranslationParams) => Promise<IPCResponse<TranslatorResponse>>;
+  translateGrammarTeaching: (params: TranslationParams) => Promise<IPCResponse<{ result: GrammarTeachingResult }>>;
+  fetchTTSAudio: (url: string) => Promise<IPCResponse<TTSAudioData>>;
+  getCache: (params: { model: string; userInput: string; systemTemplate: string }) => Promise<IPCResponse<TranslationResult | null>>;
+  setCache: (params: { model: string; userInput: string; systemTemplate: string; result: TranslationResult }) => Promise<IPCResponse<void>>;
+  clearCache: () => Promise<IPCResponse<void>>;
+  getAllHistory: () => Promise<IPCResponse<HistoryEntryWithId[]>>;
+  addHistory: (entry: HistoryEntry) => Promise<IPCResponse<void>>;
+  deleteHistory: (id: string) => Promise<IPCResponse<void>>;
+  clearHistory: () => Promise<IPCResponse<void>>;
+  getSettings: () => Promise<IPCResponse<AppSettings>>;
+  updateSettings: (partial: Partial<AppSettings>) => Promise<IPCResponse<void>>;
+  resetSettings: () => Promise<IPCResponse<void>>;
   onSettingsChange: (callback: () => void) => void;
   onSettingsOpenPage: (callback: () => void) => void;
 }

@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import { useSettingsStore, AppSettings } from '../stores/settingsStore';
+import { useSettingsStore } from '../stores/settingsStore';
+import { AppSettings } from '../types/settings';
 import { Button } from '../components/ui/Button/Button';
 import { Input } from '../components/ui/Input/Input';
 import { Select } from '../components/ui/Select/Select';
 import { ModelSelector } from '../components/translation/ModelSelector/ModelSelector';
 import { AIModel, AI_MODELS } from '../models/AIModel';
 import { Toast } from '../components/ui/Toast/Toast';
+import { OllamaGuideModal } from '../components/ui/OllamaGuideModal/OllamaGuideModal';
 
 interface SettingsPageProps {
   onBack?: () => void;
@@ -16,6 +18,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onBack }) => {
   const [formData, setFormData] = useState<Partial<AppSettings>>({});
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [showOllamaGuide, setShowOllamaGuide] = useState(false);
 
   useEffect(() => {
     loadSettings();
@@ -27,7 +30,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onBack }) => {
     }
   }, [settings]);
 
-  const handleChange = (key: keyof AppSettings, value: any) => {
+  const handleChange = (key: keyof AppSettings, value: AppSettings[keyof AppSettings]) => {
     setFormData((prev) => ({
       ...prev,
       [key]: value,
@@ -102,8 +105,21 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onBack }) => {
 
           {/* AI Provider URL */}
           <div>
+            <div className="flex items-center justify-between mb-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                آدرس AI Provider (Ollama)
+              </label>
+              <button
+                onClick={() => setShowOllamaGuide(true)}
+                className="text-sm text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300 flex items-center gap-1"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                راهنمای نصب Ollama
+              </button>
+            </div>
             <Input
-              label="آدرس AI Provider (Ollama)"
               type="text"
               value={formData.aiProviderUrl || settings.aiProviderUrl}
               onChange={(e) => handleChange('aiProviderUrl', e.target.value)}
@@ -262,6 +278,12 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onBack }) => {
             onClose={() => setToast(null)}
           />
         )}
+
+        {/* Ollama Guide Modal */}
+        <OllamaGuideModal
+          isOpen={showOllamaGuide}
+          onClose={() => setShowOllamaGuide(false)}
+        />
       </div>
     </div>
   );

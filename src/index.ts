@@ -1,21 +1,31 @@
-import { app, ipcMain, clipboard, Menu, net } from 'electron';
-import { createWindow, showWindow, minimizeWindow, closeWindow } from './main/window';
+// Load environment variables first, before any other imports
+import dotenv from 'dotenv';
+dotenv.config();
+
+import { app, Menu } from 'electron';
+import { createWindow, showWindow } from './main/window';
 import { createTray } from './main/tray';
 import { registerShortcuts, unregisterShortcuts } from './main/shortcuts';
 import { checkAIProviderConnection } from './main/healthCheck';
-import { AIModel } from './models/AIModel';
 import { APP_CONFIG } from './constants/appConfig';
 import { databaseService } from './main/database/DatabaseService';
 import { settingsService } from './main/settings/SettingsService';
-import { mainWindow } from './main/window';
-import { AITranslatorService } from './services/ai/AITranslatorService';
+import { AIServiceFactory } from './main/services/AIServiceFactory';
+import { registerAllIPCHandlers, registerTranslationIPCHandlers } from './main/ipc/ipcRouter';
 
-let aiTranslatorService: AITranslatorService;
+// Initialize AI service factory
+const aiServiceFactory = new AIServiceFactory();
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (require('electron-squirrel-startup')) {
   app.quit();
 }
+
+// Register IPC handlers before app ready
+registerAllIPCHandlers(
+  () => aiServiceFactory.getService(),
+  (settings) => aiServiceFactory.updateService(settings)
+);
 
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
@@ -28,15 +38,10 @@ app.on('ready', async () => {
   
   // Initialize AI services with settings
   const settings = await settingsService.getSettings();
-  aiTranslatorService = new AITranslatorService({
-    aiProviderUrl: settings.aiProviderUrl,
-    temperature: settings.temperature,
-    openRouterBaseUrl: settings.openRouterBaseUrl,
-    openRouterApiKey1: settings.openRouterApiKey1,
-    openRouterApiKey2: settings.openRouterApiKey2,
-    openRouterReferer: settings.openRouterReferer,
-    openRouterSiteName: settings.openRouterSiteName,
-  });
+  const aiService = aiServiceFactory.createService(settings);
+  
+  // Register translation handlers now that service is available
+  registerTranslationIPCHandlers(aiService);
   
   await createWindow();
   createTray();
@@ -68,269 +73,4 @@ app.on('activate', () => {
 app.on('will-quit', async () => {
   unregisterShortcuts();
   await databaseService.close();
-});
-
-// IPC Handlers - Register all handlers before app ready
-ipcMain.handle('clipboard:read', () => {
-  return clipboard.readText();
-});
-
-ipcMain.handle('clipboard:write', (_event, text: string) => {
-  clipboard.writeText(text);
-  return true;
-});
-
-ipcMain.handle('window:minimize', () => {
-  minimizeWindow();
-});
-
-ipcMain.handle('window:close', () => {
-  closeWindow();
-});
-
-ipcMain.handle('window:show', () => {
-  showWindow();
-});
-
-ipcMain.handle('window:focus', () => {
-  showWindow();
-});
-
-ipcMain.handle('ai-provider:check', (_event, url: string) => {
-  return checkAIProviderConnection(url);
-});
-
-// Translation IPC Handlers
-ipcMain.handle('translate:persian-to-english', async (_event, { text, model }) => {
-  try {
-    const result = await aiTranslatorService.translatePersianToEnglish(text, model as AIModel, {});
-    return { success: true, data: result };
-  } catch (error: any) {
-    return { success: false, error: error.message };
-  }
-});
-
-ipcMain.handle('translate:english-to-persian', async (_event, { text, model }) => {
-  try {
-    const result = await aiTranslatorService.translateEnglishToPersian(text, model as AIModel, {});
-    return { success: true, data: result };
-  } catch (error: any) {
-    return { success: false, error: error.message };
-  }
-});
-
-ipcMain.handle('translate:grammar', async (_event, { text, model }) => {
-  try {
-    const result = await aiTranslatorService.correctGrammar(text, model as AIModel, {});
-    return { success: true, data: result };
-  } catch (error: any) {
-    return { success: false, error: error.message };
-  }
-});
-
-ipcMain.handle('tts:fetch-audio', async (_event, url: string) => {
-  try {
-    return await new Promise<{ success: boolean; data?: string; mimeType?: string; error?: string }>((resolve, reject) => {
-      const request = net.request({
-        method: 'GET',
-        url: url,
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-          'Referer': 'https://translate.google.com/',
-          'Origin': 'https://translate.google.com',
-        },
-      });
-
-      const chunks: Buffer[] = [];
-
-      request.on('response', (response) => {
-        if (response.statusCode !== 200) {
-          reject(new Error(`HTTP error! status: ${response.statusCode}`));
-          return;
-        }
-
-        response.on('data', (chunk) => {
-          chunks.push(chunk);
-        });
-
-        response.on('end', () => {
-          const buffer = Buffer.concat(chunks);
-          const base64 = buffer.toString('base64');
-          const contentType = response.headers['content-type'];
-          const mimeType = Array.isArray(contentType) ? contentType[0] : (contentType || 'audio/mpeg');
-          resolve({ 
-            success: true, 
-            data: base64, 
-            mimeType
-          });
-        });
-
-        response.on('error', reject);
-      });
-
-      request.on('error', reject);
-      request.end();
-    });
-  } catch (error: any) {
-    return { success: false, error: error.message || 'Failed to fetch audio' };
-  }
-});
-
-// Cache IPC Handlers
-ipcMain.handle('cache:get', async (_event, { model, userInput, systemTemplate }) => {
-  try {
-    const result = await databaseService.getCache(model, userInput, systemTemplate);
-    return { success: true, data: result };
-  } catch (error: any) {
-    return { success: false, error: error.message };
-  }
-});
-
-ipcMain.handle('cache:set', async (_event, { model, userInput, systemTemplate, result }) => {
-  try {
-    await databaseService.setCache(model, userInput, systemTemplate, result);
-    return { success: true };
-  } catch (error: any) {
-    return { success: false, error: error.message };
-  }
-});
-
-ipcMain.handle('cache:clear', async () => {
-  try {
-    await databaseService.clearCache();
-    return { success: true };
-  } catch (error: any) {
-    return { success: false, error: error.message };
-  }
-});
-
-// History IPC Handlers
-ipcMain.handle('history:getAll', async () => {
-  try {
-    const entries = await databaseService.getAllHistory();
-    return { success: true, data: entries };
-  } catch (error: any) {
-    return { success: false, error: error.message };
-  }
-});
-
-ipcMain.handle('history:add', async (_event, entry) => {
-  try {
-    await databaseService.addHistoryEntry(entry);
-    return { success: true };
-  } catch (error: any) {
-    return { success: false, error: error.message };
-  }
-});
-
-ipcMain.handle('history:delete', async (_event, id: string) => {
-  try {
-    await databaseService.deleteHistoryEntry(id);
-    return { success: true };
-  } catch (error: any) {
-    return { success: false, error: error.message };
-  }
-});
-
-ipcMain.handle('history:clear', async () => {
-  try {
-    await databaseService.clearHistory();
-    return { success: true };
-  } catch (error: any) {
-    return { success: false, error: error.message };
-  }
-});
-
-// Settings IPC Handlers
-ipcMain.handle('settings:get', async () => {
-  try {
-    const settings = await settingsService.getSettings();
-    return { success: true, data: settings };
-  } catch (error: any) {
-    return { success: false, error: error.message };
-  }
-});
-
-ipcMain.handle('settings:update', async (_event, partial) => {
-  try {
-    await settingsService.updateSettings(partial);
-    
-    // Reinitialize AI services with new settings
-    const updatedSettings = await settingsService.getSettings();
-    aiTranslatorService = new AITranslatorService({
-      aiProviderUrl: updatedSettings.aiProviderUrl,
-      temperature: updatedSettings.temperature,
-      openRouterBaseUrl: updatedSettings.openRouterBaseUrl,
-      openRouterApiKey1: updatedSettings.openRouterApiKey1,
-      openRouterApiKey2: updatedSettings.openRouterApiKey2,
-      openRouterReferer: updatedSettings.openRouterReferer,
-      openRouterSiteName: updatedSettings.openRouterSiteName,
-    });
-    
-    // If window size changed, update window
-    if (partial.windowSize && mainWindow) {
-      mainWindow.setSize(partial.windowSize.width, partial.windowSize.height);
-    }
-    
-    // Notify renderer about settings change
-    if (mainWindow) {
-      mainWindow.webContents.send('settings:changed');
-    }
-    
-    return { success: true };
-  } catch (error: any) {
-    return { success: false, error: error.message };
-  }
-});
-
-ipcMain.handle('settings:reset', async () => {
-  try {
-    await settingsService.resetToDefaults();
-    
-    // Reinitialize AI services with default settings
-    const settings = await settingsService.getSettings();
-    aiTranslatorService = new AITranslatorService({
-      aiProviderUrl: settings.aiProviderUrl,
-      temperature: settings.temperature,
-      openRouterBaseUrl: settings.openRouterBaseUrl,
-      openRouterApiKey1: settings.openRouterApiKey1,
-      openRouterApiKey2: settings.openRouterApiKey2,
-      openRouterReferer: settings.openRouterReferer,
-      openRouterSiteName: settings.openRouterSiteName,
-    });
-    
-    // Update window size to default
-    if (mainWindow) {
-      mainWindow.setSize(settings.windowSize.width, settings.windowSize.height);
-    }
-    
-    // Notify renderer about settings change
-    if (mainWindow) {
-      mainWindow.webContents.send('settings:changed');
-    }
-    
-    return { success: true };
-  } catch (error: any) {
-    return { success: false, error: error.message };
-  }
-});
-
-ipcMain.handle('settings:getWindowSize', async () => {
-  try {
-    const settings = await settingsService.getSettings();
-    return { success: true, data: settings.windowSize };
-  } catch (error: any) {
-    return { success: false, error: error.message };
-  }
-});
-
-ipcMain.handle('settings:openPage', () => {
-  try {
-    if (mainWindow) {
-      mainWindow.webContents.send('settings:openPage');
-    }
-    return { success: true };
-  } catch (error: any) {
-    return { success: false, error: error.message };
-  }
 });

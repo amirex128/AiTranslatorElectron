@@ -8,7 +8,15 @@ export const checkAIProviderConnection = async (
     await client.list();
     return true;
   } catch (error) {
-    console.error('AI Provider health check failed:', error);
+    // Connection errors are expected if Ollama is not running
+    // This is a warning, not an error - the app will continue to work
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    if (errorMessage.includes('ECONNREFUSED') || errorMessage.includes('fetch failed')) {
+      // Silently return false for connection refused errors
+      return false;
+    }
+    // Log other unexpected errors
+    console.warn('AI Provider health check failed:', errorMessage);
     return false;
   }
 };

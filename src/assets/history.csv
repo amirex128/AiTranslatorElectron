@@ -1,0 +1,3 @@
+id,timestamp,input,type,model,result,responseTime
+1765633412118-0.25557192506618887,1765633412118,سلام,persian-to-english,google/gemma-3-27b-it:free,"{""english_1"":""Hello."",""persian_1"":""درود."",""english_2"":""Hi there."",""persian_2"":""سلام به شما."",""english_3"":""Greetings."",""persian_3"":""احوالپرسی.""}",3
+1765633440575-0.21713674599179178,1765633440575,سلام,persian-to-english,google/gemma-3-27b-it:free,"{""english_1"":""Hello."",""persian_1"":""درود."",""english_2"":""Hi there."",""persian_2"":""سلام به شما."",""english_3"":""Greetings."",""persian_3"":""احوالپرسی.""}",2

@@ -1,19 +1,8 @@
 import { databaseService } from '../database/DatabaseService';
 import { APP_CONFIG } from '../../constants/appConfig';
 import { AIModel } from '../../models/AIModel';
-
-export interface AppSettings {
-  selectedModel: AIModel;
-  aiProviderUrl: string;
-  openRouterBaseUrl: string;
-  openRouterApiKey1: string;
-  openRouterApiKey2: string;
-  openRouterReferer: string;
-  openRouterSiteName: string;
-  temperature: number;
-  fontSize: number;
-  windowSize: { width: number; height: number };
-}
+import { AppSettings } from '../../types/settings';
+import { getDefaultSettings } from '../../constants/defaultSettings';
 
 export class SettingsService {
   private cachedSettings: AppSettings | null = null;
@@ -27,55 +16,34 @@ export class SettingsService {
     try {
       const dbSettings = await databaseService.getAllSettings();
 
-      // If no settings in database, use defaults from APP_CONFIG
+      // If no settings in database, use defaults
       if (Object.keys(dbSettings).length === 0) {
-        this.cachedSettings = {
-          selectedModel: APP_CONFIG.selectedModel,
-          aiProviderUrl: APP_CONFIG.aiProviderUrl,
-          openRouterBaseUrl: APP_CONFIG.openRouterBaseUrl,
-          openRouterApiKey1: APP_CONFIG.openRouterApiKey1,
-          openRouterApiKey2: APP_CONFIG.openRouterApiKey2,
-          openRouterReferer: APP_CONFIG.openRouterReferer,
-          openRouterSiteName: APP_CONFIG.openRouterSiteName,
-          temperature: APP_CONFIG.temperature,
-          fontSize: APP_CONFIG.fontSize,
-          windowSize: APP_CONFIG.windowSize,
-        };
+        this.cachedSettings = getDefaultSettings();
         return this.cachedSettings;
       }
 
       // Parse settings from database
+      const defaults = getDefaultSettings();
       this.cachedSettings = {
-        selectedModel: (dbSettings.selectedModel as AIModel) || APP_CONFIG.selectedModel,
-        aiProviderUrl: dbSettings.aiProviderUrl || APP_CONFIG.aiProviderUrl,
-        openRouterBaseUrl: dbSettings.openRouterBaseUrl || APP_CONFIG.openRouterBaseUrl,
-        openRouterApiKey1: dbSettings.openRouterApiKey1 || APP_CONFIG.openRouterApiKey1,
-        openRouterApiKey2: dbSettings.openRouterApiKey2 || APP_CONFIG.openRouterApiKey2,
-        openRouterReferer: dbSettings.openRouterReferer || APP_CONFIG.openRouterReferer,
-        openRouterSiteName: dbSettings.openRouterSiteName || APP_CONFIG.openRouterSiteName,
-        temperature: dbSettings.temperature ? parseFloat(dbSettings.temperature) : APP_CONFIG.temperature,
-        fontSize: dbSettings.fontSize ? parseInt(dbSettings.fontSize, 10) : APP_CONFIG.fontSize,
+        selectedModel: (dbSettings.selectedModel as AIModel) || defaults.selectedModel,
+        aiProviderUrl: dbSettings.aiProviderUrl || defaults.aiProviderUrl,
+        openRouterBaseUrl: dbSettings.openRouterBaseUrl || defaults.openRouterBaseUrl,
+        openRouterApiKey1: dbSettings.openRouterApiKey1 || defaults.openRouterApiKey1,
+        openRouterApiKey2: dbSettings.openRouterApiKey2 || defaults.openRouterApiKey2,
+        openRouterReferer: dbSettings.openRouterReferer || defaults.openRouterReferer,
+        openRouterSiteName: dbSettings.openRouterSiteName || defaults.openRouterSiteName,
+        temperature: dbSettings.temperature ? parseFloat(dbSettings.temperature) : defaults.temperature,
+        fontSize: dbSettings.fontSize ? parseInt(dbSettings.fontSize, 10) : defaults.fontSize,
         windowSize: dbSettings.windowSize
           ? JSON.parse(dbSettings.windowSize)
-          : APP_CONFIG.windowSize,
+          : defaults.windowSize,
       };
 
       return this.cachedSettings;
     } catch (error) {
       console.error('Error getting settings:', error);
       // Return defaults on error
-      return {
-        selectedModel: APP_CONFIG.selectedModel,
-        aiProviderUrl: APP_CONFIG.aiProviderUrl,
-        openRouterBaseUrl: APP_CONFIG.openRouterBaseUrl,
-        openRouterApiKey1: APP_CONFIG.openRouterApiKey1,
-        openRouterApiKey2: APP_CONFIG.openRouterApiKey2,
-        openRouterReferer: APP_CONFIG.openRouterReferer,
-        openRouterSiteName: APP_CONFIG.openRouterSiteName,
-        temperature: APP_CONFIG.temperature,
-        fontSize: APP_CONFIG.fontSize,
-        windowSize: APP_CONFIG.windowSize,
-      };
+      return getDefaultSettings();
     }
   }
 
@@ -108,18 +76,19 @@ export class SettingsService {
       // Clear cache
       this.cachedSettings = null;
 
-      // Reset to APP_CONFIG defaults
+      // Reset to defaults
+      const defaults = getDefaultSettings();
       const defaultSettings: Record<string, string> = {
-        selectedModel: APP_CONFIG.selectedModel,
-        aiProviderUrl: APP_CONFIG.aiProviderUrl,
-        openRouterBaseUrl: APP_CONFIG.openRouterBaseUrl,
-        openRouterApiKey1: APP_CONFIG.openRouterApiKey1,
-        openRouterApiKey2: APP_CONFIG.openRouterApiKey2,
-        openRouterReferer: APP_CONFIG.openRouterReferer,
-        openRouterSiteName: APP_CONFIG.openRouterSiteName,
-        temperature: String(APP_CONFIG.temperature),
-        fontSize: String(APP_CONFIG.fontSize),
-        windowSize: JSON.stringify(APP_CONFIG.windowSize),
+        selectedModel: defaults.selectedModel,
+        aiProviderUrl: defaults.aiProviderUrl,
+        openRouterBaseUrl: defaults.openRouterBaseUrl,
+        openRouterApiKey1: defaults.openRouterApiKey1,
+        openRouterApiKey2: defaults.openRouterApiKey2,
+        openRouterReferer: defaults.openRouterReferer,
+        openRouterSiteName: defaults.openRouterSiteName,
+        temperature: String(defaults.temperature),
+        fontSize: String(defaults.fontSize),
+        windowSize: JSON.stringify(defaults.windowSize),
       };
 
       await databaseService.setAllSettings(defaultSettings);
