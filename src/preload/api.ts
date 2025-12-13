@@ -68,6 +68,9 @@ export const electronAPI: ElectronAPI = {
   onSettingsOpenPage: (callback: () => void) => {
     ipcRenderer.on('settings:openPage', () => callback());
   },
+  onAboutOpenPage: (callback: () => void) => {
+    ipcRenderer.on('about:openPage', () => callback());
+  },
 };
 
 contextBridge.exposeInMainWorld('electronAPI', electronAPI);

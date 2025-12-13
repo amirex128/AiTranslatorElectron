@@ -26,6 +26,15 @@ export const createTray = (): void => {
       },
     },
     {
+      label: 'درباره ما',
+      click: () => {
+        if (mainWindow) {
+          showWindow();
+          mainWindow.webContents.send('about:openPage');
+        }
+      },
+    },
+    {
       type: 'separator',
     },
     {

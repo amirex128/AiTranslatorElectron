@@ -2,21 +2,26 @@ import React, { useState, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import { MainPage } from './pages/MainPage';
 import { SettingsPage } from './pages/SettingsPage';
+import { AboutPage } from './pages/AboutPage';
 import { MenuBar } from './components/layout/MenuBar/MenuBar';
 
 const App: React.FC = () => {
-  const [currentPage, setCurrentPage] = useState<'main' | 'settings'>('main');
+  const [currentPage, setCurrentPage] = useState<'main' | 'settings' | 'about'>('main');
 
   // Always enable dark mode
   useEffect(() => {
     document.documentElement.classList.add('dark');
   }, []);
 
-  // Listen for settings page open event
+  // Listen for settings and about page open events
   useEffect(() => {
     if (typeof window !== 'undefined' && window.electronAPI) {
       window.electronAPI.onSettingsOpenPage(() => {
         setCurrentPage('settings');
+      });
+
+      window.electronAPI.onAboutOpenPage(() => {
+        setCurrentPage('about');
       });
 
       window.electronAPI.onSettingsChange(() => {
@@ -29,10 +34,14 @@ const App: React.FC = () => {
   return (
     <>
       <MenuBar />
-      {currentPage === 'main' ? (
+      {currentPage === 'main' && (
         <MainPage onOpenSettings={() => setCurrentPage('settings')} />
-      ) : (
+      )}
+      {currentPage === 'settings' && (
         <SettingsPage onBack={() => setCurrentPage('main')} />
+      )}
+      {currentPage === 'about' && (
+        <AboutPage onBack={() => setCurrentPage('main')} />
       )}
     </>
   );

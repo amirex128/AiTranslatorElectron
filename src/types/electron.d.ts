@@ -54,6 +54,7 @@ export interface ElectronAPI {
   resetSettings: () => Promise<IPCResponse<void>>;
   onSettingsChange: (callback: () => void) => void;
   onSettingsOpenPage: (callback: () => void) => void;
+  onAboutOpenPage: (callback: () => void) => void;
 }
 
 declare global {
