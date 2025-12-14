@@ -109,6 +109,33 @@ function loadEnvFile(): void {
               // App not ready, skip
             }
           }
+          
+          // 4. Last resort: Try to run the copy script if .env.example exists in project root
+          // This is a fallback in case postmake didn't run
+          if (!envExamplePath) {
+            try {
+              // Try to find project root by going up from executable
+              let searchDir = execDir;
+              for (let i = 0; i < 10; i++) {
+                const projectRootEnvExample = join(searchDir, '.env.example');
+                if (existsSync(projectRootEnvExample)) {
+                  // Found project root, copy to executable directory
+                  console.log('[Main] Found .env.example in project root, copying to executable directory...');
+                  copyFileSync(projectRootEnvExample, execEnvExamplePath);
+                  envExamplePath = execEnvExamplePath;
+                  // #region agent log
+                  fetch('http://127.0.0.1:7243/ingest/8f3b4518-966f-45c8-9d5c-af7cc357afc0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'src/index.ts:loadEnvFile',message:'Copied .env.example from project root',data:{source:projectRootEnvExample,target:execEnvExamplePath},timestamp:Date.now(),sessionId:'debug-session',runId:'runtime',hypothesisId:'D'})}).catch(()=>{});
+                  // #endregion
+                  break;
+                }
+                const parentDir = join(searchDir, '..');
+                if (parentDir === searchDir) break; // Reached root
+                searchDir = parentDir;
+              }
+            } catch (error) {
+              // Ignore errors in fallback
+            }
+          }
         }
         
         if (envExamplePath) {

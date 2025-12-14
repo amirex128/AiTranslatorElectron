@@ -133,10 +133,39 @@ async function writeEnvFile(settings: AppSettings): Promise<void> {
 /**
  * Registers settings IPC handlers
  */
+/**
+ * Convert APP_CONFIG Proxy to a plain object for IPC serialization
+ */
+function getAppConfigAsPlainObject(): AppSettings {
+  // Access all properties to ensure APP_CONFIG is initialized
+  return {
+    selectedModel: APP_CONFIG.selectedModel,
+    aiProviderUrl: APP_CONFIG.aiProviderUrl,
+    openRouterBaseUrl: APP_CONFIG.openRouterBaseUrl,
+    openRouterApiKey1: APP_CONFIG.openRouterApiKey1,
+    openRouterApiKey2: APP_CONFIG.openRouterApiKey2,
+    openRouterReferer: APP_CONFIG.openRouterReferer,
+    openRouterSiteName: APP_CONFIG.openRouterSiteName,
+    temperature: APP_CONFIG.temperature,
+    fontSize: APP_CONFIG.fontSize,
+    windowSize: {
+      width: APP_CONFIG.windowSize.width,
+      height: APP_CONFIG.windowSize.height,
+    },
+    shortcuts: {
+      persianToEnglish: APP_CONFIG.shortcuts.persianToEnglish,
+      englishToPersian: APP_CONFIG.shortcuts.englishToPersian,
+      grammar: APP_CONFIG.shortcuts.grammar,
+      responseSuggestions: APP_CONFIG.shortcuts.responseSuggestions,
+    },
+  };
+}
+
 export function registerSettingsHandlers(): void {
   ipcMain.handle('settings:get', handleIPC(async () => {
     // Return settings from APP_CONFIG (read from .env in main process)
-    return APP_CONFIG as AppSettings;
+    // Convert Proxy to plain object for IPC serialization
+    return getAppConfigAsPlainObject();
   }));
 
   ipcMain.handle('settings:save', handleIPC(async (_event: IpcMainInvokeEvent, settings: AppSettings) => {
