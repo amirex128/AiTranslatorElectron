@@ -8,11 +8,14 @@ interface TranslationParams {
   model: AIModel;
 }
 
+import { GrammarTeachingResult } from '../services/ai/AIChatService';
+
 interface HistoryEntry {
   input: string;
-  type: 'persian-to-english' | 'english-to-persian' | 'grammar';
+  type: 'persian-to-english' | 'english-to-persian' | 'grammar' | 'grammar-teaching';
   model: AIModel;
-  result: TranslationResult;
+  result: TranslationResult | null; // null for grammar-teaching
+  grammarTeachingResult?: GrammarTeachingResult; // Only for grammar-teaching type
   responseTime?: number;
 }
 

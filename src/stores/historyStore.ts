@@ -1,14 +1,16 @@
 import { create } from 'zustand';
 import { TranslationResult } from '../utils/validation';
 import { AIModel } from '../models/AIModel';
+import { GrammarTeachingResult } from '../services/ai/AIChatService';
 
 export interface HistoryEntry {
   id: string;
   timestamp: number;
   input: string;
-  type: 'persian-to-english' | 'english-to-persian' | 'grammar';
+  type: 'persian-to-english' | 'english-to-persian' | 'grammar' | 'grammar-teaching';
   model: AIModel;
-  result: TranslationResult;
+  result: TranslationResult | null; // null for grammar-teaching
+  grammarTeachingResult?: GrammarTeachingResult; // Only for grammar-teaching type
   responseTime?: number; // Time in seconds
 }
 
@@ -24,6 +26,7 @@ interface HistoryState {
   clearHistory: () => Promise<void>;
   setSearchQuery: (query: string) => void;
   getFilteredEntries: () => HistoryEntry[];
+  findCachedEntry: (input: string, type: string, model: AIModel) => HistoryEntry | null;
 }
 
 const loadHistoryFromDatabase = async (): Promise<HistoryEntry[]> => {
@@ -112,12 +115,40 @@ export const useHistoryStore = create<HistoryState>((set, get) => ({
     }
 
     const query = searchQuery.toLowerCase();
-    return entries.filter(
-      (entry) =>
-        entry.input.toLowerCase().includes(query) ||
-        entry.result.english_1.toLowerCase().includes(query) ||
-        entry.result.persian_1.toLowerCase().includes(query)
-    );
+    return entries.filter((entry) => {
+      const inputMatch = entry.input.toLowerCase().includes(query);
+      if (entry.type === 'grammar-teaching') {
+        // For grammar teaching, search in originalText and correctedText
+        const grammarResult = entry.grammarTeachingResult;
+        if (grammarResult) {
+          const originalMatch = grammarResult.originalText?.toLowerCase().includes(query);
+          const correctedMatch = grammarResult.correctedText?.toLowerCase().includes(query);
+          return inputMatch || originalMatch || correctedMatch;
+        }
+        return inputMatch;
+      } else if (entry.result) {
+        // For regular translations
+        return (
+          inputMatch ||
+          entry.result.english_1.toLowerCase().includes(query) ||
+          entry.result.persian_1.toLowerCase().includes(query)
+        );
+      }
+      return inputMatch;
+    });
+  },
+
+  findCachedEntry: (input: string, type: string, model: AIModel): HistoryEntry | null => {
+    const { entries } = get();
+    const trimmedInput = input.trim();
+    
+    return entries.find((entry) => {
+      return (
+        entry.input.trim() === trimmedInput &&
+        entry.type === type &&
+        entry.model === model
+      );
+    }) || null;
   },
 }));
 

@@ -1,7 +1,8 @@
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect, useState, useMemo } from 'react';
 import { Textarea } from '../../ui/Textarea/Textarea';
 import { FullscreenEditor } from '../../ui/FullscreenEditor/FullscreenEditor';
 import { UndoRedoManager } from '../../../utils/undoRedo';
+import { HistoryEntry } from '../../../stores/historyStore';
 
 interface TranslationInputProps {
   label: string;
@@ -10,6 +11,8 @@ interface TranslationInputProps {
   placeholder?: string;
   autoFocus?: boolean;
   className?: string;
+  historyEntries?: HistoryEntry[];
+  onSelectHistoryEntry?: (entry: HistoryEntry) => void;
 }
 
 export const TranslationInput: React.FC<TranslationInputProps> = ({
@@ -19,10 +22,14 @@ export const TranslationInput: React.FC<TranslationInputProps> = ({
   placeholder,
   autoFocus = false,
   className = '',
+  historyEntries = [],
+  onSelectHistoryEntry,
 }) => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const undoRedoManager = useRef(new UndoRedoManager<string>());
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [showAutocomplete, setShowAutocomplete] = useState(false);
+  const autocompleteRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (autoFocus && textareaRef.current) {
@@ -36,9 +43,50 @@ export const TranslationInput: React.FC<TranslationInputProps> = ({
     }
   }, [value]);
 
+  // Filter history entries for autocomplete
+  const autocompleteSuggestions = useMemo(() => {
+    if (!value.trim() || historyEntries.length === 0) {
+      return [];
+    }
+    
+    const lowerValue = value.toLowerCase();
+    const filtered = historyEntries
+      .filter((entry) => entry.input.toLowerCase().includes(lowerValue))
+      .slice(0, 5); // Show max 5 suggestions
+    
+    return filtered;
+  }, [value, historyEntries]);
+
+  // Close autocomplete when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        autocompleteRef.current &&
+        !autocompleteRef.current.contains(event.target as Node) &&
+        textareaRef.current &&
+        !textareaRef.current.contains(event.target as Node)
+      ) {
+        setShowAutocomplete(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newValue = e.target.value;
     onChange(newValue);
+    setShowAutocomplete(newValue.trim().length > 0 && autocompleteSuggestions.length > 0);
+  };
+
+  const handleSelectHistoryEntry = (entry: HistoryEntry) => {
+    if (onSelectHistoryEntry) {
+      onSelectHistoryEntry(entry);
+      setShowAutocomplete(false);
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -70,6 +118,11 @@ export const TranslationInput: React.FC<TranslationInputProps> = ({
             value={value}
             onChange={handleChange}
             onKeyDown={handleKeyDown}
+            onFocus={() => {
+              if (value.trim().length > 0 && autocompleteSuggestions.length > 0) {
+                setShowAutocomplete(true);
+              }
+            }}
             placeholder={placeholder}
             rows={6}
             className={className}
@@ -95,6 +148,38 @@ export const TranslationInput: React.FC<TranslationInputProps> = ({
               />
             </svg>
           </button>
+          
+          {/* Autocomplete Dropdown */}
+          {showAutocomplete && autocompleteSuggestions.length > 0 && (
+            <div
+              ref={autocompleteRef}
+              className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto"
+            >
+              {autocompleteSuggestions.map((entry) => {
+                // Determine text direction based on entry type
+                const isEnglish = entry.type === 'english-to-persian' || entry.type === 'grammar' || entry.type === 'grammar-teaching';
+                const textDir = isEnglish ? 'ltr' : 'rtl';
+                
+                return (
+                  <button
+                    key={entry.id}
+                    onClick={() => handleSelectHistoryEntry(entry)}
+                    className="w-full text-right px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors border-b border-gray-200 dark:border-gray-700 last:border-b-0"
+                  >
+                    <div className={`text-sm text-gray-900 dark:text-gray-100 truncate`} dir={textDir}>
+                      {entry.input}
+                    </div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400 mt-1" dir="rtl">
+                      {entry.type === 'persian-to-english' && 'فارسی به انگلیسی'}
+                      {entry.type === 'english-to-persian' && 'انگلیسی به فارسی'}
+                      {entry.type === 'grammar' && 'اصلاح گرامر'}
+                      {entry.type === 'grammar-teaching' && 'آموزش گرامر'}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
 

@@ -1,5 +1,6 @@
-import { app, Tray, Menu, nativeImage } from 'electron';
+import { app, Tray, Menu, nativeImage, dialog } from 'electron';
 import { showWindow, closeWindow, mainWindow } from './window';
+import { databaseService } from './database/DatabaseService';
 
 let tray: Tray | null = null;
 
@@ -31,6 +32,27 @@ export const createTray = (): void => {
         if (mainWindow) {
           showWindow();
           mainWindow.webContents.send('about:openPage');
+        }
+      },
+    },
+    {
+      label: 'پاکسازی کش',
+      click: async () => {
+        if (mainWindow) {
+          const result = await dialog.showMessageBox(mainWindow, {
+            type: 'question',
+            buttons: ['بله', 'خیر'],
+            defaultId: 1,
+            title: 'پاکسازی کش',
+            message: 'آیا مطمئن هستید که می‌خواهید تمام کش (تاریخچه) را پاک کنید؟',
+            cancelId: 1,
+          });
+          
+          if (result.response === 0) {
+            await databaseService.clearHistory();
+            // Notify renderer to reload history
+            mainWindow.webContents.send('history:cleared');
+          }
         }
       },
     },

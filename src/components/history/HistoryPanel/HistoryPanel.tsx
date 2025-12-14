@@ -4,6 +4,7 @@ import { Button } from '../../ui/Button/Button';
 import { Input } from '../../ui/Input/Input';
 import { Accordion } from '../../ui/Accordion/Accordion';
 import { AIModel, AI_MODELS } from '../../../models/AIModel';
+import { GrammarTeachingResultComponent } from '../../grammar/GrammarTeachingResult/GrammarTeachingResult';
 
 interface HistoryPanelProps {
   onSelectEntry?: (entry: HistoryEntry) => void;
@@ -78,6 +79,10 @@ export const HistoryPanel: React.FC<HistoryPanelProps> = ({
         badgeText = 'Grammar';
         badgeColor = 'bg-purple-500 dark:bg-purple-600';
         break;
+      case 'grammar-teaching':
+        badgeText = 'Grammar Teaching';
+        badgeColor = 'bg-orange-500 dark:bg-orange-600';
+        break;
     }
 
     return (
@@ -126,38 +131,52 @@ export const HistoryPanel: React.FC<HistoryPanelProps> = ({
               {entry.input}
             </div>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-            {[1, 2, 3].map((index) => {
-              const englishKey = `english_${index}` as keyof typeof entry.result;
-              const persianKey = `persian_${index}` as keyof typeof entry.result;
-              const englishText = entry.result[englishKey] as string;
-              const persianText = entry.result[persianKey] as string;
-              
-              return (
-                <div key={index} className="border border-gray-200 dark:border-gray-700 rounded p-2 space-y-2">
-                  <div className="text-xs font-medium text-gray-600 dark:text-gray-400">
-                    ترجمه {index}
+          
+          {entry.type === 'grammar-teaching' && entry.grammarTeachingResult ? (
+            <div>
+              <GrammarTeachingResultComponent
+                result={entry.grammarTeachingResult}
+                onCopy={(text) => {
+                  // Copy functionality handled by component
+                }}
+                fontSize={14}
+              />
+            </div>
+          ) : entry.result ? (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+              {[1, 2, 3].map((index) => {
+                const englishKey = `english_${index}` as keyof typeof entry.result;
+                const persianKey = `persian_${index}` as keyof typeof entry.result;
+                const englishText = entry.result[englishKey] as string;
+                const persianText = entry.result[persianKey] as string;
+                
+                return (
+                  <div key={index} className="border border-gray-200 dark:border-gray-700 rounded p-2 space-y-2">
+                    <div className="text-xs font-medium text-gray-600 dark:text-gray-400">
+                      ترجمه {index}
+                    </div>
+                    <div className="p-2 bg-gray-50 dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700">
+                      <div className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                        انگلیسی:
+                      </div>
+                      <div className="text-sm text-gray-900 dark:text-gray-100" dir="ltr">
+                        {englishText}
+                      </div>
+                    </div>
+                    <div className="p-2 bg-gray-50 dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700">
+                      <div className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                        فارسی:
+                      </div>
+                      <div className="text-sm text-gray-900 dark:text-gray-100" dir="rtl">
+                        {persianText}
+                      </div>
+                    </div>
                   </div>
-                  <div className="p-2 bg-gray-50 dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700">
-                    <div className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
-                      انگلیسی:
-                    </div>
-                    <div className="text-sm text-gray-900 dark:text-gray-100" dir="ltr">
-                      {englishText}
-                    </div>
-                  </div>
-                  <div className="p-2 bg-gray-50 dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700">
-                    <div className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
-                      فارسی:
-                    </div>
-                    <div className="text-sm text-gray-900 dark:text-gray-100" dir="rtl">
-                      {persianText}
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+          ) : null}
+          
           <div className="flex gap-2">
             <Button
               size="sm"
@@ -233,7 +252,7 @@ export const HistoryPanel: React.FC<HistoryPanelProps> = ({
                     size="sm"
                     variant={currentPage === page ? 'primary' : 'secondary'}
                     onClick={() => handlePageChange(page)}
-                    className="min-w-[2.5rem]"
+                    className="min-w-10"
                   >
                     {page}
                   </Button>

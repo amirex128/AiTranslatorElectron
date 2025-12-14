@@ -44,14 +44,15 @@ export const MainPage: React.FC<MainPageProps> = ({ onOpenSettings }) => {
     toggleErrorDetails,
   } = useTranslationStore();
 
-  const { addEntry } = useHistoryStore();
+  const { addEntry, findCachedEntry, entries: historyEntries, loadEntries } = useHistoryStore();
   const { settings, loadSettings } = useSettingsStore();
 console.log("xxxxxxxxxxxxxxxxxxxxxx MainPage",settings)
   const [selectedModel, setSelectedModel] = useState<AIModel | null>(null);
 
   useEffect(() => {
     loadSettings();
-  }, [loadSettings]);
+    loadEntries();
+  }, [loadSettings, loadEntries]);
 
   useEffect(() => {
     if (settings) {
@@ -121,6 +122,16 @@ console.log("xxxxxxxxxxxxxxxxxxxxxx MainPage",settings)
     } else if (grammarInput.trim()) {
       input = grammarInput.trim();
       if (grammarTeachingMode) {
+        // Check cache first
+        const cachedEntry = findCachedEntry(input, 'grammar-teaching', selectedModel);
+        if (cachedEntry && cachedEntry.grammarTeachingResult) {
+          setGrammarTeachingResult(cachedEntry.grammarTeachingResult);
+          setResults(null);
+          setLastRequestTime(cachedEntry.responseTime);
+          setToast({ message: 'نتیجه از کش بارگذاری شد', type: 'success' });
+          return;
+        }
+
         // Use grammar teaching mode
         try {
           setLoading(true);
@@ -135,6 +146,16 @@ console.log("xxxxxxxxxxxxxxxxxxxxxx MainPage",settings)
           setGrammarTeachingResult(response.result);
           setResults(null); // Clear regular results
           setLastRequestTime(responseTime);
+
+          // Add to history
+          await addEntry({
+            input,
+            type: 'grammar-teaching',
+            model: selectedModel,
+            result: null,
+            grammarTeachingResult: response.result,
+            responseTime,
+          });
 
           setToast({ message: 'آموزش گرامر با موفقیت انجام شد', type: 'success' });
         } catch (err: unknown) {
@@ -151,6 +172,17 @@ console.log("xxxxxxxxxxxxxxxxxxxxxx MainPage",settings)
       }
     } else {
       setError('لطفاً متن را وارد کنید');
+      return;
+    }
+
+    // Check cache first
+    const cachedEntry = findCachedEntry(input, type, selectedModel);
+    if (cachedEntry && cachedEntry.result) {
+      setResults(cachedEntry.result);
+      setSelectedResult(1);
+      setLastRequestTime(cachedEntry.responseTime);
+      setGrammarTeachingResult(null);
+      setToast({ message: 'نتیجه از کش بارگذاری شد', type: 'success' });
       return;
     }
 
@@ -223,6 +255,16 @@ console.log("xxxxxxxxxxxxxxxxxxxxxx MainPage",settings)
             onChange={setPersianToEnglishInput}
             placeholder="متن فارسی را وارد کنید..."
             autoFocus={false}
+            historyEntries={historyEntries.filter((e) => e.type === 'persian-to-english')}
+            onSelectHistoryEntry={(entry) => {
+              setPersianToEnglishInput(entry.input);
+              if (entry.result) {
+                setResults(entry.result);
+                setSelectedResult(1);
+                setGrammarTeachingResult(null);
+                setLastRequestTime(entry.responseTime);
+              }
+            }}
           />
           <TranslationInput
             label="انگلیسی به فارسی"
@@ -230,6 +272,16 @@ console.log("xxxxxxxxxxxxxxxxxxxxxx MainPage",settings)
             onChange={setEnglishToPersianInput}
             placeholder="متن انگلیسی را وارد کنید..."
             autoFocus={false}
+            historyEntries={historyEntries.filter((e) => e.type === 'english-to-persian')}
+            onSelectHistoryEntry={(entry) => {
+              setEnglishToPersianInput(entry.input);
+              if (entry.result) {
+                setResults(entry.result);
+                setSelectedResult(1);
+                setGrammarTeachingResult(null);
+                setLastRequestTime(entry.responseTime);
+              }
+            }}
           />
           <div className="space-y-2">
             <div className="flex items-center justify-between">
@@ -248,6 +300,24 @@ console.log("xxxxxxxxxxxxxxxxxxxxxx MainPage",settings)
             onChange={setGrammarInput}
             placeholder="متن انگلیسی برای اصلاح را وارد کنید..."
             autoFocus={false}
+            historyEntries={historyEntries.filter((e) => 
+              grammarTeachingMode 
+                ? e.type === 'grammar-teaching' 
+                : e.type === 'grammar'
+            )}
+            onSelectHistoryEntry={(entry) => {
+              setGrammarInput(entry.input);
+              if (entry.type === 'grammar-teaching' && entry.grammarTeachingResult) {
+                setGrammarTeachingResult(entry.grammarTeachingResult);
+                setResults(null);
+                setLastRequestTime(entry.responseTime);
+              } else if (entry.result) {
+                setResults(entry.result);
+                setSelectedResult(1);
+                setGrammarTeachingResult(null);
+                setLastRequestTime(entry.responseTime);
+              }
+            }}
           />
           </div>
         </div>
@@ -311,12 +381,21 @@ console.log("xxxxxxxxxxxxxxxxxxxxxx MainPage",settings)
               onSelectEntry={(entry) => {
                 if (entry.type === 'persian-to-english') {
                   setPersianToEnglishInput(entry.input);
+                  setResults(entry.result);
+                  setGrammarTeachingResult(null);
                 } else if (entry.type === 'english-to-persian') {
                   setEnglishToPersianInput(entry.input);
+                  setResults(entry.result);
+                  setGrammarTeachingResult(null);
                 } else if (entry.type === 'grammar') {
                   setGrammarInput(entry.input);
+                  setResults(entry.result);
+                  setGrammarTeachingResult(null);
+                } else if (entry.type === 'grammar-teaching') {
+                  setGrammarInput(entry.input);
+                  setGrammarTeachingResult(entry.grammarTeachingResult || null);
+                  setResults(null);
                 }
-                setResults(entry.result);
                 setShowHistory(false);
               }}
             />

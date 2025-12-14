@@ -3,6 +3,7 @@ import { join } from 'path';
 import { existsSync, mkdirSync, promises as fs } from 'fs';
 import { TranslationResult } from '../../utils/validation';
 import { AIModel } from '../../models/AIModel';
+import { GrammarTeachingResult } from '../../services/ai/AIChatService';
 
 interface HistoryEntry {
   id: string;
@@ -69,7 +70,23 @@ export class DatabaseService {
     try {
       // Initialize history.csv if it doesn't exist
       if (!existsSync(this.historyPath)) {
-        await fs.writeFile(this.historyPath, 'id,timestamp,input,type,model,result,responseTime\n', 'utf-8');
+        await fs.writeFile(this.historyPath, 'id,timestamp,input,type,model,result,responseTime,grammarTeachingResult\n', 'utf-8');
+      } else {
+        // Check if file has old header (without grammarTeachingResult)
+        const content = await fs.readFile(this.historyPath, 'utf-8');
+        const firstLine = content.split('\n')[0];
+        if (firstLine === 'id,timestamp,input,type,model,result,responseTime') {
+          // Migrate old CSV to new format by adding grammarTeachingResult column
+          const lines = content.split('\n');
+          lines[0] = 'id,timestamp,input,type,model,result,responseTime,grammarTeachingResult';
+          // Add empty grammarTeachingResult for existing entries
+          for (let i = 1; i < lines.length; i++) {
+            if (lines[i].trim()) {
+              lines[i] = lines[i] + ',';
+            }
+          }
+          await fs.writeFile(this.historyPath, lines.join('\n'), 'utf-8');
+        }
       }
 
       this.initialized = true;
@@ -131,9 +148,10 @@ export class DatabaseService {
     id: string;
     timestamp: number;
     input: string;
-    type: 'persian-to-english' | 'english-to-persian' | 'grammar';
+    type: 'persian-to-english' | 'english-to-persian' | 'grammar' | 'grammar-teaching';
     model: AIModel;
-    result: TranslationResult;
+    result: TranslationResult | null;
+    grammarTeachingResult?: GrammarTeachingResult;
     responseTime?: number;
   }>> {
     try {
@@ -145,9 +163,10 @@ export class DatabaseService {
         id: string;
         timestamp: number;
         input: string;
-        type: 'persian-to-english' | 'english-to-persian' | 'grammar';
+        type: 'persian-to-english' | 'english-to-persian' | 'grammar' | 'grammar-teaching';
         model: AIModel;
-        result: TranslationResult;
+        result: TranslationResult | null;
+        grammarTeachingResult?: GrammarTeachingResult;
         responseTime?: number;
       }> = [];
       
@@ -155,13 +174,40 @@ export class DatabaseService {
       for (let i = 1; i < lines.length; i++) {
         const fields = this.parseCsvLine(lines[i]);
         if (fields.length >= 7) {
+          const type = fields[3] as 'persian-to-english' | 'english-to-persian' | 'grammar' | 'grammar-teaching';
+          const grammarTeachingResultStr = fields.length >= 8 && fields[7] ? fields[7] : '';
+          
+          let result: TranslationResult | null = null;
+          let grammarTeachingResult: GrammarTeachingResult | undefined = undefined;
+          
+          if (type === 'grammar-teaching') {
+            // For grammar-teaching, result is null and grammarTeachingResult is parsed
+            if (grammarTeachingResultStr) {
+              try {
+                grammarTeachingResult = JSON.parse(grammarTeachingResultStr) as GrammarTeachingResult;
+              } catch (e) {
+                console.error('Error parsing grammarTeachingResult:', e);
+              }
+            }
+          } else {
+            // For regular translations, parse result
+            if (fields[5]) {
+              try {
+                result = JSON.parse(fields[5]) as TranslationResult;
+              } catch (e) {
+                console.error('Error parsing result:', e);
+              }
+            }
+          }
+          
           entries.push({
             id: fields[0],
             timestamp: parseInt(fields[1], 10),
             input: fields[2],
-            type: fields[3] as 'persian-to-english' | 'english-to-persian' | 'grammar',
+            type,
             model: fields[4] as AIModel,
-            result: JSON.parse(fields[5]) as TranslationResult,
+            result,
+            grammarTeachingResult,
             responseTime: fields[6] ? parseInt(fields[6], 10) : undefined,
           });
         }
@@ -179,9 +225,10 @@ export class DatabaseService {
 
   async addHistoryEntry(entry: {
     input: string;
-    type: 'persian-to-english' | 'english-to-persian' | 'grammar';
+    type: 'persian-to-english' | 'english-to-persian' | 'grammar' | 'grammar-teaching';
     model: AIModel;
-    result: TranslationResult;
+    result: TranslationResult | null;
+    grammarTeachingResult?: GrammarTeachingResult;
     responseTime?: number;
   }): Promise<void> {
     try {
@@ -189,14 +236,18 @@ export class DatabaseService {
       const id = `${Date.now()}-${Math.random()}`;
       const timestamp = Date.now();
       
+      const resultStr = entry.result ? JSON.stringify(entry.result) : '';
+      const grammarTeachingResultStr = entry.grammarTeachingResult ? JSON.stringify(entry.grammarTeachingResult) : '';
+      
       const newEntry = [
         id,
         timestamp.toString(),
         entry.input,
         entry.type,
         entry.model,
-        JSON.stringify(entry.result),
-        entry.responseTime?.toString() || ''
+        resultStr,
+        entry.responseTime?.toString() || '',
+        grammarTeachingResultStr
       ].map(field => this.escapeCsvField(field)).join(',');
       
       // Append to file
@@ -228,7 +279,7 @@ export class DatabaseService {
   async clearHistory(): Promise<void> {
     try {
       await this.initializeFiles();
-      await fs.writeFile(this.historyPath, 'id,timestamp,input,type,model,result,responseTime\n', 'utf-8');
+      await fs.writeFile(this.historyPath, 'id,timestamp,input,type,model,result,responseTime,grammarTeachingResult\n', 'utf-8');
     } catch (error) {
       console.error('Error clearing history:', error);
     }
