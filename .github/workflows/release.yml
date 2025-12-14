@@ -67,9 +67,16 @@ jobs:
           }
           
           if ($zipFile -and (Test-Path $zipFile.FullName)) {
-            Write-Host "zip_file=$($zipFile.FullName)" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+            # Get relative path from workspace root
+            $workspaceRoot = $env:GITHUB_WORKSPACE
+            if (-not $workspaceRoot) {
+              $workspaceRoot = $PWD
+            }
+            $relativePath = $zipFile.FullName.Replace("$workspaceRoot\", "").Replace("$workspaceRoot/", "")
+            Write-Host "zip_file=$relativePath" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
             Write-Host "zip_name=$($zipFile.Name)" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
             Write-Host "Found ZIP file: $($zipFile.FullName)"
+            Write-Host "Relative path: $relativePath"
             Get-Item $zipFile.FullName | Format-List
           } else {
             Write-Host "No ZIP file found or created"
@@ -116,9 +123,13 @@ jobs:
           fi
           
           if [ -n "$ZIP_FILE" ] && [ -f "$ZIP_FILE" ]; then
-            echo "zip_file=$ZIP_FILE" >> $GITHUB_OUTPUT
+            # Get relative path from workspace root
+            WORKSPACE_ROOT="${GITHUB_WORKSPACE:-$(pwd)}"
+            RELATIVE_PATH="${ZIP_FILE#$WORKSPACE_ROOT/}"
+            echo "zip_file=$RELATIVE_PATH" >> $GITHUB_OUTPUT
             echo "zip_name=$(basename "$ZIP_FILE")" >> $GITHUB_OUTPUT
             echo "Found ZIP file: $ZIP_FILE"
+            echo "Relative path: $RELATIVE_PATH"
             ls -lh "$ZIP_FILE"
           else
             echo "No ZIP file found or created"
@@ -128,21 +139,51 @@ jobs:
             exit 1
           fi
 
-      - name: Set ZIP file path
-        id: set-zip-path
-        shell: bash
+      - name: Validate ZIP file path (Windows)
+        if: matrix.platform == 'win32'
+        shell: pwsh
         run: |
-          if [ "${{ matrix.platform }}" == "win32" ]; then
-            echo "zip_file=${{ steps.find-zip-win.outputs.zip_file }}" >> $GITHUB_OUTPUT
-          else
-            echo "zip_file=${{ steps.find-zip-unix.outputs.zip_file }}" >> $GITHUB_OUTPUT
-          fi
+          $zipPath = "${{ steps.find-zip-win.outputs.zip_file }}"
+          if ([string]::IsNullOrWhiteSpace($zipPath)) {
+            Write-Host "Error: ZIP file path is empty"
+            exit 1
+          }
+          if (-not (Test-Path $zipPath)) {
+            Write-Host "Error: ZIP file not found at: $zipPath"
+            exit 1
+          }
+          Write-Host "ZIP file validated: $zipPath"
 
-      - name: Upload ZIP artifact
+      - name: Upload ZIP artifact (Windows)
+        if: matrix.platform == 'win32'
         uses: actions/upload-artifact@v4
         with:
           name: aitranslatorelectron-${{ matrix.platform }}-${{ github.ref_name }}
-          path: ${{ steps.set-zip-path.outputs.zip_file }}
+          path: ${{ steps.find-zip-win.outputs.zip_file }}
+          retention-days: 30
+          if-no-files-found: error
+
+      - name: Validate ZIP file path (Unix)
+        if: matrix.platform != 'win32'
+        shell: bash
+        run: |
+          ZIP_PATH="${{ steps.find-zip-unix.outputs.zip_file }}"
+          if [ -z "$ZIP_PATH" ]; then
+            echo "Error: ZIP file path is empty"
+            exit 1
+          fi
+          if [ ! -f "$ZIP_PATH" ]; then
+            echo "Error: ZIP file not found at: $ZIP_PATH"
+            exit 1
+          fi
+          echo "ZIP file validated: $ZIP_PATH"
+
+      - name: Upload ZIP artifact (Unix)
+        if: matrix.platform != 'win32'
+        uses: actions/upload-artifact@v4
+        with:
+          name: aitranslatorelectron-${{ matrix.platform }}-${{ github.ref_name }}
+          path: ${{ steps.find-zip-unix.outputs.zip_file }}
           retention-days: 30
           if-no-files-found: error
 
