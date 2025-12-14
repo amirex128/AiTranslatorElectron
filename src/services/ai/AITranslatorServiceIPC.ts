@@ -1,6 +1,6 @@
 import { AIModel } from '../../models/AIModel';
 import { TranslatorOptions, TranslatorResponse } from '../../types/translation';
-import { GrammarTeachingResult } from '../../utils/grammarTeachingValidation';
+import { GrammarTeachingResult } from '../ai/AIChatService';
 
 class AITranslatorServiceIPC {
   async translatePersianToEnglish(

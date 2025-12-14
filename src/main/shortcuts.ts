@@ -1,6 +1,5 @@
-import { globalShortcut, clipboard } from 'electron';
+import { globalShortcut, clipboard, BrowserWindow } from 'electron';
 import { showWindow } from './window';
-import { BrowserWindow } from 'electron';
 
 let mainWindow: BrowserWindow | null = null;
 

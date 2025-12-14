@@ -2,9 +2,10 @@ import { Ollama } from 'ollama';
 import OpenAI from 'openai';
 import { AIModel, isOpenRouterModel, getOpenRouterModelName, getOpenRouterApiKey } from '../../models/AIModel';
 import { validateTranslationResult, TranslationResult } from '../../utils/validation';
-import { validateGrammarTeachingResult, GrammarTeachingResult } from '../../utils/grammarTeachingValidation';
-import { cacheService } from '../cache/CacheService';
 import { AIChatRequest, AIChatResponse, AIChatOptions } from './types';
+
+// Grammar teaching result type (without validation)
+export type GrammarTeachingResult = any;
 
 export interface AIChatServiceConfig {
   aiProviderUrl: string;
@@ -35,19 +36,6 @@ class AIChatService {
       abortSignal,
       onProgress,
     } = options;
-
-    // Check cache first
-    const cachedResult = await cacheService.get(
-      request.model,
-      request.userInput,
-      request.systemTemplate
-    );
-
-    if (cachedResult) {
-      return {
-        result: cachedResult,
-      };
-    }
 
     // Retry logic
     let lastError: Error | null = null;
@@ -80,14 +68,6 @@ class AIChatService {
         }
 
         if (result) {
-          // Save to cache
-          await cacheService.set(
-            request.model,
-            request.userInput,
-            request.systemTemplate,
-            result
-          );
-
           return {
             result,
           };
@@ -114,8 +94,6 @@ class AIChatService {
       abortSignal,
       onProgress,
     } = options;
-
-    // Note: Grammar teaching results are not cached as they are educational and should be fresh
 
     // Retry logic
     let lastError: Error | null = null;
@@ -218,16 +196,11 @@ class AIChatService {
             if (jsonMatch) {
               const jsonStr = jsonMatch[0];
               const parsed = JSON.parse(jsonStr);
-              const validated = validateGrammarTeachingResult(parsed);
 
-              if (validated) {
-                if (onProgress) {
-                  onProgress(100);
-                }
-                resolve(validated);
-              } else {
-                reject(new Error('Invalid JSON structure for grammar teaching'));
+              if (onProgress) {
+                onProgress(100);
               }
+              resolve(parsed as GrammarTeachingResult);
             } else {
               reject(new Error('No JSON found in response'));
             }
@@ -316,16 +289,11 @@ class AIChatService {
             if (jsonMatch) {
               const jsonStr = jsonMatch[0];
               const parsed = JSON.parse(jsonStr);
-              const validated = validateGrammarTeachingResult(parsed);
 
-              if (validated) {
-                if (onProgress) {
-                  onProgress(100);
-                }
-                resolve(validated);
-              } else {
-                reject(new Error('Invalid JSON structure for grammar teaching'));
+              if (onProgress) {
+                onProgress(100);
               }
+              resolve(parsed as GrammarTeachingResult);
             } else {
               reject(new Error('No JSON found in response'));
             }

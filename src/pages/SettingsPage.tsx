@@ -14,56 +14,12 @@ interface SettingsPageProps {
 }
 
 export const SettingsPage: React.FC<SettingsPageProps> = ({ onBack }) => {
-  const { settings, loadSettings, updateSettings, resetSettings } = useSettingsStore();
-  const [formData, setFormData] = useState<Partial<AppSettings>>({});
-  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
-  const [isSaving, setIsSaving] = useState(false);
+  const { settings, loadSettings } = useSettingsStore();
   const [showOllamaGuide, setShowOllamaGuide] = useState(false);
 
   useEffect(() => {
     loadSettings();
   }, [loadSettings]);
-
-  useEffect(() => {
-    if (settings) {
-      setFormData(settings);
-    }
-  }, [settings]);
-
-  const handleChange = (key: keyof AppSettings, value: AppSettings[keyof AppSettings]) => {
-    setFormData((prev) => ({
-      ...prev,
-      [key]: value,
-    }));
-  };
-
-  const handleSave = async () => {
-    if (!settings) return;
-
-    setIsSaving(true);
-    try {
-      await updateSettings(formData);
-      setToast({ message: 'تنظیمات با موفقیت ذخیره شد', type: 'success' });
-    } catch (error) {
-      setToast({ message: 'خطا در ذخیره تنظیمات', type: 'error' });
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const handleReset = async () => {
-    setIsSaving(true);
-    try {
-      await resetSettings();
-      setToast({ message: 'تنظیمات به حالت پیش‌فرض بازگشت', type: 'success' });
-      // Reload settings to update form
-      await loadSettings();
-    } catch (error) {
-      setToast({ message: 'خطا در بازگشت به پیش‌فرض', type: 'error' });
-    } finally {
-      setIsSaving(false);
-    }
-  };
 
   const handleBack = () => {
     if (onBack) {
@@ -92,14 +48,33 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onBack }) => {
         </div>
 
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 space-y-6">
+          {/* Info Message */}
+          <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+            <div className="flex items-start gap-3">
+              <svg className="w-5 h-5 text-blue-500 dark:text-blue-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <div>
+                <p className="text-sm font-medium text-blue-800 dark:text-blue-200">
+                  تنظیمات از فایل .env خوانده می‌شوند
+                </p>
+                <p className="text-xs text-blue-600 dark:text-blue-300 mt-1">
+                  برای تغییر تنظیمات، فایل .env را ویرایش کنید و برنامه را مجدداً راه‌اندازی کنید.
+                </p>
+              </div>
+            </div>
+          </div>
+
           {/* Model Selection */}
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               مدل هوش مصنوعی
             </label>
             <ModelSelector
-              selectedModel={(formData.selectedModel as AIModel) || settings.selectedModel}
-              onModelChange={(model) => handleChange('selectedModel', model)}
+              selectedModel={settings.selectedModel}
+              // eslint-disable-next-line @typescript-eslint/no-empty-function
+              onModelChange={() => {}} // Disabled
+              disabled={true}
             />
           </div>
 
@@ -121,9 +96,11 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onBack }) => {
             </div>
             <Input
               type="text"
-              value={formData.aiProviderUrl || settings.aiProviderUrl}
-              onChange={(e) => handleChange('aiProviderUrl', e.target.value)}
+              value={settings.aiProviderUrl}
+              // eslint-disable-next-line @typescript-eslint/no-empty-function
+              onChange={() => {}} // Disabled
               placeholder="http://localhost:11434"
+              disabled={true}
             />
           </div>
 
@@ -137,41 +114,51 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onBack }) => {
               <Input
                 label="Base URL"
                 type="text"
-                value={formData.openRouterBaseUrl || settings.openRouterBaseUrl}
-                onChange={(e) => handleChange('openRouterBaseUrl', e.target.value)}
+                value={settings.openRouterBaseUrl}
+                // eslint-disable-next-line @typescript-eslint/no-empty-function
+                onChange={() => {}} // Disabled
                 placeholder="https://openrouter.ai/api/v1"
+                disabled={true}
               />
 
               <Input
                 label="API Key 1"
                 type="password"
-                value={formData.openRouterApiKey1 || settings.openRouterApiKey1}
-                onChange={(e) => handleChange('openRouterApiKey1', e.target.value)}
+                value={settings.openRouterApiKey1}
+                // eslint-disable-next-line @typescript-eslint/no-empty-function
+                onChange={() => {}} // Disabled
                 placeholder="sk-or-v1-..."
+                disabled={true}
               />
 
               <Input
                 label="API Key 2"
                 type="password"
-                value={formData.openRouterApiKey2 || settings.openRouterApiKey2}
-                onChange={(e) => handleChange('openRouterApiKey2', e.target.value)}
+                value={settings.openRouterApiKey2}
+                // eslint-disable-next-line @typescript-eslint/no-empty-function
+                onChange={() => {}} // Disabled
                 placeholder="sk-or-v1-..."
+                disabled={true}
               />
 
               <Input
                 label="Referer"
                 type="text"
-                value={formData.openRouterReferer || settings.openRouterReferer}
-                onChange={(e) => handleChange('openRouterReferer', e.target.value)}
+                value={settings.openRouterReferer}
+                // eslint-disable-next-line @typescript-eslint/no-empty-function
+                onChange={() => {}} // Disabled
                 placeholder="http://localhost:3000"
+                disabled={true}
               />
 
               <Input
                 label="Site Name"
                 type="text"
-                value={formData.openRouterSiteName || settings.openRouterSiteName}
-                onChange={(e) => handleChange('openRouterSiteName', e.target.value)}
+                value={settings.openRouterSiteName}
+                // eslint-disable-next-line @typescript-eslint/no-empty-function
+                onChange={() => {}} // Disabled
                 placeholder="AI Translator"
+                disabled={true}
               />
             </div>
           </div>
@@ -185,16 +172,18 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onBack }) => {
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Temperature: {formData.temperature !== undefined ? formData.temperature : settings.temperature}
+                  Temperature: {settings.temperature}
                 </label>
                 <input
                   type="range"
                   min="0"
                   max="2"
                   step="0.1"
-                  value={formData.temperature !== undefined ? formData.temperature : settings.temperature}
-                  onChange={(e) => handleChange('temperature', parseFloat(e.target.value))}
-                  className="w-full"
+                  value={settings.temperature}
+                  // eslint-disable-next-line @typescript-eslint/no-empty-function
+                  onChange={() => {}} // Disabled
+                  className="w-full opacity-50 cursor-not-allowed"
+                  disabled={true}
                 />
                 <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mt-1">
                   <span>0</span>
@@ -217,8 +206,10 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onBack }) => {
                 type="number"
                 min="10"
                 max="24"
-                value={formData.fontSize || settings.fontSize}
-                onChange={(e) => handleChange('fontSize', parseInt(e.target.value, 10))}
+                value={settings.fontSize}
+                // eslint-disable-next-line @typescript-eslint/no-empty-function
+                onChange={() => {}} // Disabled
+                disabled={true}
               />
 
               <div className="grid grid-cols-2 gap-4">
@@ -226,64 +217,32 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onBack }) => {
                   label="عرض پنجره"
                   type="number"
                   min="600"
-                  value={formData.windowSize?.width || settings.windowSize.width}
-                  onChange={(e) =>
-                    handleChange('windowSize', {
-                      ...(formData.windowSize || settings.windowSize),
-                      width: parseInt(e.target.value, 10),
-                    })
-                  }
+                  value={settings.windowSize.width}
+                  // eslint-disable-next-line @typescript-eslint/no-empty-function
+                  onChange={() => {}} // Disabled
+                  disabled={true}
                 />
 
                 <Input
                   label="ارتفاع پنجره"
                   type="number"
                   min="400"
-                  value={formData.windowSize?.height || settings.windowSize.height}
-                  onChange={(e) =>
-                    handleChange('windowSize', {
-                      ...(formData.windowSize || settings.windowSize),
-                      height: parseInt(e.target.value, 10),
-                    })
-                  }
+                  value={settings.windowSize.height}
+                  // eslint-disable-next-line @typescript-eslint/no-empty-function
+                  onChange={() => {}} // Disabled
+                  disabled={true}
                 />
               </div>
             </div>
           </div>
 
-          {/* Action Buttons */}
-          <div className="flex gap-4 pt-6 border-t border-gray-200 dark:border-gray-700">
-            <Button
-              variant="primary"
-              onClick={handleSave}
-              disabled={isSaving}
-              isLoading={isSaving}
-            >
-              ذخیره
-            </Button>
-            <Button
-              variant="secondary"
-              onClick={handleReset}
-              disabled={isSaving}
-            >
-              بازگشت به پیش‌فرض
-            </Button>
-          </div>
         </div>
-
-        {toast && (
-          <Toast
-            message={toast.message}
-            type={toast.type}
-            onClose={() => setToast(null)}
-          />
-        )}
 
         {/* Ollama Guide Modal */}
         <OllamaGuideModal
           isOpen={showOllamaGuide}
           onClose={() => setShowOllamaGuide(false)}
-        />
+          />
       </div>
     </div>
   );

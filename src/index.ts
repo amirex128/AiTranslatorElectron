@@ -9,9 +9,9 @@ import { registerShortcuts, unregisterShortcuts } from './main/shortcuts';
 import { checkAIProviderConnection } from './main/healthCheck';
 import { APP_CONFIG } from './constants/appConfig';
 import { databaseService } from './main/database/DatabaseService';
-import { settingsService } from './main/settings/SettingsService';
 import { AIServiceFactory } from './main/services/AIServiceFactory';
 import { registerAllIPCHandlers, registerTranslationIPCHandlers } from './main/ipc/ipcRouter';
+import { AppSettings } from './types/settings';
 
 // Initialize AI service factory
 const aiServiceFactory = new AIServiceFactory();
@@ -22,10 +22,7 @@ if (require('electron-squirrel-startup')) {
 }
 
 // Register IPC handlers before app ready
-registerAllIPCHandlers(
-  () => aiServiceFactory.getService(),
-  (settings) => aiServiceFactory.updateService(settings)
-);
+registerAllIPCHandlers();
 
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
@@ -33,11 +30,8 @@ app.on('ready', async () => {
   // Remove default menu bar
   Menu.setApplicationMenu(null);
   
-  // Initialize settings from APP_CONFIG if database is empty
-  await databaseService.initializeSettingsFromConfig(APP_CONFIG);
-  
-  // Initialize AI services with settings
-  const settings = await settingsService.getSettings();
+  // Initialize AI services with settings from APP_CONFIG
+  const settings = APP_CONFIG as AppSettings;
   const aiService = aiServiceFactory.createService(settings);
   
   // Register translation handlers now that service is available
@@ -47,6 +41,7 @@ app.on('ready', async () => {
   createTray();
   
   // Get mainWindow after it's created
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
   const windowModule = require('./main/window');
   if (windowModule.mainWindow) {
     registerShortcuts(windowModule.mainWindow);

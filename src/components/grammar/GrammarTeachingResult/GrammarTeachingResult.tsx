@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { GrammarTeachingResult } from '../../../utils/grammarTeachingValidation';
+import { GrammarTeachingResult } from '../../../services/ai/AIChatService';
 import { ttsService } from '../../../services/tts/TTSService';
 import { Button } from '../../ui/Button/Button';
 
@@ -227,7 +227,7 @@ export const GrammarTeachingResultComponent: React.FC<GrammarTeachingResultProps
         {result.grammarTeaching.similarExamples.length > 0 && (
           <CollapsibleSection title="مثال‌های مشابه">
             <div className="space-y-4">
-              {result.grammarTeaching.similarExamples.map((example, index) => (
+              {result.grammarTeaching.similarExamples.map((example: any, index: number) => (
                 <div key={index} className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4 border border-gray-200 dark:border-gray-700 space-y-2">
                   <div className="flex items-start justify-between">
                     <div className="p-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 flex-1" dir="ltr">
@@ -248,7 +248,7 @@ export const GrammarTeachingResultComponent: React.FC<GrammarTeachingResultProps
         {result.grammarTeaching.keyPoints.length > 0 && (
           <CollapsibleSection title="نکات کلیدی">
             <div className="space-y-3">
-              {result.grammarTeaching.keyPoints.map((point, index) => (
+              {result.grammarTeaching.keyPoints.map((point: any, index: number) => (
                 <div key={index} className="bg-yellow-50 dark:bg-yellow-900/20 rounded-lg p-4 border border-yellow-200 dark:border-yellow-800">
                   <h4 className="font-medium text-gray-900 dark:text-white mb-2" dir="ltr">{point.titleEn}</h4>
                   <p className="text-gray-700 dark:text-gray-300" dir="rtl">{point.explanationFa}</p>
@@ -262,7 +262,7 @@ export const GrammarTeachingResultComponent: React.FC<GrammarTeachingResultProps
         {result.grammarTeaching.commonMistakes.length > 0 && (
           <CollapsibleSection title="اشتباهات رایج">
             <div className="space-y-4">
-              {result.grammarTeaching.commonMistakes.map((mistake, index) => (
+              {result.grammarTeaching.commonMistakes.map((mistake: any, index: number) => (
                 <div key={index} className="bg-red-50 dark:bg-red-900/20 rounded-lg p-4 border border-red-200 dark:border-red-800">
                   <div className="grid grid-cols-2 gap-4 mb-2">
                     <div>
@@ -287,7 +287,7 @@ export const GrammarTeachingResultComponent: React.FC<GrammarTeachingResultProps
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">اصطلاحات و عبارات</h2>
           <div className="space-y-4">
-            {result.idiomPhrases.map((phrase, index) => (
+            {result.idiomPhrases.map((phrase: any, index: number) => (
               <div key={index} className="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-4 border border-purple-200 dark:border-purple-800">
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
@@ -324,7 +324,7 @@ export const GrammarTeachingResultComponent: React.FC<GrammarTeachingResultProps
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">تحلیل ساختار جمله</h2>
           <div className="space-y-6">
-            {result.sentenceStructure.map((sentence, sentenceIndex) => (
+            {result.sentenceStructure.map((sentence: any, sentenceIndex: number) => (
               <CollapsibleSection
                 key={sentenceIndex}
                 title={`جمله ${sentenceIndex + 1}: ${sentence.sentenceText.substring(0, 50)}...`}
@@ -348,7 +348,7 @@ export const GrammarTeachingResultComponent: React.FC<GrammarTeachingResultProps
                   <div>
                     <h4 className="font-medium text-gray-900 dark:text-white mb-3">تحلیل کلمه به کلمه:</h4>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                      {sentence.tokens.map((token, tokenIndex) => (
+                      {sentence.tokens.map((token: any, tokenIndex: number) => (
                         <div
                           key={tokenIndex}
                           className="bg-white dark:bg-gray-800 rounded-lg p-3 border border-gray-200 dark:border-gray-700"

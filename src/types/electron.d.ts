@@ -1,7 +1,7 @@
 import { IPCResponse } from './errors';
 import { TranslatorResponse } from './translation';
 import { TranslationResult } from '../utils/validation';
-import { GrammarTeachingResult } from '../utils/grammarTeachingValidation';
+import { GrammarTeachingResult } from '../services/ai/AIChatService';
 import { AIModel } from '../models/AIModel';
 import { AppSettings } from './settings';
 
@@ -42,17 +42,11 @@ export interface ElectronAPI {
   translateGrammar: (params: TranslationParams) => Promise<IPCResponse<TranslatorResponse>>;
   translateGrammarTeaching: (params: TranslationParams) => Promise<IPCResponse<{ result: GrammarTeachingResult }>>;
   fetchTTSAudio: (url: string) => Promise<IPCResponse<TTSAudioData>>;
-  getCache: (params: { model: string; userInput: string; systemTemplate: string }) => Promise<IPCResponse<TranslationResult | null>>;
-  setCache: (params: { model: string; userInput: string; systemTemplate: string; result: TranslationResult }) => Promise<IPCResponse<void>>;
-  clearCache: () => Promise<IPCResponse<void>>;
   getAllHistory: () => Promise<IPCResponse<HistoryEntryWithId[]>>;
   addHistory: (entry: HistoryEntry) => Promise<IPCResponse<void>>;
   deleteHistory: (id: string) => Promise<IPCResponse<void>>;
   clearHistory: () => Promise<IPCResponse<void>>;
   getSettings: () => Promise<IPCResponse<AppSettings>>;
-  updateSettings: (partial: Partial<AppSettings>) => Promise<IPCResponse<void>>;
-  resetSettings: () => Promise<IPCResponse<void>>;
-  onSettingsChange: (callback: () => void) => void;
   onSettingsOpenPage: (callback: () => void) => void;
   onAboutOpenPage: (callback: () => void) => void;
 }

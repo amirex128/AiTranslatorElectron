@@ -10,7 +10,7 @@ class TTSService {
     }
   }
 
-  async speak(text: string, speed: number = 1.0): Promise<void> {
+  async speak(text: string, speed = 1.0): Promise<void> {
     this.stop();
 
     this.currentSpeed = speed;

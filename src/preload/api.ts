@@ -1,8 +1,7 @@
 import { contextBridge, ipcRenderer } from 'electron';
 import { ElectronAPI } from '../types/electron';
-import { TranslationResult } from '../utils/validation';
 import { AIModel } from '../models/AIModel';
-import { AppSettings } from '../types/settings';
+import { TranslationResult } from '../utils/validation';
 
 interface TranslationParams {
   text: string;
@@ -45,13 +44,6 @@ export const electronAPI: ElectronAPI = {
   // TTS
   fetchTTSAudio: (url: string) => ipcRenderer.invoke('tts:fetch-audio', url),
 
-  // Cache
-  getCache: (params: { model: string; userInput: string; systemTemplate: string }) =>
-    ipcRenderer.invoke('cache:get', params),
-  setCache: (params: { model: string; userInput: string; systemTemplate: string; result: TranslationResult }) =>
-    ipcRenderer.invoke('cache:set', params),
-  clearCache: () => ipcRenderer.invoke('cache:clear'),
-
   // History
   getAllHistory: () => ipcRenderer.invoke('history:getAll'),
   addHistory: (entry: HistoryEntry) => ipcRenderer.invoke('history:add', entry),
@@ -60,11 +52,7 @@ export const electronAPI: ElectronAPI = {
 
   // Settings
   getSettings: () => ipcRenderer.invoke('settings:get'),
-  updateSettings: (partial: Partial<AppSettings>) => ipcRenderer.invoke('settings:update', partial),
-  resetSettings: () => ipcRenderer.invoke('settings:reset'),
-  onSettingsChange: (callback: () => void) => {
-    ipcRenderer.on('settings:changed', () => callback());
-  },
+
   onSettingsOpenPage: (callback: () => void) => {
     ipcRenderer.on('settings:openPage', () => callback());
   },

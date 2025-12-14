@@ -3,7 +3,6 @@ import { createRoot } from 'react-dom/client';
 import { MainPage } from './pages/MainPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { AboutPage } from './pages/AboutPage';
-import { MenuBar } from './components/layout/MenuBar/MenuBar';
 
 const App: React.FC = () => {
   const [currentPage, setCurrentPage] = useState<'main' | 'settings' | 'about'>('main');
@@ -23,17 +22,11 @@ const App: React.FC = () => {
       window.electronAPI.onAboutOpenPage(() => {
         setCurrentPage('about');
       });
-
-      window.electronAPI.onSettingsChange(() => {
-        // Reload settings when they change
-        // This will be handled by individual components that use settingsStore
-      });
     }
   }, []);
 
   return (
     <>
-      <MenuBar />
       {currentPage === 'main' && (
         <MainPage onOpenSettings={() => setCurrentPage('settings')} />
       )}

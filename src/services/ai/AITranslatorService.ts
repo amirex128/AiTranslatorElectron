@@ -8,7 +8,7 @@ import {
 import { AIChatService, AIChatServiceConfig } from './AIChatService';
 import { AIChatOptions } from './types';
 import { TranslatorOptions, TranslatorResponse } from '../../types/translation';
-import { GrammarTeachingResult } from '../../utils/grammarTeachingValidation';
+import { GrammarTeachingResult } from '../ai/AIChatService';
 
 export class AITranslatorService {
   private config: AIChatServiceConfig;

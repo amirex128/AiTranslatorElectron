@@ -1,12 +1,11 @@
 import { BrowserWindow } from 'electron';
-import { settingsService } from './settings/SettingsService';
+import { APP_CONFIG } from '../constants/appConfig';
 
 export let mainWindow: BrowserWindow | null = null;
 let isQuitting = false;
 
 export const createWindow = async (): Promise<void> => {
-  const settings = await settingsService.getSettings();
-  const windowSize = settings.windowSize;
+  const windowSize = APP_CONFIG.windowSize;
 
   mainWindow = new BrowserWindow({
     width: windowSize.width,

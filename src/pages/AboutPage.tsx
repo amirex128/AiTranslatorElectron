@@ -102,3 +102,4 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBack }) => {
   );
 };
 
+

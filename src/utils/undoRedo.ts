@@ -3,7 +3,7 @@ export class UndoRedoManager<T> {
   private redoStack: T[] = [];
   private maxSize: number;
 
-  constructor(maxSize: number = 50) {
+  constructor(maxSize = 50) {
     this.maxSize = maxSize;
   }
 

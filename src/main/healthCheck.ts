@@ -1,7 +1,7 @@
 import { Ollama } from 'ollama';
 
 export const checkAIProviderConnection = async (
-  url: string = 'http://localhost:11434'
+  url = 'http://localhost:11434'
 ): Promise<boolean> => {
   try {
     const client = new Ollama({ host: url });

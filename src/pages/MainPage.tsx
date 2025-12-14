@@ -17,7 +17,7 @@ import { TranslatorResponse, TranslatorOptions } from '../types/translation';
 import { writeClipboard } from '../utils/clipboard';
 import { AIModel } from '../models/AIModel';
 import { useSettingsStore } from '../stores/settingsStore';
-import { GrammarTeachingResult } from '../utils/grammarTeachingValidation';
+import { GrammarTeachingResult } from '../services/ai/AIChatService';
 
 interface MainPageProps {
   onOpenSettings?: () => void;
@@ -46,7 +46,7 @@ export const MainPage: React.FC<MainPageProps> = ({ onOpenSettings }) => {
 
   const { addEntry } = useHistoryStore();
   const { settings, loadSettings } = useSettingsStore();
-
+console.log("xxxxxxxxxxxxxxxxxxxxxx MainPage",settings)
   const [selectedModel, setSelectedModel] = useState<AIModel | null>(null);
 
   useEffect(() => {
@@ -146,8 +146,8 @@ export const MainPage: React.FC<MainPageProps> = ({ onOpenSettings }) => {
         }
         return;
       } else {
-        translateFn = aiTranslatorServiceIPC.correctGrammar.bind(aiTranslatorServiceIPC);
-        type = 'grammar';
+      translateFn = aiTranslatorServiceIPC.correctGrammar.bind(aiTranslatorServiceIPC);
+      type = 'grammar';
       }
     } else {
       setError('لطفاً متن را وارد کنید');
@@ -242,13 +242,13 @@ export const MainPage: React.FC<MainPageProps> = ({ onOpenSettings }) => {
                 label="حالت آموزش"
               />
             </div>
-            <TranslationInput
+          <TranslationInput
               label=""
-              value={grammarInput}
-              onChange={setGrammarInput}
-              placeholder="متن انگلیسی برای اصلاح را وارد کنید..."
-              autoFocus={false}
-            />
+            value={grammarInput}
+            onChange={setGrammarInput}
+            placeholder="متن انگلیسی برای اصلاح را وارد کنید..."
+            autoFocus={false}
+          />
           </div>
         </div>
 
