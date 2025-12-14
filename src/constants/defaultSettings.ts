@@ -15,6 +15,7 @@ export async function getDefaultSettings(): Promise<AppSettings> {
     const { APP_CONFIG } = require('./appConfig');
     return {
       selectedModel: APP_CONFIG.selectedModel,
+      fallbackSelectedModel: APP_CONFIG.fallbackSelectedModel,
       aiProviderUrl: APP_CONFIG.aiProviderUrl,
       openRouterBaseUrl: APP_CONFIG.openRouterBaseUrl,
       openRouterApiKey1: APP_CONFIG.openRouterApiKey1,

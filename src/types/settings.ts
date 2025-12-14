@@ -6,6 +6,7 @@ import { AIModel } from '../models/AIModel';
  */
 export interface AppSettings {
   selectedModel: AIModel;
+  fallbackSelectedModel: AIModel;
   aiProviderUrl: string;
   openRouterBaseUrl: string;
   openRouterApiKey1: string;
@@ -20,6 +21,8 @@ export interface AppSettings {
     englishToPersian: string;
     grammar: string;
     responseSuggestions: string;
+    processMain: string;
+    processFallback: string;
   };
 }
 

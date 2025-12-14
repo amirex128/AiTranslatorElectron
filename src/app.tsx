@@ -30,7 +30,7 @@ const App: React.FC = () => {
 
   return (
     <div className="flex flex-col h-screen overflow-hidden">
-      <TitleBar title="AI Translator" iconPath={iconPath} />
+      <TitleBar title="مترجم هوش مصنوعی" iconPath={iconPath} />
       <div className="flex-1 overflow-y-auto">
         {currentPage === 'main' && (
           <MainPage onOpenSettings={() => setCurrentPage('settings')} />

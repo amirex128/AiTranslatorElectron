@@ -101,6 +101,7 @@ function createAppConfig() {
   return {
   // Model Selection
     selectedModel: getEnvModel('SELECTED_MODEL'),
+    fallbackSelectedModel: getEnvModel('FALLBACK_SELECTED_MODEL'),
   
   // AI Provider Configuration
     aiProviderUrl: getEnv('AI_PROVIDER_URL'), // Ollama URL
@@ -128,6 +129,8 @@ function createAppConfig() {
       englishToPersian: getEnvShortcut('SHORTCUT_ENGLISH_TO_PERSIAN', 'Alt+Home'),
       grammar: getEnvShortcut('SHORTCUT_GRAMMAR', 'Alt+PageUp'),
       responseSuggestions: getEnvShortcut('SHORTCUT_RESPONSE_SUGGESTIONS', 'Alt+PageDown'),
+      processMain: getEnvShortcut('SHORTCUT_PROCESS_MAIN', 'CommandOrControl+Enter'),
+      processFallback: getEnvShortcut('SHORTCUT_PROCESS_FALLBACK', 'Alt+Enter'),
     },
 } as const;
 }

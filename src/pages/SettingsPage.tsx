@@ -124,15 +124,27 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onBack }) => {
           </div>
 
           {/* Model Selection */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              مدل هوش مصنوعی
-            </label>
-            <ModelSelector
-              selectedModel={formData.selectedModel}
-              onModelChange={(model) => handleChange('selectedModel', model)}
-              disabled={false}
-            />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                مدل هوش مصنوعی
+              </label>
+              <ModelSelector
+                selectedModel={formData.selectedModel}
+                onModelChange={(model) => handleChange('selectedModel', model)}
+                disabled={false}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                مدل جایگزین
+              </label>
+              <ModelSelector
+                selectedModel={formData.fallbackSelectedModel}
+                onModelChange={(model) => handleChange('fallbackSelectedModel', model)}
+                disabled={false}
+              />
+            </div>
           </div>
 
           {/* AI Provider URL */}
@@ -331,6 +343,18 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onBack }) => {
                 label="جوابش چی میشه؟"
                 value={formData.shortcuts.responseSuggestions}
                 onChange={(value) => handleShortcutChange('responseSuggestions', value)}
+              />
+
+              <ShortcutBuilder
+                label="پردازش (مدل اصلی)"
+                value={formData.shortcuts.processMain}
+                onChange={(value) => handleShortcutChange('processMain', value)}
+              />
+
+              <ShortcutBuilder
+                label="پردازش (مدل جایگزین)"
+                value={formData.shortcuts.processFallback}
+                onChange={(value) => handleShortcutChange('processFallback', value)}
               />
             </div>
           </div>

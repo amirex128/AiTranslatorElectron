@@ -35,6 +35,7 @@ async function writeEnvFile(settings: AppSettings): Promise<void> {
     // Map of keys to update
     const updates = new Map<string, string>([
       ['SELECTED_MODEL', getModelKey(settings.selectedModel)],
+      ['FALLBACK_SELECTED_MODEL', getModelKey(settings.fallbackSelectedModel)],
       ['AI_PROVIDER_URL', settings.aiProviderUrl],
       ['OPEN_ROUTER_BASE_URL', settings.openRouterBaseUrl],
       ['OPEN_ROUTER_API_KEY_1', settings.openRouterApiKey1],
@@ -49,6 +50,8 @@ async function writeEnvFile(settings: AppSettings): Promise<void> {
       ['SHORTCUT_ENGLISH_TO_PERSIAN', settings.shortcuts.englishToPersian],
       ['SHORTCUT_GRAMMAR', settings.shortcuts.grammar],
       ['SHORTCUT_RESPONSE_SUGGESTIONS', settings.shortcuts.responseSuggestions],
+      ['SHORTCUT_PROCESS_MAIN', settings.shortcuts.processMain],
+      ['SHORTCUT_PROCESS_FALLBACK', settings.shortcuts.processFallback],
     ]);
     
     const updatedKeys = new Set<string>();
@@ -94,6 +97,7 @@ async function writeEnvFile(settings: AppSettings): Promise<void> {
     console.log('[Settings] Creating new .env file');
     envContent = [
       `SELECTED_MODEL=${getModelKey(settings.selectedModel)}`,
+      `FALLBACK_SELECTED_MODEL=${getModelKey(settings.fallbackSelectedModel)}`,
       `AI_PROVIDER_URL=${settings.aiProviderUrl}`,
       `OPEN_ROUTER_BASE_URL=${settings.openRouterBaseUrl}`,
       `OPEN_ROUTER_API_KEY_1=${settings.openRouterApiKey1}`,
@@ -108,6 +112,8 @@ async function writeEnvFile(settings: AppSettings): Promise<void> {
       `SHORTCUT_ENGLISH_TO_PERSIAN=${settings.shortcuts.englishToPersian}`,
       `SHORTCUT_GRAMMAR=${settings.shortcuts.grammar}`,
       `SHORTCUT_RESPONSE_SUGGESTIONS=${settings.shortcuts.responseSuggestions}`,
+      `SHORTCUT_PROCESS_MAIN=${settings.shortcuts.processMain}`,
+      `SHORTCUT_PROCESS_FALLBACK=${settings.shortcuts.processFallback}`,
     ].join('\n') + '\n';
   }
 
@@ -141,6 +147,7 @@ function getAppConfigAsPlainObject(): AppSettings {
   // Access all properties to ensure APP_CONFIG is initialized
   return {
     selectedModel: APP_CONFIG.selectedModel,
+    fallbackSelectedModel: APP_CONFIG.fallbackSelectedModel,
     aiProviderUrl: APP_CONFIG.aiProviderUrl,
     openRouterBaseUrl: APP_CONFIG.openRouterBaseUrl,
     openRouterApiKey1: APP_CONFIG.openRouterApiKey1,
@@ -158,6 +165,8 @@ function getAppConfigAsPlainObject(): AppSettings {
       englishToPersian: APP_CONFIG.shortcuts.englishToPersian,
       grammar: APP_CONFIG.shortcuts.grammar,
       responseSuggestions: APP_CONFIG.shortcuts.responseSuggestions,
+      processMain: APP_CONFIG.shortcuts.processMain,
+      processFallback: APP_CONFIG.shortcuts.processFallback,
     },
   };
 }

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useTranslationStore } from '../stores/translationStore';
 import { useHistoryStore } from '../stores/historyStore';
 import { TranslationInput } from '../components/translation/TranslationInput/TranslationInput';
@@ -52,6 +52,7 @@ export const MainPage: React.FC<MainPageProps> = ({ onOpenSettings }) => {
   const { addEntry, findCachedEntry, entries: historyEntries, loadEntries } = useHistoryStore();
   const { settings, loadSettings } = useSettingsStore();
   const [selectedModel, setSelectedModel] = useState<AIModel | null>(null);
+  const [fallbackSelectedModel, setFallbackSelectedModel] = useState<AIModel | null>(null);
 
   useEffect(() => {
     loadSettings();
@@ -61,6 +62,7 @@ export const MainPage: React.FC<MainPageProps> = ({ onOpenSettings }) => {
   useEffect(() => {
     if (settings) {
       setSelectedModel(settings.selectedModel);
+      setFallbackSelectedModel(settings.fallbackSelectedModel);
     }
   }, [settings]);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
@@ -281,6 +283,188 @@ export const MainPage: React.FC<MainPageProps> = ({ onOpenSettings }) => {
     }
   };
 
+  const handleTranslateFallback = async () => {
+    if (!fallbackSelectedModel || !settings) {
+      setError('تنظیمات بارگذاری نشده است');
+      return;
+    }
+
+    // Handle response suggestions first
+    if (responseSuggestionsInput.trim()) {
+      const input = responseSuggestionsInput.trim();
+      
+      // Check cache first
+      const cachedEntry = findCachedEntry(input, 'response-suggestions', fallbackSelectedModel);
+      if (cachedEntry && cachedEntry.responseSuggestionsResult) {
+        setResponseSuggestionsResult(cachedEntry.responseSuggestionsResult);
+        setResults(null);
+        setGrammarTeachingResult(null);
+        setLastRequestTime(cachedEntry.responseTime);
+        setToast({ message: 'نتیجه از کش بارگذاری شد', type: 'success' });
+        return;
+      }
+
+      try {
+        setLoading(true);
+        setError(null);
+        const requestStartTime = Date.now();
+        setStartTime(requestStartTime);
+
+        const response = await aiTranslatorServiceIPC.suggestResponses(input, fallbackSelectedModel, {});
+        const endTime = Date.now();
+        const responseTime = Math.floor((endTime - requestStartTime) / 1000);
+
+        setResponseSuggestionsResult(response.result);
+        setResults(null);
+        setGrammarTeachingResult(null);
+        setLastRequestTime(responseTime);
+
+        // Add to history
+        await addEntry({
+          input,
+          type: 'response-suggestions',
+          model: fallbackSelectedModel,
+          result: null,
+          responseSuggestionsResult: response.result,
+          responseTime,
+        });
+
+        setToast({ message: 'پیشنهادات پاسخ با موفقیت تولید شد', type: 'success' });
+      } catch (err: unknown) {
+        const errorMessage = err instanceof Error ? err.message : 'خطا در تولید پیشنهادات پاسخ';
+        setError(errorMessage);
+        setToast({ message: errorMessage, type: 'error' });
+      } finally {
+        setLoading(false);
+        setStartTime(null);
+      }
+      return;
+    }
+
+    let input = '';
+    let translateFn: (
+      text: string,
+      model: AIModel,
+      options: TranslatorOptions
+    ) => Promise<TranslatorResponse>;
+    let type: 'persian-to-english' | 'english-to-persian' | 'grammar';
+
+    if (persianToEnglishInput.trim()) {
+      input = persianToEnglishInput.trim();
+      translateFn = aiTranslatorServiceIPC.translatePersianToEnglish.bind(
+        aiTranslatorServiceIPC
+      );
+      type = 'persian-to-english';
+    } else if (englishToPersianInput.trim()) {
+      input = englishToPersianInput.trim();
+      translateFn = aiTranslatorServiceIPC.translateEnglishToPersian.bind(
+        aiTranslatorServiceIPC
+      );
+      type = 'english-to-persian';
+    } else if (grammarInput.trim()) {
+      input = grammarInput.trim();
+      if (grammarTeachingMode) {
+        // Check cache first
+        const cachedEntry = findCachedEntry(input, 'grammar-teaching', fallbackSelectedModel);
+        if (cachedEntry && cachedEntry.grammarTeachingResult) {
+          setGrammarTeachingResult(cachedEntry.grammarTeachingResult);
+          setResults(null);
+          setLastRequestTime(cachedEntry.responseTime);
+          setToast({ message: 'نتیجه از کش بارگذاری شد', type: 'success' });
+          return;
+        }
+
+        // Use grammar teaching mode
+        try {
+          setLoading(true);
+          setError(null);
+          const requestStartTime = Date.now();
+          setStartTime(requestStartTime);
+
+          const response = await aiTranslatorServiceIPC.teachGrammar(input, fallbackSelectedModel, {});
+          const endTime = Date.now();
+          const responseTime = Math.floor((endTime - requestStartTime) / 1000);
+
+          setGrammarTeachingResult(response.result);
+          setResults(null); // Clear regular results
+          setLastRequestTime(responseTime);
+
+          // Add to history
+          await addEntry({
+            input,
+            type: 'grammar-teaching',
+            model: fallbackSelectedModel,
+            result: null,
+            grammarTeachingResult: response.result,
+            responseTime,
+          });
+
+          setToast({ message: 'آموزش گرامر با موفقیت انجام شد', type: 'success' });
+        } catch (err: unknown) {
+          const errorMessage = err instanceof Error ? err.message : 'خطا در آموزش گرامر';
+          setError(errorMessage);
+          setToast({ message: errorMessage, type: 'error' });
+        } finally {
+          setLoading(false);
+        }
+        return;
+      } else {
+      translateFn = aiTranslatorServiceIPC.correctGrammar.bind(aiTranslatorServiceIPC);
+      type = 'grammar';
+      }
+    } else {
+      setError('لطفاً متن را وارد کنید');
+      return;
+    }
+
+    // Check cache first
+    const cachedEntry = findCachedEntry(input, type, fallbackSelectedModel);
+    if (cachedEntry && cachedEntry.result) {
+      setResults(cachedEntry.result);
+      setSelectedResult(1);
+      setLastRequestTime(cachedEntry.responseTime);
+      setGrammarTeachingResult(null);
+      setResponseSuggestionsResult(null);
+      setToast({ message: 'نتیجه از کش بارگذاری شد', type: 'success' });
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+      const requestStartTime = Date.now(); // Start timer
+      setStartTime(requestStartTime);
+
+      const response = await translateFn(input, fallbackSelectedModel, {});
+      const endTime = Date.now();
+      const responseTime = Math.floor((endTime - requestStartTime) / 1000);
+
+      setResults(response.result);
+      setSelectedResult(1);
+      setLastRequestTime(responseTime);
+      setResponseSuggestionsResult(null);
+
+      // Add to history
+      await addEntry({
+        input,
+        type,
+        model: fallbackSelectedModel,
+        result: response.result,
+        responseTime,
+      });
+
+      setToast({ message: 'ترجمه با موفقیت انجام شد', type: 'success' });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'خطا در ترجمه. لطفاً دوباره تلاش کنید.';
+      const errorStack = error instanceof Error ? error.stack : undefined;
+      setError(errorMessage, errorStack);
+      setToast({ message: 'خطا در ترجمه', type: 'error' });
+    } finally {
+      setLoading(false);
+      setStartTime(null); // Stop timer
+    }
+  };
+
   const handleCopy = async (text: string) => {
     const success = await writeClipboard(text);
     if (success) {
@@ -297,17 +481,70 @@ export const MainPage: React.FC<MainPageProps> = ({ onOpenSettings }) => {
     grammarInput.trim() ||
     responseSuggestionsInput.trim();
 
+  // Local keyboard shortcuts handler (only works when app has focus)
+  // Use useCallback to memoize the handler and check inputs directly
+  const handleKeyDown = useCallback((e: KeyboardEvent) => {
+    // CTRL+Enter or CMD+Enter for main model
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter' && !e.altKey && !e.shiftKey) {
+      e.preventDefault();
+      e.stopPropagation();
+      // Check inputs directly to get current state at the moment of keypress
+      const canTranslateNow =
+        persianToEnglishInput.trim() ||
+        englishToPersianInput.trim() ||
+        grammarInput.trim() ||
+        responseSuggestionsInput.trim();
+      if (canTranslateNow && !isLoading) {
+        handleTranslate();
+      }
+      return;
+    }
+
+    // ALT+Enter for fallback model
+    if (e.altKey && e.key === 'Enter' && !e.ctrlKey && !e.metaKey && !e.shiftKey) {
+      e.preventDefault();
+      e.stopPropagation();
+      // Check inputs directly to get current state at the moment of keypress
+      const canTranslateNow =
+        persianToEnglishInput.trim() ||
+        englishToPersianInput.trim() ||
+        grammarInput.trim() ||
+        responseSuggestionsInput.trim();
+      if (canTranslateNow && !isLoading) {
+        handleTranslateFallback();
+      }
+      return;
+    }
+  }, [persianToEnglishInput, englishToPersianInput, grammarInput, responseSuggestionsInput, isLoading, handleTranslate, handleTranslateFallback]);
+
+  useEffect(() => {
+    // Add event listener to document to catch all keydown events, even in inputs
+    // Using capture phase (true) to catch events before they reach inputs
+    document.addEventListener('keydown', handleKeyDown, true);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown, true);
+    };
+  }, [handleKeyDown]);
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6">
-      <div className="max-w-4xl mx-auto space-y-6">
-        <h1 className="text-3xl rounded py-2 shadow bg-indigo-500 font-bold text-gray-900 dark:text-white text-center">
+      <div className="max-w-6xl mx-auto space-y-3">
+        <h1 className="text-3xl rounded py-1 shadow bg-indigo-500 font-bold text-gray-900 dark:text-white text-center">
           مترجم هوش مصنوعی
         </h1>
 
-        <ModelSelector
-          selectedModel={selectedModel || (settings?.selectedModel as AIModel)}
-          onModelChange={setSelectedModel}
-        />
+        <div className="flex gap-4">
+          <ModelSelector
+            selectedModel={selectedModel || (settings?.selectedModel as AIModel)}
+            onModelChange={setSelectedModel}
+            label="مدل اصلی"
+          />
+          <ModelSelector
+            selectedModel={fallbackSelectedModel || (settings?.fallbackSelectedModel as AIModel)}
+            onModelChange={setFallbackSelectedModel}
+            label="مدل جایگزین"
+          />
+        </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <TranslationInput
@@ -423,13 +660,24 @@ export const MainPage: React.FC<MainPageProps> = ({ onOpenSettings }) => {
               در حال پردازش...
             </Button>
           ) : (
-            <Button
-              variant="primary"
-              onClick={handleTranslate}
-              disabled={!canTranslate}
-            >
-              پردازش
-            </Button>
+            <>
+              <Button
+                variant="primary"
+                onClick={handleTranslate}
+                disabled={!canTranslate}
+                shortcut={settings?.shortcuts.processMain}
+              >
+                مدل اصلی
+              </Button>
+              <Button
+                variant="danger"
+                onClick={handleTranslateFallback}
+                disabled={!canTranslate}
+                shortcut={settings?.shortcuts.processFallback}
+              >
+                مدل جایگزین
+              </Button>
+            </>
           )}
           <Button variant="ghost" onClick={() => setShowHistory(!showHistory)} disabled={isLoading}>
             تاریخچه

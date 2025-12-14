@@ -5,7 +5,13 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   size?: 'sm' | 'md' | 'lg';
   isLoading?: boolean;
   children: React.ReactNode;
+  shortcut?: string;
 }
+
+// Format shortcut for display (replace + with space for better readability)
+const formatShortcut = (shortcut: string): string => {
+  return shortcut.replace(/\+/g, ' + ');
+};
 
 export const Button: React.FC<ButtonProps> = ({
   variant = 'primary',
@@ -14,6 +20,7 @@ export const Button: React.FC<ButtonProps> = ({
   className = '',
   disabled,
   children,
+  shortcut,
   ...props
 }) => {
   const baseClasses =
@@ -67,7 +74,14 @@ export const Button: React.FC<ButtonProps> = ({
           در حال پردازش...
         </span>
       ) : (
-        children
+        <span className="flex items-center">
+          {children}
+          {shortcut && (
+            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-mono font-medium bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 dir-ltr ml-2">
+              {formatShortcut(shortcut)}
+            </span>
+          )}
+        </span>
       )}
     </button>
   );
