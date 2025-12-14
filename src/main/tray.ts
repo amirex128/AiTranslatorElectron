@@ -1,67 +1,14 @@
 import { app, Tray, Menu, nativeImage, dialog } from 'electron';
 import { showWindow, closeWindow, mainWindow, createWindow } from './window';
 import { databaseService } from './database/DatabaseService';
-import { join } from 'path';
-import { existsSync } from 'fs';
+import { getAssetPath } from './utils/assetsPath';
+import { existsSync, readFileSync } from 'fs';
 
 let tray: Tray | null = null;
 
 export const createTray = (): void => {
-  // Load icon from assets folder
-  // Use same logic as DatabaseService for finding assets path
-  const isDev = !app.isPackaged;
-  const path = require('path');
-  let iconPath: string;
-  
-  if (isDev) {
-    // In development, use src/assets directly from project root
-    const appPath = app.getAppPath();
-    let projectRoot = appPath;
-    
-    // If we're in .webpack/main, go up 3 levels
-    if (appPath.includes('.webpack')) {
-      projectRoot = path.join(appPath, '..', '..', '..');
-    } else if (appPath.includes('src')) {
-      // If we're in src/, go up 1 level
-      projectRoot = path.join(appPath, '..');
-    } else {
-      // Try to find project root by looking for package.json
-      let currentPath = appPath;
-      for (let i = 0; i < 5; i++) {
-        if (existsSync(path.join(currentPath, 'package.json'))) {
-          projectRoot = currentPath;
-          break;
-        }
-        currentPath = path.join(currentPath, '..');
-      }
-    }
-    
-    iconPath = path.join(projectRoot, 'src', 'assets', 'images.png');
-  } else {
-    // In production, assets are unpacked from asar
-    // When files are unpacked, they go to app.asar.unpacked directory
-    const appPath = app.getAppPath();
-    
-    // Try app.asar.unpacked first (where unpacked files go)
-    const unpackedPath = appPath.replace('app.asar', 'app.asar.unpacked');
-    iconPath = path.join(unpackedPath, 'src', 'assets', 'images.png');
-    
-    // If unpacked path doesn't exist, try resources/app/src/assets
-    if (!existsSync(iconPath)) {
-      const resourcesPath = path.join(appPath, '..', '..', 'resources');
-      iconPath = path.join(resourcesPath, 'app', 'src', 'assets', 'images.png');
-    }
-    
-    // Fallback: try process.resourcesPath
-    if (!existsSync(iconPath) && process.resourcesPath) {
-      iconPath = path.join(process.resourcesPath, 'app', 'src', 'assets', 'images.png');
-    }
-    
-    // Last fallback: try app path directly
-    if (!existsSync(iconPath)) {
-      iconPath = path.join(appPath, 'src', 'assets', 'images.png');
-    }
-  }
+  // Load icon from assets folder using shared utility
+  const iconPath = getAssetPath('images.png');
   
   console.log('[Tray] Loading icon from:', iconPath);
   console.log('[Tray] Icon exists:', existsSync(iconPath));
@@ -69,8 +16,28 @@ export const createTray = (): void => {
   let icon: Electron.NativeImage;
   try {
     if (existsSync(iconPath)) {
-      icon = nativeImage.createFromPath(iconPath);
-      // If icon is empty, create a fallback
+      // Try to load icon using createFromPath first
+      try {
+        icon = nativeImage.createFromPath(iconPath);
+        // If icon is empty, try reading from buffer
+        if (icon.isEmpty()) {
+          console.warn('[Tray] Icon from path is empty, trying buffer method');
+          const iconBuffer = readFileSync(iconPath);
+          icon = nativeImage.createFromBuffer(iconBuffer);
+        }
+      } catch (pathError) {
+        // If createFromPath fails, try reading from buffer
+        console.warn('[Tray] createFromPath failed, trying buffer method:', pathError);
+        try {
+          const iconBuffer = readFileSync(iconPath);
+          icon = nativeImage.createFromBuffer(iconBuffer);
+        } catch (bufferError) {
+          console.error('[Tray] Both createFromPath and createFromBuffer failed:', bufferError);
+          icon = nativeImage.createEmpty();
+        }
+      }
+      
+      // If icon is still empty, create a fallback
       if (icon.isEmpty()) {
         console.warn('[Tray] Icon file is empty, creating fallback');
         icon = nativeImage.createEmpty();
@@ -84,10 +51,6 @@ export const createTray = (): void => {
       }
     } else {
       console.error('[Tray] Icon file not found at:', iconPath);
-      console.error('[Tray] Tried paths:', [
-        isDev ? path.join(app.getAppPath(), '..', 'src', 'assets', 'images.png') : 'N/A',
-        isDev ? path.join(__dirname, '..', 'assets', 'images.png') : 'N/A',
-      ]);
       icon = nativeImage.createEmpty();
     }
   } catch (error) {

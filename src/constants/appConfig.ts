@@ -82,11 +82,11 @@ const getEnvShortcut = (key: string, defaultValue: string): string => {
   return value || defaultValue;
 };
 
-// Create APP_CONFIG only in main process
-// In renderer process, this will throw an error at module load time
-// This is intentional - APP_CONFIG should only be used in main process
-// For renderer process, use getDefaultSettings() which handles this gracefully
-export const APP_CONFIG = (() => {
+// Lazy initialization for APP_CONFIG
+// This ensures that .env file is loaded before APP_CONFIG is accessed
+let _appConfig: ReturnType<typeof createAppConfig> | null = null;
+
+function createAppConfig() {
   if (!isNodeEnv) {
     // In renderer process, we can't read .env, so we'll use a placeholder
     // But this should never happen if the code is structured correctly
@@ -130,5 +130,45 @@ export const APP_CONFIG = (() => {
       responseSuggestions: getEnvShortcut('SHORTCUT_RESPONSE_SUGGESTIONS', 'Alt+PageDown'),
     },
 } as const;
-})();
+}
+
+// Create APP_CONFIG only in main process
+// In renderer process, this will throw an error at module load time
+// This is intentional - APP_CONFIG should only be used in main process
+// For renderer process, use getDefaultSettings() which handles this gracefully
+// Using lazy initialization to ensure .env is loaded before accessing
+// Using Proxy to defer initialization until first property access
+export const APP_CONFIG = new Proxy({} as ReturnType<typeof createAppConfig>, {
+  get(target, prop) {
+    // #region agent log
+    fetch('http://127.0.0.1:7243/ingest/8f3b4518-966f-45c8-9d5c-af7cc357afc0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'src/constants/appConfig.ts:APP_CONFIG.get',message:'APP_CONFIG property accessed',data:{prop,initialized:!!_appConfig,selectedModel:process.env.SELECTED_MODEL},timestamp:Date.now(),sessionId:'debug-session',runId:'runtime',hypothesisId:'E'})}).catch(()=>{});
+    // #endregion
+    if (!_appConfig) {
+      // #region agent log
+      fetch('http://127.0.0.1:7243/ingest/8f3b4518-966f-45c8-9d5c-af7cc357afc0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'src/constants/appConfig.ts:APP_CONFIG.get',message:'Initializing APP_CONFIG',data:{selectedModel:process.env.SELECTED_MODEL},timestamp:Date.now(),sessionId:'debug-session',runId:'runtime',hypothesisId:'E'})}).catch(()=>{});
+      // #endregion
+      _appConfig = createAppConfig();
+    }
+    const value = _appConfig[prop as keyof typeof _appConfig];
+    return value;
+  },
+  ownKeys() {
+    if (!_appConfig) {
+      _appConfig = createAppConfig();
+    }
+    return Reflect.ownKeys(_appConfig);
+  },
+  getOwnPropertyDescriptor(target, prop) {
+    if (!_appConfig) {
+      _appConfig = createAppConfig();
+    }
+    return Reflect.getOwnPropertyDescriptor(_appConfig, prop);
+  },
+  has(target, prop) {
+    if (!_appConfig) {
+      _appConfig = createAppConfig();
+    }
+    return prop in _appConfig;
+  },
+});
 

@@ -21,31 +21,69 @@ const config: ForgeConfig = {
       // Pattern matches files in assets directory
       unpack: '**/assets/**',
     },
-    // Hook to copy .env file to output directory after extract
+    // Hook to copy .env and .env.example files to output directory after extract
     afterExtract: [
       (buildPath, electronVersion, platform, arch, callback) => {
         // Use callback-based approach instead of async/await for better compatibility
         try {
           const envPath = join(process.cwd(), '.env');
-          const targetEnvPath = join(buildPath, '.env');
+          const envExamplePath = join(process.cwd(), '.env.example');
           
+          // #region agent log
+          fetch('http://127.0.0.1:7243/ingest/8f3b4518-966f-45c8-9d5c-af7cc357afc0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'forge.config.ts:afterExtract',message:'afterExtract hook called',data:{buildPath,envExamplePath,envExampleExists:existsSync(envExamplePath),cwd:process.cwd()},timestamp:Date.now(),sessionId:'debug-session',runId:'build',hypothesisId:'A'})}).catch(()=>{});
+          // #endregion
+          
+          // buildPath is typically: out/aitranslatorelectron-win32-x64/resources/app.asar.unpacked
+          // We want to copy .env and .env.example to the executable directory (where .exe is)
+          // Executable directory is: buildPath/../../ (two levels up from app.asar.unpacked)
+          const executableDir = join(buildPath, '..', '..');
+          const targetEnvPath = join(executableDir, '.env');
+          const targetEnvExamplePath = join(executableDir, '.env.example');
+          
+          // #region agent log
+          fetch('http://127.0.0.1:7243/ingest/8f3b4518-966f-45c8-9d5c-af7cc357afc0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'forge.config.ts:afterExtract',message:'Calculated paths',data:{executableDir,targetEnvExamplePath},timestamp:Date.now(),sessionId:'debug-session',runId:'build',hypothesisId:'B'})}).catch(()=>{});
+          // #endregion
+          
+          // Ensure directory exists
+          if (!existsSync(executableDir)) {
+            mkdirSync(executableDir, { recursive: true });
+          }
+          
+          // Copy .env if it exists
           if (existsSync(envPath)) {
-            console.log('[Forge] Copying .env file to build directory:', targetEnvPath);
-            // Ensure directory exists
-            const targetDir = require('path').dirname(targetEnvPath);
-            if (!existsSync(targetDir)) {
-              mkdirSync(targetDir, { recursive: true });
-            }
+            console.log('[Forge] Copying .env file to executable directory:', targetEnvPath);
             copyFileSync(envPath, targetEnvPath);
             console.log('[Forge] Successfully copied .env file');
           } else {
             console.warn('[Forge] Warning: .env file not found in project root.');
-            console.warn('[Forge] The application will look for .env in the executable directory at runtime.');
+            console.warn('[Forge] The application will create .env from .env.example on first run if needed.');
           }
+          
+          // Always copy .env.example so it can be used as fallback
+          if (existsSync(envExamplePath)) {
+            console.log('[Forge] Copying .env.example file to executable directory:', targetEnvExamplePath);
+            // #region agent log
+            fetch('http://127.0.0.1:7243/ingest/8f3b4518-966f-45c8-9d5c-af7cc357afc0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'forge.config.ts:afterExtract',message:'Before copyFileSync .env.example',data:{source:envExamplePath,target:targetEnvExamplePath},timestamp:Date.now(),sessionId:'debug-session',runId:'build',hypothesisId:'C'})}).catch(()=>{});
+            // #endregion
+            copyFileSync(envExamplePath, targetEnvExamplePath);
+            // #region agent log
+            fetch('http://127.0.0.1:7243/ingest/8f3b4518-966f-45c8-9d5c-af7cc357afc0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'forge.config.ts:afterExtract',message:'After copyFileSync .env.example',data:{targetExists:existsSync(targetEnvExamplePath)},timestamp:Date.now(),sessionId:'debug-session',runId:'build',hypothesisId:'C'})}).catch(()=>{});
+            // #endregion
+            console.log('[Forge] Successfully copied .env.example file');
+          } else {
+            console.warn('[Forge] Warning: .env.example file not found in project root.');
+            // #region agent log
+            fetch('http://127.0.0.1:7243/ingest/8f3b4518-966f-45c8-9d5c-af7cc357afc0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'forge.config.ts:afterExtract',message:'.env.example not found',data:{envExamplePath,checkedPath:envExamplePath},timestamp:Date.now(),sessionId:'debug-session',runId:'build',hypothesisId:'A'})}).catch(()=>{});
+            // #endregion
+          }
+          
           // Call callback to continue build
           callback();
         } catch (error) {
           console.error('[Forge] Error in afterExtract hook:', error);
+          // #region agent log
+          fetch('http://127.0.0.1:7243/ingest/8f3b4518-966f-45c8-9d5c-af7cc357afc0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'forge.config.ts:afterExtract',message:'Error in afterExtract',data:{error:String(error)},timestamp:Date.now(),sessionId:'debug-session',runId:'build',hypothesisId:'C'})}).catch(()=>{});
+          // #endregion
           // Call callback even on error to continue build
           callback();
         }

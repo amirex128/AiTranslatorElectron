@@ -7,62 +7,9 @@ let isQuitting = false;
 export const createWindow = async (): Promise<void> => {
   const windowSize = APP_CONFIG.windowSize;
 
-  // Get icon path - use same logic as tray.ts
-  const path = require('path');
-  const { app } = require('electron');
-  const { existsSync } = require('fs');
-  
-  const isDev = !app.isPackaged;
-  let iconPath: string;
-  
-  if (isDev) {
-    // In development, use src/assets directly from project root
-    const appPath = app.getAppPath();
-    let projectRoot = appPath;
-    
-    // If we're in .webpack/main, go up 3 levels
-    if (appPath.includes('.webpack')) {
-      projectRoot = path.join(appPath, '..', '..', '..');
-    } else if (appPath.includes('src')) {
-      // If we're in src/, go up 1 level
-      projectRoot = path.join(appPath, '..');
-    } else {
-      // Try to find project root by looking for package.json
-      let currentPath = appPath;
-      for (let i = 0; i < 5; i++) {
-        if (existsSync(path.join(currentPath, 'package.json'))) {
-          projectRoot = currentPath;
-          break;
-        }
-        currentPath = path.join(currentPath, '..');
-      }
-    }
-    
-    iconPath = path.join(projectRoot, 'src', 'assets', 'images.png');
-  } else {
-    // In production, assets are unpacked from asar
-    const appPath = app.getAppPath();
-    
-    // Try app.asar.unpacked first (where unpacked files go)
-    const unpackedPath = appPath.replace('app.asar', 'app.asar.unpacked');
-    iconPath = path.join(unpackedPath, 'src', 'assets', 'images.png');
-    
-    // If unpacked path doesn't exist, try resources/app/src/assets
-    if (!existsSync(iconPath)) {
-      const resourcesPath = path.join(appPath, '..', '..', 'resources');
-      iconPath = path.join(resourcesPath, 'app', 'src', 'assets', 'images.png');
-    }
-    
-    // Fallback: try process.resourcesPath
-    if (!existsSync(iconPath) && process.resourcesPath) {
-      iconPath = path.join(process.resourcesPath, 'app', 'src', 'assets', 'images.png');
-    }
-    
-    // Last fallback: try app path directly
-    if (!existsSync(iconPath)) {
-      iconPath = path.join(appPath, 'src', 'assets', 'images.png');
-    }
-  }
+  // Get icon path using shared utility
+  const { getAssetPath } = require('./utils/assetsPath');
+  const iconPath = getAssetPath('images.png');
   
   console.log('[Window] Loading icon from:', iconPath);
 

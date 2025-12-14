@@ -75,10 +75,12 @@ export class DatabaseService {
       } else {
         // Check if file has old header and migrate
         const content = await fs.readFile(this.historyPath, 'utf-8');
-        const firstLine = content.split('\n')[0];
+        const lines = content.split('\n').filter(line => line.trim());
+        const firstLine = lines[0] || '';
+        
+        // Migrate header if needed
         if (firstLine === 'id,timestamp,input,type,model,result,responseTime') {
           // Migrate old CSV to new format by adding grammarTeachingResult and responseSuggestionsResult columns
-          const lines = content.split('\n');
           lines[0] = 'id,timestamp,input,type,model,result,responseTime,grammarTeachingResult,responseSuggestionsResult';
           // Add empty columns for existing entries
           for (let i = 1; i < lines.length; i++) {
@@ -86,10 +88,9 @@ export class DatabaseService {
               lines[i] = lines[i] + ',,';
             }
           }
-          await fs.writeFile(this.historyPath, lines.join('\n'), 'utf-8');
+          await fs.writeFile(this.historyPath, lines.join('\n') + '\n', 'utf-8');
         } else if (firstLine === 'id,timestamp,input,type,model,result,responseTime,grammarTeachingResult') {
           // Migrate to add responseSuggestionsResult column
-          const lines = content.split('\n');
           lines[0] = 'id,timestamp,input,type,model,result,responseTime,grammarTeachingResult,responseSuggestionsResult';
           // Add empty responseSuggestionsResult for existing entries
           for (let i = 1; i < lines.length; i++) {
@@ -97,7 +98,68 @@ export class DatabaseService {
               lines[i] = lines[i] + ',';
             }
           }
-          await fs.writeFile(this.historyPath, lines.join('\n'), 'utf-8');
+          await fs.writeFile(this.historyPath, lines.join('\n') + '\n', 'utf-8');
+        }
+        
+        // Migrate input fields to always be quoted (ensure input is always a string)
+        // Check if migration is needed by examining a sample line
+        let needsInputMigration = false;
+        if (lines.length > 1) {
+          // Check first data line to see if input is quoted
+          const sampleLine = lines[1];
+          const fields = this.parseCsvLine(sampleLine);
+          if (fields.length >= 3) {
+            // Find the input field position in the raw line
+            // Input is the 3rd field (index 2), after id and timestamp
+            const firstComma = sampleLine.indexOf(',');
+            const secondComma = sampleLine.indexOf(',', firstComma + 1);
+            const thirdComma = sampleLine.indexOf(',', secondComma + 1);
+            
+            if (secondComma !== -1 && thirdComma !== -1) {
+              const inputSegment = sampleLine.substring(secondComma + 1, thirdComma).trim();
+              // If input doesn't start with quote, migration is needed
+              if (!inputSegment.startsWith('"')) {
+                needsInputMigration = true;
+              }
+            }
+          }
+        }
+        
+        if (needsInputMigration) {
+          console.log('[Database] Migrating input fields to quoted format...');
+          const migratedLines = [lines[0]]; // Keep header
+          
+          for (let i = 1; i < lines.length; i++) {
+            if (!lines[i].trim()) {
+              migratedLines.push(lines[i]);
+              continue;
+            }
+            
+            const fields = this.parseCsvLine(lines[i]);
+            if (fields.length >= 3) {
+              // Re-escape input field to ensure it's always quoted
+              const escapedInput = this.escapeCsvField(fields[2]);
+              
+              // Reconstruct the line with escaped input
+              const newFields = [
+                this.escapeCsvFieldOptional(fields[0] || ''),
+                this.escapeCsvFieldOptional(fields[1] || ''),
+                escapedInput, // Always quoted as string
+                this.escapeCsvFieldOptional(fields[3] || ''),
+                this.escapeCsvFieldOptional(fields[4] || ''),
+                this.escapeCsvFieldOptional(fields[5] || ''),
+                this.escapeCsvFieldOptional(fields[6] || ''),
+                this.escapeCsvFieldOptional(fields[7] || ''),
+                this.escapeCsvFieldOptional(fields[8] || '')
+              ];
+              migratedLines.push(newFields.join(','));
+            } else {
+              migratedLines.push(lines[i]);
+            }
+          }
+          
+          await fs.writeFile(this.historyPath, migratedLines.join('\n') + '\n', 'utf-8');
+          console.log('[Database] Input fields migration completed');
         }
       }
 
@@ -109,6 +171,11 @@ export class DatabaseService {
 
   // CSV Helper Methods
   private escapeCsvField(field: string): string {
+    // Always wrap in quotes and escape quotes for safety
+    return `"${field.replace(/"/g, '""')}"`;
+  }
+  
+  private escapeCsvFieldOptional(field: string): string {
     // If field contains comma, quote, or newline, wrap in quotes and escape quotes
     if (field.includes(',') || field.includes('"') || field.includes('\n') || field.includes('\r')) {
       return `"${field.replace(/"/g, '""')}"`;
@@ -267,17 +334,20 @@ export class DatabaseService {
       const grammarTeachingResultStr = entry.grammarTeachingResult ? JSON.stringify(entry.grammarTeachingResult) : '';
       const responseSuggestionsResultStr = entry.responseSuggestionsResult ? JSON.stringify(entry.responseSuggestionsResult) : '';
       
+      // Always escape input field as string (wrap in quotes)
+      const escapedInput = this.escapeCsvField(entry.input);
+      
       const newEntry = [
-        id,
-        timestamp.toString(),
-        entry.input,
-        entry.type,
-        entry.model,
-        resultStr,
-        entry.responseTime?.toString() || '',
-        grammarTeachingResultStr,
-        responseSuggestionsResultStr
-      ].map(field => this.escapeCsvField(field)).join(',');
+        this.escapeCsvFieldOptional(id),
+        this.escapeCsvFieldOptional(timestamp.toString()),
+        escapedInput, // input is always escaped as string
+        this.escapeCsvFieldOptional(entry.type),
+        this.escapeCsvFieldOptional(entry.model),
+        this.escapeCsvFieldOptional(resultStr),
+        this.escapeCsvFieldOptional(entry.responseTime?.toString() || ''),
+        this.escapeCsvFieldOptional(grammarTeachingResultStr),
+        this.escapeCsvFieldOptional(responseSuggestionsResultStr)
+      ].join(',');
       
       // Append to file
       await fs.appendFile(this.historyPath, newEntry + '\n', 'utf-8');

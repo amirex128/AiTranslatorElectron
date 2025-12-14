@@ -1,7 +1,7 @@
 // Load environment variables first, before any other imports
 import dotenv from 'dotenv';
 import { join } from 'path';
-import { existsSync } from 'fs';
+import { existsSync, copyFileSync } from 'fs';
 
 // Get .env file path and load it
 // In development, this will find .env in project root
@@ -51,9 +51,107 @@ function loadEnvFile(): void {
         envPath = userDataEnvPath;
         console.log('[Main] Loading .env from userData:', envPath);
       } else {
-        // Default to executable directory (will create if needed)
-        envPath = execEnvPath;
-        console.log('[Main] .env not found, will use executable directory:', envPath);
+        // .env not found, try to create from .env.example
+        // Try multiple locations for .env.example
+        let envExamplePath: string | null = null;
+        
+        // #region agent log
+        fetch('http://127.0.0.1:7243/ingest/8f3b4518-966f-45c8-9d5c-af7cc357afc0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'src/index.ts:loadEnvFile',message:'Searching for .env.example',data:{execDir},timestamp:Date.now(),sessionId:'debug-session',runId:'runtime',hypothesisId:'D'})}).catch(()=>{});
+        // #endregion
+        
+        // 1. Try executable directory first
+        const execEnvExamplePath = join(execDir, '.env.example');
+        // #region agent log
+        fetch('http://127.0.0.1:7243/ingest/8f3b4518-966f-45c8-9d5c-af7cc357afc0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'src/index.ts:loadEnvFile',message:'Checking execEnvExamplePath',data:{path:execEnvExamplePath,exists:existsSync(execEnvExamplePath)},timestamp:Date.now(),sessionId:'debug-session',runId:'runtime',hypothesisId:'D'})}).catch(()=>{});
+        // #endregion
+        if (existsSync(execEnvExamplePath)) {
+          envExamplePath = execEnvExamplePath;
+          // #region agent log
+          fetch('http://127.0.0.1:7243/ingest/8f3b4518-966f-45c8-9d5c-af7cc357afc0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'src/index.ts:loadEnvFile',message:'Found .env.example in execDir',data:{path:envExamplePath},timestamp:Date.now(),sessionId:'debug-session',runId:'runtime',hypothesisId:'D'})}).catch(()=>{});
+          // #endregion
+        } else {
+          // 2. Try app.asar.unpacked (where forge copies it)
+          try {
+            const { app } = require('electron');
+            const appPath = app.getAppPath();
+            const unpackedPath = appPath.replace('app.asar', 'app.asar.unpacked');
+            const unpackedEnvExamplePath = join(unpackedPath, '.env.example');
+            // #region agent log
+            fetch('http://127.0.0.1:7243/ingest/8f3b4518-966f-45c8-9d5c-af7cc357afc0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'src/index.ts:loadEnvFile',message:'Checking unpackedEnvExamplePath',data:{path:unpackedEnvExamplePath,exists:existsSync(unpackedEnvExamplePath)},timestamp:Date.now(),sessionId:'debug-session',runId:'runtime',hypothesisId:'D'})}).catch(()=>{});
+            // #endregion
+            if (existsSync(unpackedEnvExamplePath)) {
+              envExamplePath = unpackedEnvExamplePath;
+              // #region agent log
+              fetch('http://127.0.0.1:7243/ingest/8f3b4518-966f-45c8-9d5c-af7cc357afc0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'src/index.ts:loadEnvFile',message:'Found .env.example in unpacked',data:{path:envExamplePath},timestamp:Date.now(),sessionId:'debug-session',runId:'runtime',hypothesisId:'D'})}).catch(()=>{});
+              // #endregion
+            }
+          } catch (error) {
+            // App not ready, skip
+          }
+          
+          // 3. Try resources directory
+          if (!envExamplePath) {
+            try {
+              const { app } = require('electron');
+              const appPath = app.getAppPath();
+              const resourcesPath = join(appPath, '..', '..', 'resources');
+              const resourcesEnvExamplePath = join(resourcesPath, 'app.asar.unpacked', '.env.example');
+              // #region agent log
+              fetch('http://127.0.0.1:7243/ingest/8f3b4518-966f-45c8-9d5c-af7cc357afc0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'src/index.ts:loadEnvFile',message:'Checking resourcesEnvExamplePath',data:{path:resourcesEnvExamplePath,exists:existsSync(resourcesEnvExamplePath)},timestamp:Date.now(),sessionId:'debug-session',runId:'runtime',hypothesisId:'D'})}).catch(()=>{});
+              // #endregion
+              if (existsSync(resourcesEnvExamplePath)) {
+                envExamplePath = resourcesEnvExamplePath;
+                // #region agent log
+                fetch('http://127.0.0.1:7243/ingest/8f3b4518-966f-45c8-9d5c-af7cc357afc0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'src/index.ts:loadEnvFile',message:'Found .env.example in resources',data:{path:envExamplePath},timestamp:Date.now(),sessionId:'debug-session',runId:'runtime',hypothesisId:'D'})}).catch(()=>{});
+                // #endregion
+              }
+            } catch (error) {
+              // App not ready, skip
+            }
+          }
+        }
+        
+        if (envExamplePath) {
+          console.log('[Main] .env not found, creating from .env.example...');
+          console.log('[Main] Found .env.example at:', envExamplePath);
+          console.log('[Main] Executable directory:', execDir);
+          console.log('[Main] Target .env path:', execEnvPath);
+          // #region agent log
+          fetch('http://127.0.0.1:7243/ingest/8f3b4518-966f-45c8-9d5c-af7cc357afc0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'src/index.ts:loadEnvFile',message:'Before copyFileSync .env.example',data:{source:envExamplePath,target:execEnvPath},timestamp:Date.now(),sessionId:'debug-session',runId:'runtime',hypothesisId:'D'})}).catch(()=>{});
+          // #endregion
+          try {
+            copyFileSync(envExamplePath, execEnvPath);
+            // #region agent log
+            fetch('http://127.0.0.1:7243/ingest/8f3b4518-966f-45c8-9d5c-af7cc357afc0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'src/index.ts:loadEnvFile',message:'After copyFileSync .env.example',data:{targetExists:existsSync(execEnvPath)},timestamp:Date.now(),sessionId:'debug-session',runId:'runtime',hypothesisId:'D'})}).catch(()=>{});
+            // #endregion
+            console.log('[Main] Successfully created .env from .env.example at:', execEnvPath);
+            console.log('[Main] Verifying .env file exists:', existsSync(execEnvPath));
+            envPath = execEnvPath;
+          } catch (error) {
+            console.error('[Main] Error creating .env from .env.example:', error);
+            // #region agent log
+            fetch('http://127.0.0.1:7243/ingest/8f3b4518-966f-45c8-9d5c-af7cc357afc0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'src/index.ts:loadEnvFile',message:'Error copying .env.example',data:{error:String(error)},timestamp:Date.now(),sessionId:'debug-session',runId:'runtime',hypothesisId:'D'})}).catch(()=>{});
+            // #endregion
+            // Fallback to executable directory anyway
+            envPath = execEnvPath;
+          }
+        } else {
+          // Default to executable directory (will create if needed)
+          envPath = execEnvPath;
+          console.log('[Main] .env not found, will use executable directory:', envPath);
+          console.log('[Main] Executable directory:', execDir);
+          console.log('[Main] Searched for .env.example in:');
+          console.log('[Main]   -', join(execDir, '.env.example'));
+          try {
+            const { app } = require('electron');
+            const appPath = app.getAppPath();
+            console.log('[Main]   -', join(appPath.replace('app.asar', 'app.asar.unpacked'), '.env.example'));
+            console.log('[Main]   -', join(appPath, '..', '..', 'resources', 'app.asar.unpacked', '.env.example'));
+          } catch (error) {
+            // App not ready, skip
+          }
+          console.log('[Main] Please create .env file or ensure .env.example exists in:', execDir);
+        }
       }
     } else {
       // In development, .env is in project root

@@ -8,6 +8,7 @@ import { ModelSelector } from '../components/translation/ModelSelector/ModelSele
 import { AIModel, AI_MODELS } from '../models/AIModel';
 import { Toast } from '../components/ui/Toast/Toast';
 import { OllamaGuideModal } from '../components/ui/OllamaGuideModal/OllamaGuideModal';
+import { OpenRouterGuideModal } from '../components/ui/OpenRouterGuideModal/OpenRouterGuideModal';
 import { ShortcutBuilder } from '../components/ui/ShortcutBuilder/ShortcutBuilder';
 
 interface SettingsPageProps {
@@ -17,6 +18,7 @@ interface SettingsPageProps {
 export const SettingsPage: React.FC<SettingsPageProps> = ({ onBack }) => {
   const { settings, loadSettings } = useSettingsStore();
   const [showOllamaGuide, setShowOllamaGuide] = useState(false);
+  const [showOpenRouterGuide, setShowOpenRouterGuide] = useState(false);
   const [formData, setFormData] = useState<AppSettings | null>(null);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -160,9 +162,20 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onBack }) => {
 
           {/* OpenRouter Configuration */}
           <div className="border-t border-gray-200 dark:border-gray-700 pt-6">
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-              تنظیمات OpenRouter
-            </h2>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+                تنظیمات OpenRouter
+              </h2>
+              <button
+                onClick={() => setShowOpenRouterGuide(true)}
+                className="text-sm text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300 flex items-center gap-1"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                راهنمای ساخت API Key
+              </button>
+            </div>
 
             <div className="space-y-4">
               <Input
@@ -358,6 +371,12 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onBack }) => {
         <OllamaGuideModal
           isOpen={showOllamaGuide}
           onClose={() => setShowOllamaGuide(false)}
+          />
+
+        {/* OpenRouter Guide Modal */}
+        <OpenRouterGuideModal
+          isOpen={showOpenRouterGuide}
+          onClose={() => setShowOpenRouterGuide(false)}
           />
       </div>
     </div>
