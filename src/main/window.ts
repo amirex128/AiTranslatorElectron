@@ -83,6 +83,7 @@ export const createWindow = async (): Promise<void> => {
       nodeIntegration: false,
       contextIsolation: true,
       webSecurity: true,
+      sandbox: false, // Disable sandbox to avoid chrome-sandbox permission issues in development
     },
     show: false,
   });

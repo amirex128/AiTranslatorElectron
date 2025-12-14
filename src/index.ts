@@ -46,19 +46,24 @@ registerAllIPCHandlers();
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 app.on('ready', async () => {
+  // Disable sandbox for development to avoid chrome-sandbox permission issues
+  if (!app.isPackaged) {
+    app.commandLine.appendSwitch('--no-sandbox');
+  }
+
   // Remove default menu bar
   Menu.setApplicationMenu(null);
-  
+
   // Initialize AI services with settings from APP_CONFIG
   const settings = APP_CONFIG as AppSettings;
   const aiService = aiServiceFactory.createService(settings);
-  
+
   // Register translation handlers now that service is available
   registerTranslationIPCHandlers(aiService);
-  
+
   await createWindow();
   createTray();
-  
+
   // Get mainWindow after it's created
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   const windowModule = require('./main/window');
