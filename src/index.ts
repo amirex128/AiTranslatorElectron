@@ -229,6 +229,11 @@ app.on('ready', async () => {
   // Remove default menu bar
   Menu.setApplicationMenu(null);
   
+  // Set app user model ID for Windows (helps with taskbar icon)
+  if (process.platform === 'win32') {
+    app.setAppUserModelId('com.aitranslatorelectron.app');
+  }
+  
   // Initialize AI services with settings from APP_CONFIG
   const settings = APP_CONFIG as AppSettings;
   const aiService = aiServiceFactory.createService(settings);

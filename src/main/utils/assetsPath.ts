@@ -43,10 +43,6 @@ export function getAssetsPath(): string {
     const unpackedPath = appPath.replace('app.asar', 'app.asar.unpacked');
     let assetsPath = join(unpackedPath, 'src', 'assets');
     
-    // #region agent log
-    fetch('http://127.0.0.1:7243/ingest/8f3b4518-966f-45c8-9d5c-af7cc357afc0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'src/main/utils/assetsPath.ts:getAssetsPath',message:'Strategy 1: Checking unpackedPath',data:{path:assetsPath,exists:existsSync(assetsPath),appPath,unpackedPath},timestamp:Date.now(),sessionId:'debug-session',runId:'runtime',hypothesisId:'A'})}).catch(()=>{});
-    // #endregion
-    
     // If unpacked path doesn't exist, try to verify if it's actually unpacked
     // Sometimes existsSync returns false even if files are unpacked
     // So we'll try to use it anyway if no other path works
@@ -56,18 +52,12 @@ export function getAssetsPath(): string {
     if (!existsSync(assetsPath)) {
       const execDir = require('path').dirname(process.execPath);
       assetsPath = join(execDir, 'resources', 'app.asar.unpacked', 'src', 'assets');
-      // #region agent log
-      fetch('http://127.0.0.1:7243/ingest/8f3b4518-966f-45c8-9d5c-af7cc357afc0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'src/main/utils/assetsPath.ts:getAssetsPath',message:'Strategy 2: Checking execDir resources',data:{path:assetsPath,exists:existsSync(assetsPath),execDir},timestamp:Date.now(),sessionId:'debug-session',runId:'runtime',hypothesisId:'A'})}).catch(()=>{});
-      // #endregion
     }
     
     // Strategy 3: Try resources/app.asar.unpacked relative to appPath
     if (!existsSync(assetsPath)) {
       const resourcesPath = join(appPath, '..', '..', 'resources');
       assetsPath = join(resourcesPath, 'app.asar.unpacked', 'src', 'assets');
-      // #region agent log
-      fetch('http://127.0.0.1:7243/ingest/8f3b4518-966f-45c8-9d5c-af7cc357afc0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'src/main/utils/assetsPath.ts:getAssetsPath',message:'Strategy 3: Checking resourcesPath',data:{path:assetsPath,exists:existsSync(assetsPath),resourcesPath},timestamp:Date.now(),sessionId:'debug-session',runId:'runtime',hypothesisId:'A'})}).catch(()=>{});
-      // #endregion
     }
     
     // Strategy 4: Try process.resourcesPath (if available)
@@ -105,15 +95,9 @@ export function getAssetsPath(): string {
     if (!existsSync(assetsPath)) {
       const execDir = require('path').dirname(process.execPath);
       const execAssetsPath = join(execDir, 'assets');
-      // #region agent log
-      fetch('http://127.0.0.1:7243/ingest/8f3b4518-966f-45c8-9d5c-af7cc357afc0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'src/main/utils/assetsPath.ts:getAssetsPath',message:'Strategy 6: Checking execDir assets',data:{path:execAssetsPath,exists:existsSync(execAssetsPath),execDir},timestamp:Date.now(),sessionId:'debug-session',runId:'runtime',hypothesisId:'A'})}).catch(()=>{});
-      // #endregion
       if (existsSync(execAssetsPath)) {
         assetsPath = execAssetsPath;
         foundAssets = true;
-        // #region agent log
-        fetch('http://127.0.0.1:7243/ingest/8f3b4518-966f-45c8-9d5c-af7cc357afc0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'src/main/utils/assetsPath.ts:getAssetsPath',message:'Strategy 6: Found assets in execDir',data:{path:assetsPath},timestamp:Date.now(),sessionId:'debug-session',runId:'runtime',hypothesisId:'A'})}).catch(()=>{});
-        // #endregion
       }
     }
     
@@ -123,9 +107,6 @@ export function getAssetsPath(): string {
     if (!foundAssets) {
       const execDir = require('path').dirname(process.execPath);
       const execAssetsPath = join(execDir, 'assets');
-      // #region agent log
-      fetch('http://127.0.0.1:7243/ingest/8f3b4518-966f-45c8-9d5c-af7cc357afc0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'src/main/utils/assetsPath.ts:getAssetsPath',message:'Strategy 7: Trying execDir assets as fallback',data:{path:execAssetsPath,exists:existsSync(execAssetsPath)},timestamp:Date.now(),sessionId:'debug-session',runId:'runtime',hypothesisId:'A'})}).catch(()=>{});
-      // #endregion
       
       // If assets don't exist in executable directory, try to copy from project root
       if (!existsSync(execAssetsPath)) {
@@ -186,14 +167,8 @@ export function getAssetsPath(): string {
               }
             });
             console.log('[AssetsPath] Successfully copied assets to:', execAssetsPath);
-            // #region agent log
-            fetch('http://127.0.0.1:7243/ingest/8f3b4518-966f-45c8-9d5c-af7cc357afc0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'src/main/utils/assetsPath.ts:getAssetsPath',message:'Strategy 7: Copied assets from project root',data:{source:projectAssetsPath,target:execAssetsPath},timestamp:Date.now(),sessionId:'debug-session',runId:'runtime',hypothesisId:'A'})}).catch(()=>{});
-            // #endregion
           } catch (error) {
             console.error('[AssetsPath] Error copying assets from project root:', error);
-            // #region agent log
-            fetch('http://127.0.0.1:7243/ingest/8f3b4518-966f-45c8-9d5c-af7cc357afc0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'src/main/utils/assetsPath.ts:getAssetsPath',message:'Strategy 7: Error copying assets',data:{error:String(error)},timestamp:Date.now(),sessionId:'debug-session',runId:'runtime',hypothesisId:'A'})}).catch(()=>{});
-            // #endregion
           }
         }
       }
@@ -209,9 +184,6 @@ export function getAssetsPath(): string {
     // We'll use the unpacked path as a fallback before trying asar
     if (!foundAssets && unpackedPath !== appPath) {
       const unpackedAssetsPath = join(unpackedPath, 'src', 'assets');
-      // #region agent log
-      fetch('http://127.0.0.1:7243/ingest/8f3b4518-966f-45c8-9d5c-af7cc357afc0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'src/main/utils/assetsPath.ts:getAssetsPath',message:'Strategy 8: Using unpacked path as fallback',data:{path:unpackedAssetsPath,currentAssetsPath:assetsPath,foundAssets},timestamp:Date.now(),sessionId:'debug-session',runId:'runtime',hypothesisId:'C'})}).catch(()=>{});
-      // #endregion
       assetsPath = unpackedAssetsPath;
       foundAssets = true; // Mark as found so Strategy 9 doesn't override it
     }
@@ -222,9 +194,6 @@ export function getAssetsPath(): string {
     if (!foundAssets) {
       // Try app.asar/src/assets (inside the asar archive)
       const asarAssetsPath = join(appPath, 'src', 'assets');
-      // #region agent log
-      fetch('http://127.0.0.1:7243/ingest/8f3b4518-966f-45c8-9d5c-af7cc357afc0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'src/main/utils/assetsPath.ts:getAssetsPath',message:'Strategy 9: Trying asar archive as last resort',data:{path:asarAssetsPath},timestamp:Date.now(),sessionId:'debug-session',runId:'runtime',hypothesisId:'B'})}).catch(()=>{});
-      // #endregion
       // Use asar path as last fallback even if existsSync returns false
       // (because existsSync doesn't work for files inside asar)
       assetsPath = asarAssetsPath;

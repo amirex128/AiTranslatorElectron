@@ -1,17 +1,67 @@
-import { BrowserWindow } from 'electron';
+import { BrowserWindow, nativeImage } from 'electron';
 import { APP_CONFIG } from '../constants/appConfig';
+import { getAssetPath } from './utils/assetsPath';
+import { existsSync, readFileSync } from 'fs';
 
 export let mainWindow: BrowserWindow | null = null;
 let isQuitting = false;
 
+// Shared function to load icon (used by both window and tray)
+export function loadAppIcon(): Electron.NativeImage {
+  const iconPath = getAssetPath('images.png');
+  console.log('[AppIcon] Loading icon from:', iconPath);
+  
+  let icon: Electron.NativeImage;
+  try {
+    // Try to load icon even if existsSync returns false
+    // (because existsSync doesn't work for files inside asar archive)
+    // Try to load icon using createFromPath first
+    // This works even for files inside asar archive
+    try {
+      icon = nativeImage.createFromPath(iconPath);
+      // If icon is empty, try reading from buffer
+      if (icon.isEmpty()) {
+        console.warn('[AppIcon] Icon from path is empty, trying buffer method');
+        try {
+          const iconBuffer = readFileSync(iconPath);
+          icon = nativeImage.createFromBuffer(iconBuffer);
+        } catch (bufferError) {
+          console.warn('[AppIcon] Buffer read failed:', bufferError);
+        }
+      }
+    } catch (pathError) {
+      // If createFromPath fails, try reading from buffer
+      console.warn('[AppIcon] createFromPath failed, trying buffer method:', pathError);
+      try {
+        const iconBuffer = readFileSync(iconPath);
+        icon = nativeImage.createFromBuffer(iconBuffer);
+      } catch (bufferError) {
+        console.error('[AppIcon] Both createFromPath and createFromBuffer failed:', bufferError);
+        icon = nativeImage.createEmpty();
+      }
+    }
+    
+    // If icon is still empty, create a fallback
+    if (icon.isEmpty()) {
+      console.warn('[AppIcon] Icon file is empty or not found at:', iconPath);
+      icon = nativeImage.createEmpty();
+    } else {
+      console.log('[AppIcon] Icon loaded successfully, size:', icon.getSize());
+    }
+  } catch (error) {
+    console.error('[AppIcon] Error loading icon:', error);
+    icon = nativeImage.createEmpty();
+  }
+  
+  return icon;
+}
+
 export const createWindow = async (): Promise<void> => {
   const windowSize = APP_CONFIG.windowSize;
 
-  // Get icon path using shared utility
-  const { getAssetPath } = require('./utils/assetsPath');
+  // Load icon using shared function (same as tray)
+  const windowIcon = loadAppIcon();
   const iconPath = getAssetPath('images.png');
-  
-  console.log('[Window] Loading icon from:', iconPath);
 
   mainWindow = new BrowserWindow({
     width: windowSize.width,
@@ -20,7 +70,8 @@ export const createWindow = async (): Promise<void> => {
     minHeight: 400,
     frame: false, // Remove default title bar
     titleBarStyle: 'hidden',
-    icon: iconPath, // Set window icon
+    // For Windows, use icon path directly (more reliable than NativeImage)
+    icon: process.platform === 'win32' ? iconPath : windowIcon,
     maximizable: true, // Enable maximize button
     minimizable: true, // Enable minimize button
     closable: true, // Enable close button
@@ -59,8 +110,34 @@ export const createWindow = async (): Promise<void> => {
 
   mainWindow.loadURL(MAIN_WINDOW_WEBPACK_ENTRY);
 
+  // Set icon again after window is created (for Windows taskbar)
+  // This ensures the icon is properly displayed in the taskbar
+  if (process.platform === 'win32') {
+    // Try both path and NativeImage for Windows
+    try {
+      mainWindow.setIcon(iconPath);
+      console.log('[Window] Icon set for Windows taskbar using path:', iconPath);
+    } catch (error) {
+      console.warn('[Window] Failed to set icon using path, trying NativeImage:', error);
+      if (!windowIcon.isEmpty()) {
+        mainWindow.setIcon(windowIcon);
+        console.log('[Window] Icon set for Windows taskbar using NativeImage');
+      }
+    }
+  }
+
   mainWindow.once('ready-to-show', () => {
     mainWindow?.show();
+    // Set icon again after window is shown (for Windows taskbar)
+    if (process.platform === 'win32') {
+      try {
+        mainWindow?.setIcon(iconPath);
+      } catch (error) {
+        if (!windowIcon.isEmpty()) {
+          mainWindow?.setIcon(windowIcon);
+        }
+      }
+    }
   });
 
   // Prevent window from closing, minimize to tray instead
