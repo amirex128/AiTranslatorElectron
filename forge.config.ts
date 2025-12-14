@@ -1,9 +1,10 @@
 import type { ForgeConfig } from '@electron-forge/shared-types';
 import { MakerSquirrel } from '@electron-forge/maker-squirrel';
 import { MakerZIP } from '@electron-forge/maker-zip';
-import { MakerDeb } from '@electron-forge/maker-deb';
-import { MakerRpm } from '@electron-forge/maker-rpm';
-import { AutoUnpackNativesPlugin } from '@electron-forge/plugin-auto-unpack-natives';
+// Temporarily disabled to fix build issues
+// import { MakerDeb } from '@electron-forge/maker-deb';
+// import { MakerRpm } from '@electron-forge/maker-rpm';
+// import { AutoUnpackNativesPlugin } from '@electron-forge/plugin-auto-unpack-natives';
 import { WebpackPlugin } from '@electron-forge/plugin-webpack';
 import { FusesPlugin } from '@electron-forge/plugin-fuses';
 import { FuseV1Options, FuseVersion } from '@electron/fuses';
@@ -16,14 +17,14 @@ import { rendererConfig } from './webpack.renderer.config';
 const config: ForgeConfig = {
   packagerConfig: {
     asar: {
-      // Unpack assets folder for CSV files
-      unpack: 'assets/**',
+      // Unpack assets folder for CSV files and images
+      // Pattern matches files in assets directory
+      unpack: '**/assets/**',
     },
-    // Ensure assets folder is included in the package
-    extraResource: [],
     // Hook to copy .env file to output directory after extract
     afterExtract: [
-      async (buildPath, electronVersion, platform, arch) => {
+      (buildPath, electronVersion, platform, arch, callback) => {
+        // Use callback-based approach instead of async/await for better compatibility
         try {
           const envPath = join(process.cwd(), '.env');
           const targetEnvPath = join(buildPath, '.env');
@@ -41,9 +42,12 @@ const config: ForgeConfig = {
             console.warn('[Forge] Warning: .env file not found in project root.');
             console.warn('[Forge] The application will look for .env in the executable directory at runtime.');
           }
+          // Call callback to continue build
+          callback();
         } catch (error) {
           console.error('[Forge] Error in afterExtract hook:', error);
-          // Don't throw - continue with build even if .env copy fails
+          // Call callback even on error to continue build
+          callback();
         }
       },
     ],
@@ -56,13 +60,12 @@ const config: ForgeConfig = {
       authors: 'amir.shirdeli',
       description: 'AI Translator Electron Application',
     }),
-    // Add ZIP maker for all platforms to create release artifacts
-    new MakerZIP({}, ['darwin', 'win32', 'linux']),
-    new MakerRpm({}),
-    new MakerDeb({}),
+    // ZIP maker for Windows only to reduce build time
+    new MakerZIP({}, ['win32']),
   ],
   plugins: [
-    new AutoUnpackNativesPlugin({}),
+    // Temporarily disabled AutoUnpackNativesPlugin to fix EPERM issues on Windows
+    // new AutoUnpackNativesPlugin({}),
     new WebpackPlugin({
       mainConfig,
       renderer: {
