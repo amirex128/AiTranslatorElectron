@@ -215,13 +215,30 @@ jobs:
           - **Linux**: \`aitranslatorelectron-linux-*.zip\`
           EOF
 
+          # Find all ZIP files in artifacts directory
+          ZIP_FILES=$(find artifacts -name "*.zip" -type f 2>/dev/null || true)
+          
+          if [ -z "$ZIP_FILES" ]; then
+            echo "Error: No ZIP files found in artifacts directory"
+            echo "Contents of artifacts directory:"
+            ls -la artifacts/ || echo "artifacts directory does not exist"
+            exit 1
+          fi
+          
+          echo "Found ZIP files:"
+          echo "$ZIP_FILES"
+          
           # Create release using GitHub CLI (gh is pre-installed in GitHub Actions runners)
           export GITHUB_TOKEN="${{ secrets.GITHUB_TOKEN }}"
+          
+          # Use xargs to pass files to gh release create, or use array
+          # Convert newline-separated list to space-separated for gh command
+          ZIP_FILES_ARRAY=$(echo "$ZIP_FILES" | tr '\n' ' ')
           
           gh release create "$TAG_NAME" \
             --title "Release $TAG_NAME" \
             --notes-file release_body.md \
-            artifacts/**/*.zip
+            $ZIP_FILES_ARRAY
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
