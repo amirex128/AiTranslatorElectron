@@ -5,6 +5,7 @@ import { registerTranslationHandlers } from './handlers/translationHandlers';
 import { registerTTSHandlers } from './handlers/ttsHandlers';
 import { registerHistoryHandlers } from './handlers/historyHandlers';
 import { registerSettingsHandlers } from './handlers/settingsHandlers';
+import { registerSpeechHandlers } from './handlers/speechHandlers';
 
 /**
  * Registers all IPC handlers except translation handlers
@@ -16,6 +17,7 @@ export function registerAllIPCHandlers(): void {
   registerTTSHandlers();
   registerHistoryHandlers();
   registerSettingsHandlers();
+  registerSpeechHandlers();
 }
 
 /**

@@ -76,6 +76,15 @@ export const electronAPI: ElectronAPI = {
   onAboutOpenPage: (callback: () => void) => {
     ipcRenderer.on('about:openPage', () => callback());
   },
+
+  // Speech Recognition
+  isSpeechRecognitionAvailable: () => ipcRenderer.invoke('speech:isAvailable'),
+  startSpeechRecognition: () => ipcRenderer.invoke('speech:start'),
+  stopSpeechRecognition: () => ipcRenderer.invoke('speech:stop'),
+  getSpeechRecognitionStatus: () => ipcRenderer.invoke('speech:getStatus'),
+  onSpeechStatus: (callback: (status: { isListening: boolean }) => void) => {
+    ipcRenderer.on('speech:status', (_event, status) => callback(status));
+  },
 };
 
 contextBridge.exposeInMainWorld('electronAPI', electronAPI);

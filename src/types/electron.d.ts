@@ -61,6 +61,11 @@ export interface ElectronAPI {
   openDevTools: () => Promise<void>;
   onSettingsOpenPage: (callback: () => void) => void;
   onAboutOpenPage: (callback: () => void) => void;
+  isSpeechRecognitionAvailable: () => Promise<IPCResponse<boolean>>;
+  startSpeechRecognition: () => Promise<IPCResponse<{ success: boolean }>>;
+  stopSpeechRecognition: () => Promise<IPCResponse<{ success: boolean }>>;
+  getSpeechRecognitionStatus: () => Promise<IPCResponse<{ isListening: boolean }>>;
+  onSpeechStatus: (callback: (status: { isListening: boolean }) => void) => void;
 }
 
 declare global {

@@ -87,11 +87,22 @@ export const createWindow = async (): Promise<void> => {
 
   // Set basic CSP for security (TTS is handled via IPC, no need for Google TTS CSP)
   const session = mainWindow.webContents.session;
+  
+  // Handle microphone permissions for speech recognition
+  session.setPermissionRequestHandler((webContents, permission, callback) => {
+    // Allow media (microphone) access for speech recognition
+    if (permission === 'media') {
+      callback(true);
+    } else {
+      callback(false);
+    }
+  });
+
   session.webRequest.onHeadersReceived((details, callback) => {
     const cspHeader = 
       "default-src 'self' 'unsafe-inline' 'unsafe-eval' data:; " +
-      "media-src 'self' blob: data:; " +
-      "connect-src 'self' ws://localhost:* ws://0.0.0.0:* http://localhost:* http://0.0.0.0:*; " +
+      "media-src 'self' blob: data: https:; " +
+      "connect-src 'self' ws://localhost:* ws://0.0.0.0:* http://localhost:* http://0.0.0.0:* https://www.google.com https://speech.googleapis.com; " +
       "script-src 'self' 'unsafe-inline' 'unsafe-eval'; " +
       "style-src 'self' 'unsafe-inline'; " +
       "img-src 'self' data: https:; " +
