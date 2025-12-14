@@ -5,16 +5,33 @@ import { SettingsPage } from './pages/SettingsPage';
 import { AboutPage } from './pages/AboutPage';
 import { TitleBar } from './components/ui/TitleBar/TitleBar';
 import { QuickTranslateProvider } from './components/quickTranslate/QuickTranslateProvider/QuickTranslateProvider';
+import { ApiKeySetupModal } from './components/ui/ApiKeySetupModal/ApiKeySetupModal';
+import { useSettingsStore } from './stores/settingsStore';
 // Import the icon - webpack will handle it
 import iconPath from './assets/images.png';
 
 const App: React.FC = () => {
   const [currentPage, setCurrentPage] = useState<'main' | 'settings' | 'about'>('main');
+  const [showApiKeyModal, setShowApiKeyModal] = useState(false);
+  const { settings, loadSettings, checkApiKeyValid } = useSettingsStore();
 
   // Always enable dark mode
   useEffect(() => {
     document.documentElement.classList.add('dark');
   }, []);
+
+  // Load settings on mount
+  useEffect(() => {
+    loadSettings();
+  }, [loadSettings]);
+
+  // Check API key validity when settings are loaded
+  useEffect(() => {
+    if (settings) {
+      const isValid = checkApiKeyValid();
+      setShowApiKeyModal(!isValid);
+    }
+  }, [settings, checkApiKeyValid]);
 
   // Listen for settings and about page open events
   useEffect(() => {
@@ -29,21 +46,44 @@ const App: React.FC = () => {
     }
   }, []);
 
+  const handleApiKeySaved = async () => {
+    // Reload settings to get the updated API key
+    await loadSettings();
+    // Check again if API key is valid
+    const isValid = checkApiKeyValid();
+    if (isValid) {
+      setShowApiKeyModal(false);
+    }
+  };
+
+  // Don't show main content if API key modal is open
+  const shouldShowContent = !showApiKeyModal;
+
   return (
     <QuickTranslateProvider>
       <div className="flex flex-col h-screen overflow-hidden">
-        <TitleBar title="مترجم هوش مصنوعی" iconPath={iconPath} />
-        <div className="flex-1 overflow-y-auto">
-          {currentPage === 'main' && (
-            <MainPage onOpenSettings={() => setCurrentPage('settings')} />
-          )}
-          {currentPage === 'settings' && (
-            <SettingsPage onBack={() => setCurrentPage('main')} />
-          )}
-          {currentPage === 'about' && (
-            <AboutPage onBack={() => setCurrentPage('main')} />
-          )}
-        </div>
+        {shouldShowContent && (
+          <TitleBar title="مترجم هوش مصنوعی" iconPath={iconPath} />
+        )}
+        {shouldShowContent ? (
+          <div className="flex-1 overflow-y-auto">
+            {currentPage === 'main' && (
+              <MainPage onOpenSettings={() => setCurrentPage('settings')} />
+            )}
+            {currentPage === 'settings' && (
+              <SettingsPage onBack={() => setCurrentPage('main')} />
+            )}
+            {currentPage === 'about' && (
+              <AboutPage onBack={() => setCurrentPage('main')} />
+            )}
+          </div>
+        ) : (
+          <div className="flex-1" />
+        )}
+        <ApiKeySetupModal
+          isOpen={showApiKeyModal}
+          onApiKeySaved={handleApiKeySaved}
+        />
       </div>
     </QuickTranslateProvider>
   );

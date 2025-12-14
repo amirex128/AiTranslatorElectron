@@ -4,14 +4,33 @@ A modern Electron-based desktop application for AI-powered translation, grammar 
 
 ## Features
 
-- **Translation**: Translate between English and Persian (Farsi)
-- **Grammar Correction**: Get AI-powered grammar corrections with teaching explanations
-- **Response Suggestions**: Get AI-generated response suggestions for English questions
-- **Multiple AI Models**: Support for Ollama and OpenRouter models
-- **History**: Save and manage translation history
-- **Text-to-Speech**: Built-in TTS functionality
-- **System Tray**: Minimize to system tray for quick access
-- **Customizable UI**: Adjustable font size and window dimensions
+### Core Translation Features
+- **Bidirectional Translation**: Translate between English and Persian (Farsi) with high accuracy
+- **Grammar Correction**: Get AI-powered grammar corrections with detailed teaching explanations
+- **Response Suggestions**: Get AI-generated response suggestions for English questions (5 different tone variations)
+- **Quick Translate**: Instant translation using Google Translate API when selecting English text (glassmorphic popup)
+
+### AI Model Support
+- **Multiple AI Models**: Support for both Ollama (local) and OpenRouter (cloud) models
+- **Model Selection**: Choose from various models including Qwen3, Gemma3, Llama3, DeepSeek, and GLM
+- **Fallback Model**: Configure a fallback model for automatic failover
+- **Dual API Keys**: Support for two OpenRouter API keys for load balancing
+
+### User Experience
+- **Text-to-Speech (TTS)**: Built-in TTS functionality for English text playback
+- **Speech Recognition**: Convert speech to text using Windows Speech Recognition (Win+H) or Web Speech API
+- **Keyboard Shortcuts**: Fully customizable keyboard shortcuts for all features
+- **History Management**: Save and manage translation history with CSV-based storage
+- **System Tray**: Minimize to system tray for quick access and background operation
+- **Customizable UI**: Adjustable font size, window dimensions, and dark mode support
+
+### Advanced Features
+- **API Key Setup Modal**: Automatic modal on first launch to guide users through API key setup
+- **Quick Translate Cache**: CSV-based caching for quick translations to reduce API calls
+- **Copy to Clipboard**: Easy copy functionality for translated text
+- **Auto-close Timeout**: Configurable auto-close timeout for quick translate popup
+- **Error Handling**: Comprehensive error handling with user-friendly messages
+- **Settings Management**: Centralized settings management with .env file support
 
 ## Prerequisites
 
