@@ -66,6 +66,9 @@ export interface ElectronAPI {
   stopSpeechRecognition: () => Promise<IPCResponse<{ success: boolean }>>;
   getSpeechRecognitionStatus: () => Promise<IPCResponse<{ isListening: boolean }>>;
   onSpeechStatus: (callback: (status: { isListening: boolean }) => void) => void;
+  quickTranslateGetCached: (englishText: string) => Promise<IPCResponse<string | null>>;
+  quickTranslateSaveCached: (englishText: string, persianTranslation: string) => Promise<IPCResponse<boolean>>;
+  quickTranslateTranslate: (englishText: string) => Promise<IPCResponse<string>>;
 }
 
 declare global {

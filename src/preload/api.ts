@@ -85,6 +85,11 @@ export const electronAPI: ElectronAPI = {
   onSpeechStatus: (callback: (status: { isListening: boolean }) => void) => {
     ipcRenderer.on('speech:status', (_event, status) => callback(status));
   },
+
+  // Quick Translate
+  quickTranslateGetCached: (englishText: string) => ipcRenderer.invoke('quick-translate:get-cached', { englishText }),
+  quickTranslateSaveCached: (englishText: string, persianTranslation: string) => ipcRenderer.invoke('quick-translate:save-cached', { englishText, persianTranslation }),
+  quickTranslateTranslate: (englishText: string) => ipcRenderer.invoke('quick-translate:translate', { englishText }),
 };
 
 contextBridge.exposeInMainWorld('electronAPI', electronAPI);

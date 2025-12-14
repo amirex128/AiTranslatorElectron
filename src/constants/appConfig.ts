@@ -82,6 +82,18 @@ const getEnvShortcut = (key: string, defaultValue: string): string => {
   return value || defaultValue;
 };
 
+// Helper function to get boolean from environment variable (optional, with default)
+const getEnvBoolean = (key: string, defaultValue: boolean): boolean => {
+  if (!isNodeEnv) {
+    return defaultValue;
+  }
+  const value = process.env[key];
+  if (value === undefined || value === '') {
+    return defaultValue;
+  }
+  return value.toLowerCase() === 'true';
+};
+
 // Lazy initialization for APP_CONFIG
 // This ensures that .env file is loaded before APP_CONFIG is accessed
 let _appConfig: ReturnType<typeof createAppConfig> | null = null;
@@ -131,7 +143,12 @@ function createAppConfig() {
       responseSuggestions: getEnvShortcut('SHORTCUT_RESPONSE_SUGGESTIONS', 'Alt+PageDown'),
       processMain: getEnvShortcut('SHORTCUT_PROCESS_MAIN', 'CommandOrControl+Enter'),
       processFallback: getEnvShortcut('SHORTCUT_PROCESS_FALLBACK', 'Alt+Enter'),
+      processQuickTranslate: getEnvShortcut('SHORTCUT_PROCESS_QUICK_TRANSLATE', 'Alt+Shift+Enter'),
     },
+  
+  // Quick Translate Configuration
+    quickTranslateEnabled: getEnvBoolean('QUICK_TRANSLATE_ENABLED', true),
+    quickTranslateTimeout: getEnvNumber('QUICK_TRANSLATE_TIMEOUT'),
 } as const;
 }
 

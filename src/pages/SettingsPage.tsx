@@ -10,6 +10,7 @@ import { Toast } from '../components/ui/Toast/Toast';
 import { OllamaGuideModal } from '../components/ui/OllamaGuideModal/OllamaGuideModal';
 import { OpenRouterGuideModal } from '../components/ui/OpenRouterGuideModal/OpenRouterGuideModal';
 import { ShortcutBuilder } from '../components/ui/ShortcutBuilder/ShortcutBuilder';
+import { Switch } from '../components/ui/Switch/Switch';
 
 interface SettingsPageProps {
   onBack?: () => void;
@@ -39,10 +40,10 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onBack }) => {
     }
   };
 
-  const handleChange = (field: keyof AppSettings, value: string | number | AIModel | { width: number; height: number }) => {
+  const handleChange = (field: keyof AppSettings, value: string | number | boolean | AIModel | { width: number; height: number }) => {
     if (!formData) return;
     
-    if (field === 'windowSize' && typeof value === 'object') {
+    if (field === 'windowSize' && typeof value === 'object' && 'width' in value) {
       setFormData({ ...formData, windowSize: value });
     } else {
       setFormData({ ...formData, [field]: value });
@@ -355,6 +356,45 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onBack }) => {
                 label="پردازش (مدل جایگزین)"
                 value={formData.shortcuts.processFallback}
                 onChange={(value) => handleShortcutChange('processFallback', value)}
+              />
+
+              <ShortcutBuilder
+                label="ترجمه سریع"
+                value={formData.shortcuts.processQuickTranslate}
+                onChange={(value) => handleShortcutChange('processQuickTranslate', value)}
+              />
+            </div>
+          </div>
+
+          {/* Quick Translate Configuration */}
+          <div className="border-t border-gray-200 dark:border-gray-700 pt-6">
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+              ترجمه سریع
+            </h2>
+
+            <div className="space-y-4">
+              <Switch
+                label="فعال‌سازی ترجمه سریع"
+                checked={formData.quickTranslateEnabled}
+                onChange={(checked: boolean) => handleChange('quickTranslateEnabled', checked)}
+              />
+
+              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-4">
+                <p className="text-sm text-blue-800 dark:text-blue-200">
+                  <strong>راهنما:</strong> با فعال‌سازی این قابلیت، با انتخاب متن انگلیسی در برنامه، یک باکس شیشه‌ای کنار موس نمایش داده می‌شود که متن را به فارسی ترجمه می‌کند.
+                </p>
+              </div>
+
+              <Input
+                label="زمان بسته شدن خودکار (ثانیه)"
+                type="number"
+                min="0"
+                max="60"
+                value={formData.quickTranslateTimeout}
+                onChange={(e) => handleChange('quickTranslateTimeout', parseInt(e.target.value, 10))}
+                placeholder="5"
+                disabled={!formData.quickTranslateEnabled}
+                helperText="0 = بسته نشدن خودکار"
               />
             </div>
           </div>

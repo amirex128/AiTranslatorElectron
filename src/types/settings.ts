@@ -23,6 +23,9 @@ export interface AppSettings {
     responseSuggestions: string;
     processMain: string;
     processFallback: string;
+    processQuickTranslate: string;
   };
+  quickTranslateEnabled: boolean;
+  quickTranslateTimeout: number;
 }
 

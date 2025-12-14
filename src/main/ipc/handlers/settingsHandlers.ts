@@ -52,6 +52,9 @@ async function writeEnvFile(settings: AppSettings): Promise<void> {
       ['SHORTCUT_RESPONSE_SUGGESTIONS', settings.shortcuts.responseSuggestions],
       ['SHORTCUT_PROCESS_MAIN', settings.shortcuts.processMain],
       ['SHORTCUT_PROCESS_FALLBACK', settings.shortcuts.processFallback],
+      ['SHORTCUT_PROCESS_QUICK_TRANSLATE', settings.shortcuts.processQuickTranslate],
+      ['QUICK_TRANSLATE_ENABLED', settings.quickTranslateEnabled.toString()],
+      ['QUICK_TRANSLATE_TIMEOUT', settings.quickTranslateTimeout.toString()],
     ]);
     
     const updatedKeys = new Set<string>();
@@ -114,6 +117,8 @@ async function writeEnvFile(settings: AppSettings): Promise<void> {
       `SHORTCUT_RESPONSE_SUGGESTIONS=${settings.shortcuts.responseSuggestions}`,
       `SHORTCUT_PROCESS_MAIN=${settings.shortcuts.processMain}`,
       `SHORTCUT_PROCESS_FALLBACK=${settings.shortcuts.processFallback}`,
+      `QUICK_TRANSLATE_ENABLED=${settings.quickTranslateEnabled}`,
+      `QUICK_TRANSLATE_TIMEOUT=${settings.quickTranslateTimeout}`,
     ].join('\n') + '\n';
   }
 
@@ -167,7 +172,10 @@ function getAppConfigAsPlainObject(): AppSettings {
       responseSuggestions: APP_CONFIG.shortcuts.responseSuggestions,
       processMain: APP_CONFIG.shortcuts.processMain,
       processFallback: APP_CONFIG.shortcuts.processFallback,
+      processQuickTranslate: APP_CONFIG.shortcuts.processQuickTranslate,
     },
+    quickTranslateEnabled: APP_CONFIG.quickTranslateEnabled,
+    quickTranslateTimeout: APP_CONFIG.quickTranslateTimeout,
   };
 }
 

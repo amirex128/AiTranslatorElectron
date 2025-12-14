@@ -4,6 +4,7 @@ import { MainPage } from './pages/MainPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { AboutPage } from './pages/AboutPage';
 import { TitleBar } from './components/ui/TitleBar/TitleBar';
+import { QuickTranslateProvider } from './components/quickTranslate/QuickTranslateProvider/QuickTranslateProvider';
 // Import the icon - webpack will handle it
 import iconPath from './assets/images.png';
 
@@ -29,20 +30,22 @@ const App: React.FC = () => {
   }, []);
 
   return (
-    <div className="flex flex-col h-screen overflow-hidden">
-      <TitleBar title="مترجم هوش مصنوعی" iconPath={iconPath} />
-      <div className="flex-1 overflow-y-auto">
-        {currentPage === 'main' && (
-          <MainPage onOpenSettings={() => setCurrentPage('settings')} />
-        )}
-        {currentPage === 'settings' && (
-          <SettingsPage onBack={() => setCurrentPage('main')} />
-        )}
-        {currentPage === 'about' && (
-          <AboutPage onBack={() => setCurrentPage('main')} />
-        )}
+    <QuickTranslateProvider>
+      <div className="flex flex-col h-screen overflow-hidden">
+        <TitleBar title="مترجم هوش مصنوعی" iconPath={iconPath} />
+        <div className="flex-1 overflow-y-auto">
+          {currentPage === 'main' && (
+            <MainPage onOpenSettings={() => setCurrentPage('settings')} />
+          )}
+          {currentPage === 'settings' && (
+            <SettingsPage onBack={() => setCurrentPage('main')} />
+          )}
+          {currentPage === 'about' && (
+            <AboutPage onBack={() => setCurrentPage('main')} />
+          )}
+        </div>
       </div>
-    </div>
+    </QuickTranslateProvider>
   );
 };
 

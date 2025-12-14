@@ -19,6 +19,7 @@ import { writeClipboard } from '../utils/clipboard';
 import { AIModel } from '../models/AIModel';
 import { useSettingsStore } from '../stores/settingsStore';
 import { GrammarTeachingResult } from '../services/ai/AIChatService';
+import { TranslationResult as TranslationResultType } from '../utils/validation';
 
 interface MainPageProps {
   onOpenSettings?: () => void;
@@ -474,6 +475,106 @@ export const MainPage: React.FC<MainPageProps> = ({ onOpenSettings }) => {
     }
   };
 
+  const handleQuickTranslate = useCallback(async () => {
+    if (!settings || !window.electronAPI) {
+      setError('تنظیمات یا API در دسترس نیست');
+      return;
+    }
+
+    // Determine translation direction and input text
+    let input: string;
+    let type: 'persian-to-english' | 'english-to-persian';
+    
+    if (persianToEnglishInput.trim()) {
+      input = persianToEnglishInput.trim();
+      type = 'persian-to-english';
+    } else if (englishToPersianInput.trim()) {
+      input = englishToPersianInput.trim();
+      type = 'english-to-persian';
+    } else {
+      setError('لطفاً متن فارسی یا انگلیسی وارد کنید');
+      return;
+    }
+
+    // Only work for translation inputs, not grammar or response suggestions
+    if (grammarInput.trim() || responseSuggestionsInput.trim()) {
+      setError('ترجمه سریع فقط برای ورودی‌های ترجمه کار می‌کند');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+      const requestStartTime = Date.now();
+      setStartTime(requestStartTime);
+
+      // Call Google Translate API
+      const response = await window.electronAPI.quickTranslateTranslate(input);
+      
+      if (!response || 'error' in response) {
+        throw new Error('error' in response ? response.error : 'خطا در ترجمه');
+      }
+
+      if (!response.success || !('data' in response)) {
+        throw new Error('پاسخ نامعتبر از سرور');
+      }
+
+      const translation = response.data;
+      const endTime = Date.now();
+      const responseTime = Math.floor((endTime - requestStartTime) / 1000);
+
+      // Format translation result based on direction
+      // TranslationResult expects: { english_1, persian_1, english_2, persian_2, english_3, persian_3 }
+      let formattedResult: TranslationResultType;
+      if (type === 'persian-to-english') {
+        // Persian to English: input is Persian, translation is English
+        formattedResult = {
+          english_1: translation,
+          persian_1: input,
+          english_2: '',
+          persian_2: '',
+          english_3: '',
+          persian_3: '',
+        };
+      } else {
+        // English to Persian: input is English, translation is Persian
+        formattedResult = {
+          english_1: input,
+          persian_1: translation,
+          english_2: '',
+          persian_2: '',
+          english_3: '',
+          persian_3: '',
+        };
+      }
+
+      setResults(formattedResult);
+      setSelectedResult(1);
+      setLastRequestTime(responseTime);
+      setResponseSuggestionsResult(null);
+      setGrammarTeachingResult(null);
+
+      // Add to history (using a placeholder model since we're not using AI)
+      await addEntry({
+        input,
+        type,
+        model: selectedModel || settings.selectedModel, // Use selected model for history entry
+        result: formattedResult,
+        responseTime,
+      });
+
+      setToast({ message: 'ترجمه با موفقیت انجام شد', type: 'success' });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'خطا در ترجمه. لطفاً دوباره تلاش کنید.';
+      const errorStack = error instanceof Error ? error.stack : undefined;
+      setError(errorMessage, errorStack);
+      setToast({ message: 'خطا در ترجمه', type: 'error' });
+    } finally {
+      setLoading(false);
+      setStartTime(null);
+    }
+  }, [persianToEnglishInput, englishToPersianInput, grammarInput, responseSuggestionsInput, settings, selectedModel, setLoading, setError, setStartTime, setResults, setSelectedResult, setLastRequestTime, setResponseSuggestionsResult, setGrammarTeachingResult, addEntry, setToast]);
+
 
   const canTranslate =
     persianToEnglishInput.trim() ||
@@ -481,9 +582,84 @@ export const MainPage: React.FC<MainPageProps> = ({ onOpenSettings }) => {
     grammarInput.trim() ||
     responseSuggestionsInput.trim();
 
+  const canQuickTranslate =
+    (persianToEnglishInput.trim() || englishToPersianInput.trim()) &&
+    !grammarInput.trim() &&
+    !responseSuggestionsInput.trim() &&
+    !isLoading;
+
+  // Helper function to check if a shortcut matches the keydown event
+  const matchesShortcut = (shortcut: string, e: KeyboardEvent): boolean => {
+    const parts = shortcut.split('+').map(p => p.trim().toLowerCase());
+    const keyMap: Record<string, string> = {
+      'commandorcontrol': 'ctrl',
+      'command': 'meta',
+      'cmd': 'meta',
+      'ctrl': 'ctrl',
+      'control': 'ctrl',
+      'alt': 'alt',
+      'shift': 'shift',
+      'enter': 'Enter',
+      'return': 'Enter',
+    };
+
+    let hasCtrl = false;
+    let hasAlt = false;
+    let hasShift = false;
+    let hasMeta = false;
+    let mainKey = '';
+
+    for (const part of parts) {
+      const normalized = keyMap[part] || part;
+      if (normalized === 'ctrl') {
+        hasCtrl = true;
+      } else if (normalized === 'alt') {
+        hasAlt = true;
+      } else if (normalized === 'shift') {
+        hasShift = true;
+      } else if (normalized === 'meta') {
+        hasMeta = true;
+      } else {
+        mainKey = normalized;
+      }
+    }
+
+    // Check modifiers
+    if (hasCtrl && !e.ctrlKey) return false;
+    if (hasAlt && !e.altKey) return false;
+    if (hasShift && !e.shiftKey) return false;
+    if (hasMeta && !e.metaKey) return false;
+
+    // Check that no other modifiers are pressed
+    if (!hasCtrl && e.ctrlKey) return false;
+    if (!hasAlt && e.altKey) return false;
+    if (!hasShift && e.shiftKey) return false;
+    if (!hasMeta && e.metaKey) return false;
+
+    // Check main key (case-insensitive)
+    return mainKey.toLowerCase() === e.key.toLowerCase();
+  };
+
   // Local keyboard shortcuts handler (only works when app has focus)
   // Use useCallback to memoize the handler and check inputs directly
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
+    // Check for quick translate shortcut
+    if (settings?.shortcuts.processQuickTranslate) {
+      if (matchesShortcut(settings.shortcuts.processQuickTranslate, e)) {
+        e.preventDefault();
+        e.stopPropagation();
+        // Check inputs directly to get current state at the moment of keypress
+        const canQuickTranslateNow =
+          (persianToEnglishInput.trim() || englishToPersianInput.trim()) &&
+          !grammarInput.trim() &&
+          !responseSuggestionsInput.trim();
+        if (canQuickTranslateNow && !isLoading) {
+          handleQuickTranslate();
+        }
+        return;
+      }
+    }
+
     // CTRL+Enter or CMD+Enter for main model
     if ((e.ctrlKey || e.metaKey) && e.key === 'Enter' && !e.altKey && !e.shiftKey) {
       e.preventDefault();
@@ -515,7 +691,7 @@ export const MainPage: React.FC<MainPageProps> = ({ onOpenSettings }) => {
       }
       return;
     }
-  }, [persianToEnglishInput, englishToPersianInput, grammarInput, responseSuggestionsInput, isLoading, handleTranslate, handleTranslateFallback]);
+  }, [persianToEnglishInput, englishToPersianInput, grammarInput, responseSuggestionsInput, isLoading, handleTranslate, handleTranslateFallback, handleQuickTranslate, settings]);
 
   useEffect(() => {
     // Add event listener to document to catch all keydown events, even in inputs
@@ -676,6 +852,14 @@ export const MainPage: React.FC<MainPageProps> = ({ onOpenSettings }) => {
                 shortcut={settings?.shortcuts.processFallback}
               >
                 مدل جایگزین
+              </Button>
+              <Button
+                variant="secondary"
+                onClick={handleQuickTranslate}
+                disabled={!canQuickTranslate}
+                shortcut={settings?.shortcuts.processQuickTranslate}
+              >
+                ترجمه سریع
               </Button>
             </>
           )}
