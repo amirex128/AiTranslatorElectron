@@ -3,6 +3,9 @@ import { createRoot } from 'react-dom/client';
 import { MainPage } from './pages/MainPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { AboutPage } from './pages/AboutPage';
+import { TitleBar } from './components/ui/TitleBar/TitleBar';
+// Import the icon - webpack will handle it
+import iconPath from './assets/images.png';
 
 const App: React.FC = () => {
   const [currentPage, setCurrentPage] = useState<'main' | 'settings' | 'about'>('main');
@@ -27,6 +30,7 @@ const App: React.FC = () => {
 
   return (
     <>
+      <TitleBar title="AI Translator" iconPath={iconPath} />
       {currentPage === 'main' && (
         <MainPage onOpenSettings={() => setCurrentPage('settings')} />
       )}

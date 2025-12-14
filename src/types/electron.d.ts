@@ -33,6 +33,9 @@ export interface ElectronAPI {
   readClipboard: () => Promise<string>;
   writeClipboard: (text: string) => Promise<boolean>;
   minimize: () => Promise<void>;
+  maximize: () => Promise<void>;
+  restore: () => Promise<void>;
+  isMaximized: () => Promise<boolean>;
   close: () => Promise<void>;
   show: () => Promise<void>;
   focus: () => Promise<void>;
@@ -48,6 +51,7 @@ export interface ElectronAPI {
   deleteHistory: (id: string) => Promise<IPCResponse<void>>;
   clearHistory: () => Promise<IPCResponse<void>>;
   getSettings: () => Promise<IPCResponse<AppSettings>>;
+  saveSettings: (settings: AppSettings) => Promise<IPCResponse<void>>;
   onSettingsOpenPage: (callback: () => void) => void;
   onAboutOpenPage: (callback: () => void) => void;
 }

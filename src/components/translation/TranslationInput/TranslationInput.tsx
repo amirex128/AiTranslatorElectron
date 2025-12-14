@@ -156,25 +156,71 @@ export const TranslationInput: React.FC<TranslationInputProps> = ({
               className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto"
             >
               {autocompleteSuggestions.map((entry) => {
-                // Determine text direction based on entry type
-                const isEnglish = entry.type === 'english-to-persian' || entry.type === 'grammar' || entry.type === 'grammar-teaching';
-                const textDir = isEnglish ? 'ltr' : 'rtl';
+                // Get English and Persian text based on entry type
+                let englishText = '';
+                let persianText = '';
                 
+                if (entry.type === 'persian-to-english') {
+                  // Input is Persian, result has English
+                  persianText = entry.input;
+                  if (entry.result) {
+                    englishText = entry.result.english_1 || '';
+                  }
+                } else if (entry.type === 'english-to-persian') {
+                  // Input is English, result has Persian
+                  englishText = entry.input;
+                  if (entry.result) {
+                    persianText = entry.result.persian_1 || '';
+                  }
+                } else if (entry.type === 'grammar') {
+                  // Input is English, result has corrected English and Persian
+                  englishText = entry.input;
+                  if (entry.result) {
+                    persianText = entry.result.persian_1 || '';
+                  }
+                } else if (entry.type === 'grammar-teaching') {
+                  // Input is English, grammarTeachingResult has original and corrected
+                  if (entry.grammarTeachingResult) {
+                    englishText = entry.grammarTeachingResult.originalText || entry.input;
+                    persianText = entry.grammarTeachingResult.persianTranslation || '';
+                  } else {
+                    englishText = entry.input;
+                  }
+                }
+                
+                // Get type label
+                const getTypeLabel = () => {
+                  if (entry.type === 'persian-to-english') return 'فارسی به انگلیسی';
+                  if (entry.type === 'english-to-persian') return 'انگلیسی به فارسی';
+                  if (entry.type === 'grammar') return 'اصلاح گرامر';
+                  if (entry.type === 'grammar-teaching') return 'آموزش گرامر';
+                  return '';
+                };
+
                 return (
                   <button
                     key={entry.id}
                     onClick={() => handleSelectHistoryEntry(entry)}
                     className="w-full text-right px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors border-b border-gray-200 dark:border-gray-700 last:border-b-0"
                   >
-                    <div className={`text-sm text-gray-900 dark:text-gray-100 truncate`} dir={textDir}>
-                      {entry.input}
-                    </div>
-                    <div className="text-xs text-gray-500 dark:text-gray-400 mt-1" dir="rtl">
-                      {entry.type === 'persian-to-english' && 'فارسی به انگلیسی'}
-                      {entry.type === 'english-to-persian' && 'انگلیسی به فارسی'}
-                      {entry.type === 'grammar' && 'اصلاح گرامر'}
-                      {entry.type === 'grammar-teaching' && 'آموزش گرامر'}
-                    </div>
+                    {/* English text in separate div with LTR */}
+                    {englishText && (
+                      <div className="text-sm text-gray-900 dark:text-gray-100 truncate mb-1" dir="ltr">
+                        {englishText}
+                      </div>
+                    )}
+                    {/* Persian text in separate div with RTL */}
+                    {persianText && (
+                      <div className="text-sm text-gray-900 dark:text-gray-100 truncate mb-1" dir="rtl">
+                        {persianText}
+                      </div>
+                    )}
+                    {/* Type label - always show */}
+                    {getTypeLabel() && (
+                      <div className="text-xs text-gray-500 dark:text-gray-400 mt-1 font-medium" dir="rtl">
+                        {getTypeLabel()}
+                      </div>
+                    )}
                   </button>
                 );
               })}

@@ -28,7 +28,8 @@ const config: ForgeConfig = {
       authors: 'amir.shirdeli',
       description: 'AI Translator Electron Application',
     }),
-    new MakerZIP({}, ['darwin']),
+    // Add ZIP maker for all platforms to create release artifacts
+    new MakerZIP({}, ['darwin', 'win32', 'linux']),
     new MakerRpm({}),
     new MakerDeb({}),
   ],

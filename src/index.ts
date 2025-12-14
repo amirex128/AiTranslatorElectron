@@ -1,6 +1,25 @@
 // Load environment variables first, before any other imports
 import dotenv from 'dotenv';
-dotenv.config();
+import { getEnvFilePath } from './main/utils/envPath';
+
+// Get .env file path and load it
+// In development, this will find .env in project root
+// In production, this will use userData or executable directory
+try {
+  const envPath = getEnvFilePath();
+  const result = dotenv.config({ path: envPath });
+  if (result.error) {
+    console.warn('[Main] Warning: Could not load .env file:', result.error.message);
+    // Fallback to default dotenv.config() behavior
+    dotenv.config();
+  } else {
+    console.log('[Main] Loaded .env file from:', envPath);
+  }
+} catch (error) {
+  console.warn('[Main] Warning: Could not determine .env path, using default:', error);
+  // Fallback to default dotenv.config() behavior
+  dotenv.config();
+}
 
 import { app, Menu } from 'electron';
 import { createWindow, showWindow } from './main/window';

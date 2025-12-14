@@ -16,10 +16,19 @@ interface SettingsPageProps {
 export const SettingsPage: React.FC<SettingsPageProps> = ({ onBack }) => {
   const { settings, loadSettings } = useSettingsStore();
   const [showOllamaGuide, setShowOllamaGuide] = useState(false);
+  const [formData, setFormData] = useState<AppSettings | null>(null);
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     loadSettings();
   }, [loadSettings]);
+
+  useEffect(() => {
+    if (settings) {
+      setFormData(settings);
+    }
+  }, [settings]);
 
   const handleBack = () => {
     if (onBack) {
@@ -27,7 +36,42 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onBack }) => {
     }
   };
 
-  if (!settings) {
+  const handleChange = (field: keyof AppSettings, value: string | number | AIModel | { width: number; height: number }) => {
+    if (!formData) return;
+    
+    if (field === 'windowSize' && typeof value === 'object') {
+      setFormData({ ...formData, windowSize: value });
+    } else {
+      setFormData({ ...formData, [field]: value });
+    }
+  };
+
+  const handleSave = async () => {
+    if (!formData || !window.electronAPI) {
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const response = await window.electronAPI.saveSettings(formData);
+      if (response.success) {
+        setToast({ message: 'تنظیمات با موفقیت ذخیره شد. لطفاً برنامه را مجدداً راه‌اندازی کنید.', type: 'success' });
+        // Reload settings after save
+        await loadSettings();
+      } else {
+        // TypeScript type narrowing: if success is false, it's ErrorResponse
+        const error = 'error' in response ? response.error : 'خطا در ذخیره تنظیمات';
+        setToast({ message: error, type: 'error' });
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'خطا در ذخیره تنظیمات';
+      setToast({ message: errorMessage, type: 'error' });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  if (!settings || !formData) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6 flex items-center justify-center">
         <div className="text-gray-600 dark:text-gray-400">در حال بارگذاری...</div>
@@ -51,7 +95,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onBack }) => {
           {/* Info Message */}
           <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
             <div className="flex items-start gap-3">
-              <svg className="w-5 h-5 text-blue-500 dark:text-blue-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-5 h-5 text-blue-500 dark:text-blue-400 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
               <div>
@@ -59,7 +103,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onBack }) => {
                   تنظیمات از فایل .env خوانده می‌شوند
                 </p>
                 <p className="text-xs text-blue-600 dark:text-blue-300 mt-1">
-                  برای تغییر تنظیمات، فایل .env را ویرایش کنید و برنامه را مجدداً راه‌اندازی کنید.
+                  می‌توانید تنظیمات را در اینجا تغییر دهید و با دکمه ذخیره در فایل .env ذخیره کنید. پس از ذخیره، برنامه را مجدداً راه‌اندازی کنید.
                 </p>
               </div>
             </div>
@@ -71,10 +115,9 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onBack }) => {
               مدل هوش مصنوعی
             </label>
             <ModelSelector
-              selectedModel={settings.selectedModel}
-              // eslint-disable-next-line @typescript-eslint/no-empty-function
-              onModelChange={() => {}} // Disabled
-              disabled={true}
+              selectedModel={formData.selectedModel}
+              onModelChange={(model) => handleChange('selectedModel', model)}
+              disabled={false}
             />
           </div>
 
@@ -96,11 +139,10 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onBack }) => {
             </div>
             <Input
               type="text"
-              value={settings.aiProviderUrl}
-              // eslint-disable-next-line @typescript-eslint/no-empty-function
-              onChange={() => {}} // Disabled
+              value={formData.aiProviderUrl}
+              onChange={(e) => handleChange('aiProviderUrl', e.target.value)}
               placeholder="http://localhost:11434"
-              disabled={true}
+              disabled={false}
             />
           </div>
 
@@ -114,51 +156,46 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onBack }) => {
               <Input
                 label="Base URL"
                 type="text"
-                value={settings.openRouterBaseUrl}
-                // eslint-disable-next-line @typescript-eslint/no-empty-function
-                onChange={() => {}} // Disabled
+                value={formData.openRouterBaseUrl}
+                onChange={(e) => handleChange('openRouterBaseUrl', e.target.value)}
                 placeholder="https://openrouter.ai/api/v1"
-                disabled={true}
+                disabled={false}
               />
 
               <Input
                 label="API Key 1"
                 type="password"
-                value={settings.openRouterApiKey1}
-                // eslint-disable-next-line @typescript-eslint/no-empty-function
-                onChange={() => {}} // Disabled
+                value={formData.openRouterApiKey1}
+                onChange={(e) => handleChange('openRouterApiKey1', e.target.value)}
                 placeholder="sk-or-v1-..."
-                disabled={true}
+                disabled={false}
               />
 
               <Input
                 label="API Key 2"
                 type="password"
-                value={settings.openRouterApiKey2}
-                // eslint-disable-next-line @typescript-eslint/no-empty-function
-                onChange={() => {}} // Disabled
+                value={formData.openRouterApiKey2}
+                onChange={(e) => handleChange('openRouterApiKey2', e.target.value)}
                 placeholder="sk-or-v1-..."
-                disabled={true}
+                disabled={false}
               />
 
               <Input
                 label="Referer"
                 type="text"
-                value={settings.openRouterReferer}
-                // eslint-disable-next-line @typescript-eslint/no-empty-function
-                onChange={() => {}} // Disabled
+                value={formData.openRouterReferer}
+                onChange={(e) => handleChange('openRouterReferer', e.target.value)}
                 placeholder="http://localhost:3000"
-                disabled={true}
+                disabled={false}
               />
 
               <Input
                 label="Site Name"
                 type="text"
-                value={settings.openRouterSiteName}
-                // eslint-disable-next-line @typescript-eslint/no-empty-function
-                onChange={() => {}} // Disabled
+                value={formData.openRouterSiteName}
+                onChange={(e) => handleChange('openRouterSiteName', e.target.value)}
                 placeholder="AI Translator"
-                disabled={true}
+                disabled={false}
               />
             </div>
           </div>
@@ -172,18 +209,17 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onBack }) => {
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Temperature: {settings.temperature}
+                  Temperature: {formData.temperature}
                 </label>
                 <input
                   type="range"
                   min="0"
                   max="2"
                   step="0.1"
-                  value={settings.temperature}
-                  // eslint-disable-next-line @typescript-eslint/no-empty-function
-                  onChange={() => {}} // Disabled
-                  className="w-full opacity-50 cursor-not-allowed"
-                  disabled={true}
+                  value={formData.temperature}
+                  onChange={(e) => handleChange('temperature', parseFloat(e.target.value))}
+                  className="w-full"
+                  disabled={false}
                 />
                 <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mt-1">
                   <span>0</span>
@@ -206,10 +242,9 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onBack }) => {
                 type="number"
                 min="10"
                 max="24"
-                value={settings.fontSize}
-                // eslint-disable-next-line @typescript-eslint/no-empty-function
-                onChange={() => {}} // Disabled
-                disabled={true}
+                value={formData.fontSize}
+                onChange={(e) => handleChange('fontSize', parseInt(e.target.value, 10))}
+                disabled={false}
               />
 
               <div className="grid grid-cols-2 gap-4">
@@ -217,26 +252,54 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onBack }) => {
                   label="عرض پنجره"
                   type="number"
                   min="600"
-                  value={settings.windowSize.width}
-                  // eslint-disable-next-line @typescript-eslint/no-empty-function
-                  onChange={() => {}} // Disabled
-                  disabled={true}
+                  value={formData.windowSize.width}
+                  onChange={(e) => handleChange('windowSize', { ...formData.windowSize, width: parseInt(e.target.value, 10) })}
+                  disabled={false}
                 />
 
                 <Input
                   label="ارتفاع پنجره"
                   type="number"
                   min="400"
-                  value={settings.windowSize.height}
-                  // eslint-disable-next-line @typescript-eslint/no-empty-function
-                  onChange={() => {}} // Disabled
-                  disabled={true}
+                  value={formData.windowSize.height}
+                  onChange={(e) => handleChange('windowSize', { ...formData.windowSize, height: parseInt(e.target.value, 10) })}
+                  disabled={false}
                 />
               </div>
             </div>
           </div>
 
+          {/* Save Button */}
+          <div className="border-t border-gray-200 dark:border-gray-700 pt-6">
+            <div className="flex gap-4 justify-end">
+              <Button
+                variant="ghost"
+                onClick={handleBack}
+                disabled={isSaving}
+              >
+                بازگشت
+              </Button>
+              <Button
+                variant="primary"
+                onClick={handleSave}
+                disabled={isSaving}
+                isLoading={isSaving}
+              >
+                {isSaving ? 'در حال ذخیره...' : 'ذخیره تنظیمات'}
+              </Button>
+            </div>
+          </div>
+
         </div>
+
+        {/* Toast */}
+        {toast && (
+          <Toast
+            message={toast.message}
+            type={toast.type}
+            onClose={() => setToast(null)}
+          />
+        )}
 
         {/* Ollama Guide Modal */}
         <OllamaGuideModal

@@ -27,6 +27,14 @@ rules.push({
   },
 });
 
+rules.push({
+  test: /\.(png|jpg|jpeg|gif|svg|ico)$/i,
+  type: 'asset/resource',
+  generator: {
+    filename: 'assets/images/[name][ext]',
+  },
+});
+
 export const rendererConfig: Configuration = {
   module: {
     rules,

@@ -2,13 +2,13 @@ import { contextBridge, ipcRenderer } from 'electron';
 import { ElectronAPI } from '../types/electron';
 import { AIModel } from '../models/AIModel';
 import { TranslationResult } from '../utils/validation';
+import { AppSettings } from '../types/settings';
+import { GrammarTeachingResult } from '../services/ai/AIChatService';
 
 interface TranslationParams {
   text: string;
   model: AIModel;
 }
-
-import { GrammarTeachingResult } from '../services/ai/AIChatService';
 
 interface HistoryEntry {
   input: string;
@@ -24,11 +24,14 @@ export const electronAPI: ElectronAPI = {
   readClipboard: () => ipcRenderer.invoke('clipboard:read'),
   writeClipboard: (text: string) => ipcRenderer.invoke('clipboard:write', text),
 
-  // Window
-  minimize: () => ipcRenderer.invoke('window:minimize'),
-  close: () => ipcRenderer.invoke('window:close'),
-  show: () => ipcRenderer.invoke('window:show'),
-  focus: () => ipcRenderer.invoke('window:focus'),
+        // Window
+        minimize: () => ipcRenderer.invoke('window:minimize'),
+        maximize: () => ipcRenderer.invoke('window:maximize'),
+        restore: () => ipcRenderer.invoke('window:restore'),
+        isMaximized: () => ipcRenderer.invoke('window:isMaximized'),
+        close: () => ipcRenderer.invoke('window:close'),
+        show: () => ipcRenderer.invoke('window:show'),
+        focus: () => ipcRenderer.invoke('window:focus'),
 
   // Shortcuts
   onShortcut: (callback: (shortcut: { type: string; text: string }) => void) => {
@@ -55,6 +58,7 @@ export const electronAPI: ElectronAPI = {
 
   // Settings
   getSettings: () => ipcRenderer.invoke('settings:get'),
+  saveSettings: (settings: AppSettings) => ipcRenderer.invoke('settings:save', settings),
 
   onSettingsOpenPage: (callback: () => void) => {
     ipcRenderer.on('settings:openPage', () => callback());

@@ -56,3 +56,34 @@ body {
 .animate-slideUp {
   animation: slideUp 0.3s ease-out;
 }
+
+/* Title Bar Styles */
+.title-bar {
+  -webkit-app-region: drag;
+  user-select: none;
+}
+
+.title-bar .no-drag {
+  -webkit-app-region: no-drag;
+}
+
+.drag-region {
+  -webkit-app-region: drag;
+}
+
+.no-drag {
+  -webkit-app-region: no-drag;
+}
+
+/* Remove default body margin */
+body {
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+#root {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}

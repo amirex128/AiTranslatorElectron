@@ -1,0 +1,193 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'  # Trigger on version tags like v1.0.0
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        include:
+          - os: ubuntu-latest
+            platform: linux
+          - os: windows-latest
+            platform: win32
+          - os: macos-latest
+            platform: darwin
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Electron app
+        run: npm run make
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Set platform for Electron Forge
+          ELECTRON_FORGE_PLATFORM: ${{ matrix.platform }}
+
+      - name: Find and prepare ZIP artifacts (Windows)
+        if: matrix.platform == 'win32'
+        id: find-zip-win
+        shell: pwsh
+        run: |
+          Write-Host "Looking for ZIP files for Windows platform"
+          
+          # First, try to find ZIP files created by MakerZIP
+          $zipFiles = Get-ChildItem -Path "out\make\zip" -Filter "*.zip" -Recurse -ErrorAction SilentlyContinue
+          $zipFile = $zipFiles | Select-Object -First 1
+          
+          # If no ZIP found, look for unpacked directory and create ZIP
+          if (-not $zipFile) {
+            Write-Host "No ZIP file found in out/make/zip, looking for unpacked directory..."
+            $unpackedDir = Get-ChildItem -Path "out" -Directory -Filter "aitranslatorelectron-win32-x64" -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
+            
+            if ($unpackedDir) {
+              Write-Host "Found unpacked directory: $($unpackedDir.FullName)"
+              $zipName = "aitranslatorelectron-win32-x64.zip"
+              $zipPath = Join-Path $unpackedDir.Parent.FullName $zipName
+              
+              # Create ZIP file
+              Compress-Archive -Path $unpackedDir.FullName -DestinationPath $zipPath -Force
+              $zipFile = Get-Item $zipPath
+            }
+          }
+          
+          if ($zipFile -and (Test-Path $zipFile.FullName)) {
+            Write-Host "zip_file=$($zipFile.FullName)" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+            Write-Host "zip_name=$($zipFile.Name)" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+            Write-Host "Found ZIP file: $($zipFile.FullName)"
+            Get-Item $zipFile.FullName | Format-List
+          } else {
+            Write-Host "No ZIP file found or created"
+            Write-Host "Contents of out directory:"
+            Get-ChildItem -Path "out" -Recurse -ErrorAction SilentlyContinue | Select-Object FullName
+            exit 1
+          }
+
+      - name: Find and prepare ZIP artifacts (Unix)
+        if: matrix.platform != 'win32'
+        id: find-zip-unix
+        shell: bash
+        run: |
+          PLATFORM="${{ matrix.platform }}"
+          echo "Looking for ZIP files for platform: $PLATFORM"
+          
+          # First, try to find ZIP files created by MakerZIP
+          ZIP_FILE=$(find out/make/zip -name "*.zip" -type f 2>/dev/null | head -n 1)
+          
+          # If no ZIP found, look for unpacked directory and create ZIP
+          if [ -z "$ZIP_FILE" ]; then
+            echo "No ZIP file found in out/make/zip, looking for unpacked directory..."
+            
+            if [ "$PLATFORM" == "darwin" ]; then
+              UNPACKED_DIR=$(find out -type d \( -name "aitranslatorelectron-darwin-x64" -o -name "aitranslatorelectron-darwin-arm64" \) 2>/dev/null | head -n 1)
+              if [[ "$UNPACKED_DIR" == *"arm64"* ]]; then
+                ZIP_NAME="aitranslatorelectron-darwin-arm64.zip"
+              else
+                ZIP_NAME="aitranslatorelectron-darwin-x64.zip"
+              fi
+            else
+              UNPACKED_DIR=$(find out -type d -name "aitranslatorelectron-linux-x64" 2>/dev/null | head -n 1)
+              ZIP_NAME="aitranslatorelectron-linux-x64.zip"
+            fi
+            
+            if [ -n "$UNPACKED_DIR" ]; then
+              echo "Found unpacked directory: $UNPACKED_DIR"
+              cd "$(dirname "$UNPACKED_DIR")"
+              
+              # Create ZIP file using zip command
+              zip -r "$ZIP_NAME" "$(basename "$UNPACKED_DIR")"
+              ZIP_FILE="$(pwd)/$ZIP_NAME"
+            fi
+          fi
+          
+          if [ -n "$ZIP_FILE" ] && [ -f "$ZIP_FILE" ]; then
+            echo "zip_file=$ZIP_FILE" >> $GITHUB_OUTPUT
+            echo "zip_name=$(basename "$ZIP_FILE")" >> $GITHUB_OUTPUT
+            echo "Found ZIP file: $ZIP_FILE"
+            ls -lh "$ZIP_FILE"
+          else
+            echo "No ZIP file found or created"
+            echo "Contents of out directory:"
+            find out -type f -name "*.zip" 2>/dev/null || echo "No ZIP files found"
+            find out -type d -name "aitranslatorelectron-*" 2>/dev/null || echo "No unpacked directories found"
+            exit 1
+          fi
+
+      - name: Set ZIP file path
+        id: set-zip-path
+        shell: bash
+        run: |
+          if [ "${{ matrix.platform }}" == "win32" ]; then
+            echo "zip_file=${{ steps.find-zip-win.outputs.zip_file }}" >> $GITHUB_OUTPUT
+          else
+            echo "zip_file=${{ steps.find-zip-unix.outputs.zip_file }}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Upload ZIP artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: aitranslatorelectron-${{ matrix.platform }}-${{ github.ref_name }}
+          path: ${{ steps.set-zip-path.outputs.zip_file }}
+          retention-days: 30
+          if-no-files-found: error
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Extract tag name
+        id: tag
+        run: |
+          TAG_NAME=${GITHUB_REF#refs/tags/}
+          echo "tag_name=$TAG_NAME" >> $GITHUB_OUTPUT
+          echo "Tag name: $TAG_NAME"
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.tag.outputs.tag_name }}
+          name: Release ${{ steps.tag.outputs.tag_name }}
+          body: |
+            ## Changes in this Release
+            
+            See the [changelog](https://github.com/${{ github.repository }}/compare/${{ steps.tag.outputs.tag_name }}) for details.
+            
+            ## Downloads
+            
+            Download the appropriate build for your platform:
+            - **Windows**: `aitranslatorelectron-win32-*.zip`
+            - **macOS**: `aitranslatorelectron-darwin-*.zip`
+            - **Linux**: `aitranslatorelectron-linux-*.zip`
+          files: |
+            artifacts/**/*.zip
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
