@@ -53,15 +53,16 @@ const config: ForgeConfig = {
     ],
   },
   makers: [
+    // Windows makers
     new MakerSquirrel({
       name: 'aitranslatorelectron',
       setupIcon: undefined, // Add icon path if you have one
       // Configure for Windows EXE installer
       authors: 'amir.shirdeli',
       description: 'AI Translator Electron Application',
-    }),
-    // ZIP maker for Windows only to reduce build time
-    new MakerZIP({}, ['win32']),
+    }, ['win32']),
+    // ZIP maker for all platforms
+    new MakerZIP({}, ['win32', 'darwin', 'linux']),
   ],
   plugins: [
     // Temporarily disabled AutoUnpackNativesPlugin to fix EPERM issues on Windows
