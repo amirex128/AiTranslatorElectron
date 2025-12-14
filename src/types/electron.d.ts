@@ -32,8 +32,8 @@ interface TTSAudioData {
 }
 
 export interface ElectronAPI {
-  readClipboard: () => Promise<string>;
-  writeClipboard: (text: string) => Promise<boolean>;
+  readClipboard: () => Promise<IPCResponse<string>>;
+  writeClipboard: (text: string) => Promise<IPCResponse<boolean>>;
   minimize: () => Promise<void>;
   maximize: () => Promise<void>;
   restore: () => Promise<void>;

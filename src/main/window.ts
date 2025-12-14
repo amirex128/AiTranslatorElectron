@@ -88,12 +88,15 @@ export const createWindow = async (): Promise<void> => {
   // Set basic CSP for security (TTS is handled via IPC, no need for Google TTS CSP)
   const session = mainWindow.webContents.session;
   
-  // Handle microphone permissions for speech recognition
+  // Handle permissions for various features
   session.setPermissionRequestHandler((webContents, permission, callback) => {
     // Allow media (microphone) access for speech recognition
     if (permission === 'media') {
       callback(true);
-    } else {
+    }
+    // Note: Clipboard access via Electron's IPC API doesn't require permissions
+    // The browser API fallback in our code will handle permission errors gracefully
+    else {
       callback(false);
     }
   });
