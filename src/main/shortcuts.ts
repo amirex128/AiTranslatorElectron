@@ -8,6 +8,7 @@ interface ShortcutsConfig {
   englishToPersian: string;
   grammar: string;
   responseSuggestions: string;
+  addBookmark: string;
 }
 
 const registerShortcut = (accelerator: string, type: string): boolean => {
@@ -47,6 +48,7 @@ export const registerShortcuts = (window: BrowserWindow, shortcuts: ShortcutsCon
   registerShortcut(shortcuts.englishToPersian, 'english-to-persian');
   registerShortcut(shortcuts.grammar, 'grammar');
   registerShortcut(shortcuts.responseSuggestions, 'response-suggestions');
+  registerShortcut(shortcuts.addBookmark, 'add-bookmark');
 };
 
 export const reloadShortcuts = (window: BrowserWindow, shortcuts: ShortcutsConfig): void => {

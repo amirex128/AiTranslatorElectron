@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { ttsService } from '../../../services/tts/TTSService';
+import { useBookmarkStore } from '../../../stores/bookmarkStore';
 
 interface QuickTranslateBoxProps {
   text: string;
@@ -20,6 +21,9 @@ export const QuickTranslateBox: React.FC<QuickTranslateBoxProps> = ({
 }) => {
   const boxRef = useRef<HTMLDivElement>(null);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const { checkBookmark, addBookmark, removeBookmark } = useBookmarkStore();
+  const [isBookmarked, setIsBookmarked] = useState(false);
+  const [isCheckingBookmark, setIsCheckingBookmark] = useState(true);
 
   // Auto-close after timeout
   useEffect(() => {
@@ -72,6 +76,69 @@ export const QuickTranslateBox: React.FC<QuickTranslateBoxProps> = ({
       box.style.top = `${finalY}px`;
     }
   }, [position]);
+
+  // Check bookmark status on mount and when text changes
+  useEffect(() => {
+    const checkStatus = async () => {
+      setIsCheckingBookmark(true);
+      const bookmark = await checkBookmark(text);
+      setIsBookmarked(!!bookmark);
+      setIsCheckingBookmark(false);
+    };
+    checkStatus();
+  }, [text, checkBookmark]);
+
+  // Bookmark Button Component
+  const BookmarkButton: React.FC = () => {
+    const handleToggleBookmark = async (e: React.MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+
+      if (isBookmarked) {
+        // Remove bookmark
+        const bookmark = await checkBookmark(text);
+        if (bookmark) {
+          await removeBookmark(bookmark.id);
+          setIsBookmarked(false);
+        }
+      } else {
+        // Add bookmark
+        await addBookmark(text);
+        setIsBookmarked(true);
+      }
+    };
+
+    return (
+      <button
+        onClick={handleToggleBookmark}
+        onMouseDown={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+        }}
+        className={`p-1.5 rounded-md hover:bg-white/20 transition-colors ${
+          isBookmarked
+            ? 'text-yellow-400 hover:text-yellow-300'
+            : 'text-white/80 hover:text-white'
+        }`}
+        title={isBookmarked ? 'حذف از مورد علاقه‌ها' : 'افزودن به مورد علاقه‌ها'}
+        disabled={isCheckingBookmark}
+      >
+        <svg
+          className="w-4 h-4"
+          fill={isBookmarked ? 'currentColor' : 'none'}
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"
+          />
+        </svg>
+      </button>
+    );
+  };
 
   // TTS Button Component
   const TTSButton: React.FC<{ text: string }> = ({ text }) => {
@@ -189,7 +256,10 @@ export const QuickTranslateBox: React.FC<QuickTranslateBoxProps> = ({
           <div className="mb-3">
             <div className="flex items-center justify-between mb-1">
               <div className="text-xs text-white/60">متن انگلیسی:</div>
-              <TTSButton text={text} />
+              <div className="flex items-center gap-1">
+                <BookmarkButton />
+                <TTSButton text={text} />
+              </div>
             </div>
             <div className="text-sm text-white/90 font-medium" dir="ltr">
               {text}

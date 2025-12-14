@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { MainPage } from './pages/MainPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { AboutPage } from './pages/AboutPage';
+import { BookmarksPage } from './pages/BookmarksPage';
 import { TitleBar } from './components/ui/TitleBar/TitleBar';
 import { QuickTranslateProvider } from './components/quickTranslate/QuickTranslateProvider/QuickTranslateProvider';
 import { ApiKeySetupModal } from './components/ui/ApiKeySetupModal/ApiKeySetupModal';
@@ -11,7 +12,7 @@ import { useSettingsStore } from './stores/settingsStore';
 import iconPath from './assets/images.png';
 
 const App: React.FC = () => {
-  const [currentPage, setCurrentPage] = useState<'main' | 'settings' | 'about'>('main');
+  const [currentPage, setCurrentPage] = useState<'main' | 'settings' | 'about' | 'bookmarks'>('main');
   const [showApiKeyModal, setShowApiKeyModal] = useState(false);
   const { settings, loadSettings, checkApiKeyValid } = useSettingsStore();
 
@@ -42,6 +43,32 @@ const App: React.FC = () => {
 
       window.electronAPI.onAboutOpenPage(() => {
         setCurrentPage('about');
+      });
+
+      // Listen for add-bookmark shortcut
+      window.electronAPI.onShortcut((shortcut: { type: string; text: string }) => {
+        if (shortcut.type === 'add-bookmark') {
+          // Add bookmark from clipboard text
+          if (shortcut.text && shortcut.text.trim()) {
+            // Check if text is English (basic check)
+            const isEnglish = /^[a-zA-Z0-9\s.,!?'"-]+$/.test(shortcut.text.trim());
+            if (isEnglish) {
+              // Import bookmark store and add bookmark
+              import('./stores/bookmarkStore').then(({ useBookmarkStore }) => {
+                const store = useBookmarkStore.getState();
+                store.addBookmark(shortcut.text.trim()).then((bookmark) => {
+                  if (bookmark) {
+                    console.log('[App] Bookmark added from shortcut:', bookmark);
+                    // Optionally show a notification or navigate to bookmarks page
+                    setCurrentPage('bookmarks');
+                  }
+                });
+              });
+            } else {
+              console.log('[App] Text is not English, skipping bookmark');
+            }
+          }
+        }
       });
     }
   }, []);
@@ -78,7 +105,11 @@ const App: React.FC = () => {
     <QuickTranslateProvider>
       <div className="flex flex-col h-screen overflow-hidden">
         {shouldShowContent && (
-          <TitleBar title="مترجم هوش مصنوعی" iconPath={iconPath} />
+          <TitleBar 
+            title="مترجم هوش مصنوعی" 
+            iconPath={iconPath}
+            onOpenBookmarks={() => setCurrentPage('bookmarks')}
+          />
         )}
         {shouldShowContent ? (
           <div className="flex-1 overflow-y-auto">
@@ -90,6 +121,9 @@ const App: React.FC = () => {
             )}
             {currentPage === 'about' && (
               <AboutPage onBack={() => setCurrentPage('main')} />
+            )}
+            {currentPage === 'bookmarks' && (
+              <BookmarksPage onBack={() => setCurrentPage('main')} />
             )}
           </div>
         ) : (

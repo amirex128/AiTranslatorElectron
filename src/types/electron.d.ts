@@ -69,6 +69,30 @@ export interface ElectronAPI {
   quickTranslateGetCached: (englishText: string) => Promise<IPCResponse<string | null>>;
   quickTranslateSaveCached: (englishText: string, persianTranslation: string) => Promise<IPCResponse<boolean>>;
   quickTranslateTranslate: (englishText: string) => Promise<IPCResponse<string>>;
+  getAllBookmarks: (filters?: {
+    searchQuery?: string;
+    sortBy?: 'date' | 'alphabet' | 'readCount';
+    sortOrder?: 'asc' | 'desc';
+    page?: number;
+    pageSize?: number;
+  }) => Promise<IPCResponse<{
+    bookmarks: import('../main/database/BookmarkService').Bookmark[];
+    total: number;
+    page: number;
+    pageSize: number;
+    totalPages: number;
+  }>>;
+  checkBookmark: (englishText: string) => Promise<IPCResponse<import('../main/database/BookmarkService').Bookmark | null>>;
+  addBookmark: (englishText: string) => Promise<IPCResponse<import('../main/database/BookmarkService').Bookmark>>;
+  removeBookmark: (id: string) => Promise<IPCResponse<boolean>>;
+  updateBookmark: (id: string, updates: Partial<import('../main/database/BookmarkService').Bookmark>) => Promise<IPCResponse<import('../main/database/BookmarkService').Bookmark | null>>;
+  translateBookmarkMain: (id: string) => Promise<IPCResponse<import('../main/database/BookmarkService').Bookmark | null>>;
+  translateBookmarkFallback: (id: string) => Promise<IPCResponse<import('../main/database/BookmarkService').Bookmark | null>>;
+  translateBookmarkQuick: (id: string) => Promise<IPCResponse<import('../main/database/BookmarkService').Bookmark | null>>;
+  incrementBookmarkReadCount: (id: string) => Promise<IPCResponse<import('../main/database/BookmarkService').Bookmark | null>>;
+  resetBookmarkReadCount: (id: string) => Promise<IPCResponse<import('../main/database/BookmarkService').Bookmark | null>>;
+  generateBookmarkMainExamples: (id: string) => Promise<IPCResponse<import('../main/database/BookmarkService').Bookmark | null>>;
+  generateBookmarkFallbackExamples: (id: string) => Promise<IPCResponse<import('../main/database/BookmarkService').Bookmark | null>>;
 }
 
 declare global {

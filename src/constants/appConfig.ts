@@ -153,6 +153,7 @@ function createAppConfig() {
       processMain: getEnvShortcut('SHORTCUT_PROCESS_MAIN', 'CommandOrControl+Enter'),
       processFallback: getEnvShortcut('SHORTCUT_PROCESS_FALLBACK', 'Alt+Enter'),
       processQuickTranslate: getEnvShortcut('SHORTCUT_PROCESS_QUICK_TRANSLATE', 'Alt+Shift+Enter'),
+      addBookmark: getEnvShortcut('SHORTCUT_ADD_BOOKMARK', 'Alt+Delete'),
     },
   
   // Quick Translate Configuration

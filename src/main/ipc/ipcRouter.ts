@@ -7,6 +7,7 @@ import { registerHistoryHandlers } from './handlers/historyHandlers';
 import { registerSettingsHandlers } from './handlers/settingsHandlers';
 import { registerSpeechHandlers } from './handlers/speechHandlers';
 import { registerQuickTranslateHandlers } from './handlers/quickTranslateHandlers';
+import { registerBookmarkHandlers } from './handlers/bookmarkHandlers';
 
 /**
  * Registers all IPC handlers except translation handlers
@@ -20,6 +21,7 @@ export function registerAllIPCHandlers(): void {
   registerSettingsHandlers();
   registerSpeechHandlers();
   registerQuickTranslateHandlers();
+  registerBookmarkHandlers();
 }
 
 /**

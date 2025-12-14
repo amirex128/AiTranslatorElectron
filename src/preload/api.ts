@@ -90,6 +90,20 @@ export const electronAPI: ElectronAPI = {
   quickTranslateGetCached: (englishText: string) => ipcRenderer.invoke('quick-translate:get-cached', { englishText }),
   quickTranslateSaveCached: (englishText: string, persianTranslation: string) => ipcRenderer.invoke('quick-translate:save-cached', { englishText, persianTranslation }),
   quickTranslateTranslate: (englishText: string) => ipcRenderer.invoke('quick-translate:translate', { englishText }),
+
+  // Bookmarks
+  getAllBookmarks: (filters?: any) => ipcRenderer.invoke('bookmark:get-all', filters),
+  checkBookmark: (englishText: string) => ipcRenderer.invoke('bookmark:check', englishText),
+  addBookmark: (englishText: string) => ipcRenderer.invoke('bookmark:add', englishText),
+  removeBookmark: (id: string) => ipcRenderer.invoke('bookmark:remove', id),
+  updateBookmark: (id: string, updates: any) => ipcRenderer.invoke('bookmark:update', { id, updates }),
+  translateBookmarkMain: (id: string) => ipcRenderer.invoke('bookmark:translate-main', id),
+  translateBookmarkFallback: (id: string) => ipcRenderer.invoke('bookmark:translate-fallback', id),
+  translateBookmarkQuick: (id: string) => ipcRenderer.invoke('bookmark:translate-quick', id),
+  incrementBookmarkReadCount: (id: string) => ipcRenderer.invoke('bookmark:increment-read-count', id),
+  resetBookmarkReadCount: (id: string) => ipcRenderer.invoke('bookmark:reset-read-count', id),
+  generateBookmarkMainExamples: (id: string) => ipcRenderer.invoke('bookmark:generate-main-examples', id),
+  generateBookmarkFallbackExamples: (id: string) => ipcRenderer.invoke('bookmark:generate-fallback-examples', id),
 };
 
 contextBridge.exposeInMainWorld('electronAPI', electronAPI);

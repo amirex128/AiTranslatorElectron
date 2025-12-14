@@ -352,6 +352,12 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onBack }) => {
                 value={formData.shortcuts.processQuickTranslate}
                 onChange={(value) => handleShortcutChange('processQuickTranslate', value)}
               />
+
+              <ShortcutBuilder
+                label="افزودن به علاقه‌مندی‌ها"
+                value={formData.shortcuts.addBookmark}
+                onChange={(value) => handleShortcutChange('addBookmark', value)}
+              />
             </div>
           </div>
 

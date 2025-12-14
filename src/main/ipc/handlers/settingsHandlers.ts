@@ -53,6 +53,7 @@ async function writeEnvFile(settings: AppSettings): Promise<void> {
       ['SHORTCUT_PROCESS_MAIN', settings.shortcuts.processMain],
       ['SHORTCUT_PROCESS_FALLBACK', settings.shortcuts.processFallback],
       ['SHORTCUT_PROCESS_QUICK_TRANSLATE', settings.shortcuts.processQuickTranslate],
+      ['SHORTCUT_ADD_BOOKMARK', settings.shortcuts.addBookmark],
       ['QUICK_TRANSLATE_ENABLED', settings.quickTranslateEnabled.toString()],
       ['QUICK_TRANSLATE_TIMEOUT', settings.quickTranslateTimeout.toString()],
     ]);
@@ -117,6 +118,8 @@ async function writeEnvFile(settings: AppSettings): Promise<void> {
       `SHORTCUT_RESPONSE_SUGGESTIONS=${settings.shortcuts.responseSuggestions}`,
       `SHORTCUT_PROCESS_MAIN=${settings.shortcuts.processMain}`,
       `SHORTCUT_PROCESS_FALLBACK=${settings.shortcuts.processFallback}`,
+      `SHORTCUT_PROCESS_QUICK_TRANSLATE=${settings.shortcuts.processQuickTranslate}`,
+      `SHORTCUT_ADD_BOOKMARK=${settings.shortcuts.addBookmark}`,
       `QUICK_TRANSLATE_ENABLED=${settings.quickTranslateEnabled}`,
       `QUICK_TRANSLATE_TIMEOUT=${settings.quickTranslateTimeout}`,
     ].join('\n') + '\n';
@@ -173,6 +176,7 @@ function getAppConfigAsPlainObject(): AppSettings {
       processMain: APP_CONFIG.shortcuts.processMain,
       processFallback: APP_CONFIG.shortcuts.processFallback,
       processQuickTranslate: APP_CONFIG.shortcuts.processQuickTranslate,
+      addBookmark: APP_CONFIG.shortcuts.addBookmark,
     },
     quickTranslateEnabled: APP_CONFIG.quickTranslateEnabled,
     quickTranslateTimeout: APP_CONFIG.quickTranslateTimeout,

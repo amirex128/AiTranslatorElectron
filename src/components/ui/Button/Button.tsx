@@ -2,7 +2,7 @@ import React from 'react';
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: 'primary' | 'secondary' | 'danger' | 'ghost';
-  size?: 'sm' | 'md' | 'lg';
+  size?: 'xs' | 'sm' | 'md' | 'lg';
   isLoading?: boolean;
   children: React.ReactNode;
   shortcut?: string;
@@ -38,6 +38,7 @@ export const Button: React.FC<ButtonProps> = ({
   };
 
   const sizeClasses = {
+    xs: 'px-2 py-1 text-xs',
     sm: 'px-3 py-1.5 text-sm',
     md: 'px-4 py-2 text-base',
     lg: 'px-6 py-3 text-lg',

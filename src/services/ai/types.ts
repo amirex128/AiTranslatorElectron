@@ -18,5 +18,6 @@ export interface AIChatOptions {
   maxRetries?: number;
   abortSignal?: AbortSignal;
   onProgress?: (progress: number) => void;
+  skipValidation?: boolean;
 }
 

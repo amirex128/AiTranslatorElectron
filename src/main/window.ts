@@ -102,14 +102,27 @@ export const createWindow = async (): Promise<void> => {
   });
 
   session.webRequest.onHeadersReceived((details, callback) => {
-    const cspHeader = 
-      "default-src 'self' 'unsafe-inline' 'unsafe-eval' data:; " +
-      "media-src 'self' blob: data: https:; " +
-      "connect-src 'self' ws://localhost:* ws://0.0.0.0:* http://localhost:* http://0.0.0.0:* https://www.google.com https://speech.googleapis.com; " +
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval'; " +
-      "style-src 'self' 'unsafe-inline'; " +
-      "img-src 'self' data: https:; " +
-      "font-src 'self' data:;";
+    // In development, we need 'unsafe-eval' for webpack HMR
+    // In production, this warning won't appear as mentioned in Electron docs
+    const isDev = !require('electron').app.isPackaged;
+    
+    const cspHeader = isDev
+      ? // Development CSP (allows webpack HMR)
+        "default-src 'self' 'unsafe-inline' 'unsafe-eval' data:; " +
+        "media-src 'self' blob: data: https:; " +
+        "connect-src 'self' ws://localhost:* ws://0.0.0.0:* http://localhost:* http://0.0.0.0:* https://www.google.com https://speech.googleapis.com; " +
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval'; " +
+        "style-src 'self' 'unsafe-inline'; " +
+        "img-src 'self' data: https:; " +
+        "font-src 'self' data:;"
+      : // Production CSP (more restrictive, no unsafe-eval)
+        "default-src 'self' 'unsafe-inline' data:; " +
+        "media-src 'self' blob: data: https:; " +
+        "connect-src 'self' https://www.google.com https://speech.googleapis.com https://api.openrouter.ai; " +
+        "script-src 'self' 'unsafe-inline'; " +
+        "style-src 'self' 'unsafe-inline'; " +
+        "img-src 'self' data: https:; " +
+        "font-src 'self' data:;";
 
     const responseHeaders: Record<string, string | string[]> = {
       ...details.responseHeaders,
