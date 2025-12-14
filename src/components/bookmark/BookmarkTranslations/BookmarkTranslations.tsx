@@ -26,7 +26,7 @@ export const BookmarkTranslations: React.FC<BookmarkTranslationsProps> = ({ book
       id: 'main',
       title: 'ترجمه با مدل اصلی',
       content: (
-        <div className="text-xs text-gray-900 dark:text-white" dir="rtl">
+        <div className="text-sm text-gray-900 dark:text-white" dir="rtl">
           {translation}
         </div>
       ),
@@ -41,7 +41,7 @@ export const BookmarkTranslations: React.FC<BookmarkTranslationsProps> = ({ book
       id: 'fallback',
       title: 'ترجمه با مدل جایگزین',
       content: (
-        <div className="text-xs text-gray-900 dark:text-white" dir="rtl">
+        <div className="text-sm text-gray-900 dark:text-white" dir="rtl">
           {translation}
         </div>
       ),
@@ -56,7 +56,7 @@ export const BookmarkTranslations: React.FC<BookmarkTranslationsProps> = ({ book
       id: 'quick',
       title: 'ترجمه سریع',
       content: (
-        <div className="text-xs text-gray-900 dark:text-white" dir="rtl">
+        <div className="text-sm text-gray-900 dark:text-white" dir="rtl">
           {translation}
         </div>
       ),
@@ -74,14 +74,14 @@ export const BookmarkTranslations: React.FC<BookmarkTranslationsProps> = ({ book
           {bookmark.mainExamples.map((example, index) => (
             <div key={index} className="border-b border-gray-200 dark:border-gray-700 pb-2 last:border-b-0">
               <div className="mb-1">
-                <p className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-0.5">مثال {index + 1}:</p>
-                <p className="text-xs text-gray-900 dark:text-white" dir="ltr">
+                <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-0.5">مثال {index + 1}:</p>
+                <p className="text-sm text-gray-900 dark:text-white" dir="ltr">
                   {example.english}
                 </p>
               </div>
               <div>
-                <p className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-0.5">ترجمه:</p>
-                <p className="text-xs text-gray-900 dark:text-white" dir="rtl">
+                <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-0.5">ترجمه:</p>
+                <p className="text-sm text-gray-900 dark:text-white" dir="rtl">
                   {example.persian}
                 </p>
               </div>
@@ -103,14 +103,14 @@ export const BookmarkTranslations: React.FC<BookmarkTranslationsProps> = ({ book
           {bookmark.fallbackExamples.map((example, index) => (
             <div key={index} className="border-b border-gray-200 dark:border-gray-700 pb-2 last:border-b-0">
               <div className="mb-1">
-                <p className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-0.5">مثال {index + 1}:</p>
-                <p className="text-xs text-gray-900 dark:text-white" dir="ltr">
+                <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-0.5">مثال {index + 1}:</p>
+                <p className="text-sm text-gray-900 dark:text-white" dir="ltr">
                   {example.english}
                 </p>
               </div>
               <div>
-                <p className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-0.5">ترجمه:</p>
-                <p className="text-xs text-gray-900 dark:text-white" dir="rtl">
+                <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-0.5">ترجمه:</p>
+                <p className="text-sm text-gray-900 dark:text-white" dir="rtl">
                   {example.persian}
                 </p>
               </div>
