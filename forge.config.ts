@@ -7,6 +7,8 @@ import { AutoUnpackNativesPlugin } from '@electron-forge/plugin-auto-unpack-nati
 import { WebpackPlugin } from '@electron-forge/plugin-webpack';
 import { FusesPlugin } from '@electron-forge/plugin-fuses';
 import { FuseV1Options, FuseVersion } from '@electron/fuses';
+import { existsSync, copyFileSync, mkdirSync } from 'fs';
+import { join } from 'path';
 
 import { mainConfig } from './webpack.main.config';
 import { rendererConfig } from './webpack.renderer.config';
@@ -19,6 +21,27 @@ const config: ForgeConfig = {
     },
     // Ensure assets folder is included in the package
     extraResource: [],
+    // Hook to copy .env file to output directory after extract
+    afterExtract: [
+      async (buildPath, electronVersion, platform, arch) => {
+        const envPath = join(process.cwd(), '.env');
+        const targetEnvPath = join(buildPath, '.env');
+        
+        if (existsSync(envPath)) {
+          console.log('[Forge] Copying .env file to build directory:', targetEnvPath);
+          try {
+            copyFileSync(envPath, targetEnvPath);
+            console.log('[Forge] Successfully copied .env file');
+          } catch (error) {
+            console.error('[Forge] Error copying .env file:', error);
+          }
+        } else {
+          console.warn('[Forge] Warning: .env file not found in project root.');
+          console.warn('[Forge] The application will look for .env in the executable directory at runtime.');
+          console.warn('[Forge] Please ensure .env file exists in the same directory as the executable.');
+        }
+      },
+    ],
   },
   makers: [
     new MakerSquirrel({

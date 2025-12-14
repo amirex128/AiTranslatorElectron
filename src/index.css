@@ -79,6 +79,7 @@ body {
 body {
   margin: 0;
   padding: 0;
+  height: 100vh;
   overflow: hidden;
 }
 
@@ -86,4 +87,5 @@ body {
   height: 100vh;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }

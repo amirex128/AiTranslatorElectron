@@ -20,37 +20,36 @@ export function getEnvFilePath(): string {
   const isPackaged = app.isPackaged || false;
   
   if (isPackaged) {
-    // In production, .env should be in userData directory (writable location)
-    // Or in the same directory as the executable
+    // In production, .env should be in the same directory as the executable
+    // This is the most common location for portable apps
+    const execPath = process.execPath;
+    const execDir = require('path').dirname(execPath);
+    const execEnvPath = join(execDir, '.env');
+    
+    // First, check executable directory (most common for portable apps)
+    if (existsSync(execEnvPath)) {
+      console.log('[EnvPath] Using .env from executable directory:', execEnvPath);
+      return execEnvPath;
+    }
+    
+    // Fallback to userData directory (writable location)
     try {
       const userDataPath = app.getPath('userData');
       const userDataEnvPath = join(userDataPath, '.env');
       
-      // Also check executable directory
-      const execPath = process.execPath;
-      const execDir = require('path').dirname(execPath);
-      const execEnvPath = join(execDir, '.env');
-      
-      // Prefer userData (always writable)
       if (existsSync(userDataEnvPath)) {
         console.log('[EnvPath] Using .env from userData:', userDataEnvPath);
         return userDataEnvPath;
       }
       
-      // Fallback to executable directory
-      if (existsSync(execEnvPath)) {
-        console.log('[EnvPath] Using .env from executable directory:', execEnvPath);
-        return execEnvPath;
-      }
-      
-      // Default to userData (always writable)
-      console.log('[EnvPath] Creating .env in userData:', userDataEnvPath);
-      return userDataEnvPath;
+      // Default to executable directory (where user should place .env)
+      console.log('[EnvPath] .env not found, will use executable directory:', execEnvPath);
+      console.log('[EnvPath] Please place .env file in:', execDir);
+      return execEnvPath;
     } catch (error) {
       // Fallback if app methods are not available
-      const execPath = process.execPath;
-      const execDir = require('path').dirname(execPath);
-      return join(execDir, '.env');
+      console.log('[EnvPath] App not ready, using executable directory:', execEnvPath);
+      return execEnvPath;
     }
   } else {
     // In development, .env is in project root

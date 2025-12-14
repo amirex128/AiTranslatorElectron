@@ -29,18 +29,20 @@ const App: React.FC = () => {
   }, []);
 
   return (
-    <>
+    <div className="flex flex-col h-screen overflow-hidden">
       <TitleBar title="AI Translator" iconPath={iconPath} />
-      {currentPage === 'main' && (
-        <MainPage onOpenSettings={() => setCurrentPage('settings')} />
-      )}
-      {currentPage === 'settings' && (
-        <SettingsPage onBack={() => setCurrentPage('main')} />
-      )}
-      {currentPage === 'about' && (
-        <AboutPage onBack={() => setCurrentPage('main')} />
-      )}
-    </>
+      <div className="flex-1 overflow-y-auto">
+        {currentPage === 'main' && (
+          <MainPage onOpenSettings={() => setCurrentPage('settings')} />
+        )}
+        {currentPage === 'settings' && (
+          <SettingsPage onBack={() => setCurrentPage('main')} />
+        )}
+        {currentPage === 'about' && (
+          <AboutPage onBack={() => setCurrentPage('main')} />
+        )}
+      </div>
+    </div>
   );
 };
 
