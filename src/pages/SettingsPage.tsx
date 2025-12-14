@@ -8,6 +8,7 @@ import { ModelSelector } from '../components/translation/ModelSelector/ModelSele
 import { AIModel, AI_MODELS } from '../models/AIModel';
 import { Toast } from '../components/ui/Toast/Toast';
 import { OllamaGuideModal } from '../components/ui/OllamaGuideModal/OllamaGuideModal';
+import { ShortcutBuilder } from '../components/ui/ShortcutBuilder/ShortcutBuilder';
 
 interface SettingsPageProps {
   onBack?: () => void;
@@ -46,6 +47,17 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onBack }) => {
     }
   };
 
+  const handleShortcutChange = (shortcutKey: keyof AppSettings['shortcuts'], value: string) => {
+    if (!formData) return;
+    setFormData({
+      ...formData,
+      shortcuts: {
+        ...formData.shortcuts,
+        [shortcutKey]: value,
+      },
+    });
+  };
+
   const handleSave = async () => {
     if (!formData || !window.electronAPI) {
       return;
@@ -55,7 +67,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onBack }) => {
     try {
       const response = await window.electronAPI.saveSettings(formData);
       if (response.success) {
-        setToast({ message: 'تنظیمات با موفقیت ذخیره شد. لطفاً برنامه را مجدداً راه‌اندازی کنید.', type: 'success' });
+        setToast({ message: 'تنظیمات با موفقیت ذخیره شد. کلیدهای میانبر به‌صورت خودکار اعمال شدند.', type: 'success' });
         // Reload settings after save
         await loadSettings();
       } else {
@@ -103,7 +115,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onBack }) => {
                   تنظیمات از فایل .env خوانده می‌شوند
                 </p>
                 <p className="text-xs text-blue-600 dark:text-blue-300 mt-1">
-                  می‌توانید تنظیمات را در اینجا تغییر دهید و با دکمه ذخیره در فایل .env ذخیره کنید. پس از ذخیره، برنامه را مجدداً راه‌اندازی کنید.
+                  می‌توانید تنظیمات را در اینجا تغییر دهید و با دکمه ذخیره در فایل .env ذخیره کنید. کلیدهای میانبر به‌صورت خودکار اعمال می‌شوند. برای سایر تنظیمات ممکن است نیاز به راه‌اندازی مجدد باشد.
                 </p>
               </div>
             </div>
@@ -266,6 +278,47 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onBack }) => {
                   disabled={false}
                 />
               </div>
+            </div>
+          </div>
+
+          {/* Keyboard Shortcuts Configuration */}
+          <div className="border-t border-gray-200 dark:border-gray-700 pt-6">
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+              کلیدهای میانبر
+            </h2>
+
+            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-4">
+              <p className="text-sm text-blue-800 dark:text-blue-200">
+                <strong>راهنما:</strong> برای هر کلید میانبر، می‌توانید حداکثر 4 کلید modifier (Alt, Ctrl, Shift, Cmd) و یک کلید اصلی انتخاب کنید.
+                <br />
+                <strong>نکته:</strong> انتخاب modifierها اختیاری است. می‌توانید فقط با یک کلید اصلی یا ترکیب modifier + کلید اصلی، کلید میانبر بسازید.
+              </p>
+            </div>
+
+            <div className="space-y-6">
+              <ShortcutBuilder
+                label="فارسی به انگلیسی"
+                value={formData.shortcuts.persianToEnglish}
+                onChange={(value) => handleShortcutChange('persianToEnglish', value)}
+              />
+
+              <ShortcutBuilder
+                label="انگلیسی به فارسی"
+                value={formData.shortcuts.englishToPersian}
+                onChange={(value) => handleShortcutChange('englishToPersian', value)}
+              />
+
+              <ShortcutBuilder
+                label="اصلاح گرامر"
+                value={formData.shortcuts.grammar}
+                onChange={(value) => handleShortcutChange('grammar', value)}
+              />
+
+              <ShortcutBuilder
+                label="جوابش چی میشه؟"
+                value={formData.shortcuts.responseSuggestions}
+                onChange={(value) => handleShortcutChange('responseSuggestions', value)}
+              />
             </div>
           </div>
 

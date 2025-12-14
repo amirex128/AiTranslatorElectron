@@ -152,7 +152,7 @@ app.on('ready', async () => {
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   const windowModule = require('./main/window');
   if (windowModule.mainWindow) {
-    registerShortcuts(windowModule.mainWindow);
+    registerShortcuts(windowModule.mainWindow, APP_CONFIG.shortcuts);
   }
 
   // Health check on startup

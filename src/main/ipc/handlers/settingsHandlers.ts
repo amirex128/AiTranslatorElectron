@@ -6,6 +6,7 @@ import { APP_CONFIG } from '../../../constants/appConfig';
 import { AppSettings } from '../../../types/settings';
 import { AIModel } from '../../../models/AIModel';
 import { getEnvFilePath } from '../../utils/envPath';
+import { reloadShortcuts } from '../../shortcuts';
 
 /**
  * Write settings to .env file
@@ -43,6 +44,10 @@ async function writeEnvFile(settings: AppSettings): Promise<void> {
       ['FONT_SIZE', settings.fontSize.toString()],
       ['WINDOW_WIDTH', settings.windowSize.width.toString()],
       ['WINDOW_HEIGHT', settings.windowSize.height.toString()],
+      ['SHORTCUT_PERSIAN_TO_ENGLISH', settings.shortcuts.persianToEnglish],
+      ['SHORTCUT_ENGLISH_TO_PERSIAN', settings.shortcuts.englishToPersian],
+      ['SHORTCUT_GRAMMAR', settings.shortcuts.grammar],
+      ['SHORTCUT_RESPONSE_SUGGESTIONS', settings.shortcuts.responseSuggestions],
     ]);
     
     const updatedKeys = new Set<string>();
@@ -98,6 +103,10 @@ async function writeEnvFile(settings: AppSettings): Promise<void> {
       `FONT_SIZE=${settings.fontSize}`,
       `WINDOW_WIDTH=${settings.windowSize.width}`,
       `WINDOW_HEIGHT=${settings.windowSize.height}`,
+      `SHORTCUT_PERSIAN_TO_ENGLISH=${settings.shortcuts.persianToEnglish}`,
+      `SHORTCUT_ENGLISH_TO_PERSIAN=${settings.shortcuts.englishToPersian}`,
+      `SHORTCUT_GRAMMAR=${settings.shortcuts.grammar}`,
+      `SHORTCUT_RESPONSE_SUGGESTIONS=${settings.shortcuts.responseSuggestions}`,
     ].join('\n') + '\n';
   }
 
@@ -145,6 +154,14 @@ export function registerSettingsHandlers(): void {
     
     console.log('[Settings] Successfully reloaded .env file');
     console.log('[Settings] SELECTED_MODEL after reload:', process.env.SELECTED_MODEL);
+    
+    // Reload shortcuts with new configuration from the settings that were just saved
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const windowModule = require('../../window');
+    if (windowModule.mainWindow && !windowModule.mainWindow.isDestroyed()) {
+      reloadShortcuts(windowModule.mainWindow, settings.shortcuts);
+      console.log('[Settings] Shortcuts reloaded');
+    }
     
     // Return void on success - handleIPC will wrap it in SuccessResponse
     return;

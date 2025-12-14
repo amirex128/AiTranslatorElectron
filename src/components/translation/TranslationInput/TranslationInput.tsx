@@ -14,6 +14,7 @@ interface TranslationInputProps {
   historyEntries?: HistoryEntry[];
   onSelectHistoryEntry?: (entry: HistoryEntry) => void;
   dir?: 'ltr' | 'rtl' | 'auto';
+  shortcut?: string;
 }
 
 export const TranslationInput: React.FC<TranslationInputProps> = ({
@@ -26,6 +27,7 @@ export const TranslationInput: React.FC<TranslationInputProps> = ({
   historyEntries = [],
   onSelectHistoryEntry,
   dir = 'rtl',
+  shortcut,
 }) => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const undoRedoManager = useRef(new UndoRedoManager<string>());
@@ -110,13 +112,31 @@ export const TranslationInput: React.FC<TranslationInputProps> = ({
     }
   };
 
+  // Format shortcut for display (replace + with space for better readability)
+  const formatShortcut = (shortcut: string): string => {
+    return shortcut.replace(/\+/g, ' + ');
+  };
+
   return (
     <>
       <div className="relative">
         <div className="relative">
+          {/* Custom label with badge */}
+          {label && (
+            <div className="flex items-center gap-2 mb-1">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                {label}
+              </label>
+              {shortcut && (
+                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-mono font-medium bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 dir-ltr">
+                  {formatShortcut(shortcut)}
+                </span>
+              )}
+            </div>
+          )}
           <Textarea
             ref={textareaRef}
-            label={label}
+            label={undefined}
             value={value}
             onChange={handleChange}
             onKeyDown={handleKeyDown}

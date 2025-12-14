@@ -15,5 +15,11 @@ export interface AppSettings {
   temperature: number;
   fontSize: number;
   windowSize: { width: number; height: number };
+  shortcuts: {
+    persianToEnglish: string;
+    englishToPersian: string;
+    grammar: string;
+    responseSuggestions: string;
+  };
 }
 

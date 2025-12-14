@@ -24,6 +24,7 @@ export async function getDefaultSettings(): Promise<AppSettings> {
       temperature: APP_CONFIG.temperature,
       fontSize: APP_CONFIG.fontSize,
       windowSize: APP_CONFIG.windowSize,
+      shortcuts: APP_CONFIG.shortcuts,
     };
   } else {
     // In renderer process, get settings from main process via IPC

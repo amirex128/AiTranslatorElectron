@@ -18,16 +18,36 @@ export const HistoryPanel: React.FC<HistoryPanelProps> = ({
   onSelectEntry,
   className = '',
 }) => {
-  const { entries, searchQuery, setSearchQuery, deleteEntry, getFilteredEntries, loadEntries } =
+  const { entries, searchQuery, setSearchQuery, deleteEntry, clearHistory, getFilteredEntries, loadEntries } =
     useHistoryStore();
 
   const filteredEntries = getFilteredEntries();
   const [currentPage, setCurrentPage] = useState(1);
+  const [showClearConfirmModal, setShowClearConfirmModal] = useState(false);
 
   // Load entries from database on mount
   React.useEffect(() => {
     loadEntries();
   }, [loadEntries]);
+
+  // Handle Escape key to close modal
+  React.useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && showClearConfirmModal) {
+        setShowClearConfirmModal(false);
+      }
+    };
+
+    if (showClearConfirmModal) {
+      document.addEventListener('keydown', handleEscape);
+      document.body.style.overflow = 'hidden';
+    }
+
+    return () => {
+      document.removeEventListener('keydown', handleEscape);
+      document.body.style.overflow = '';
+    };
+  }, [showClearConfirmModal]);
 
   const totalPages = Math.ceil(filteredEntries.length / ITEMS_PER_PAGE);
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
@@ -56,6 +76,12 @@ export const HistoryPanel: React.FC<HistoryPanelProps> = ({
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
+  };
+
+  const handleClearHistory = async () => {
+    await clearHistory();
+    setShowClearConfirmModal(false);
+    setCurrentPage(1);
   };
 
   const getModelLabel = (model: AIModel): string => {
@@ -221,10 +247,8 @@ export const HistoryPanel: React.FC<HistoryPanelProps> = ({
         </h2>
         <Button
           size="sm"
-          variant="secondary"
-          onClick={async () => {
-            await useHistoryStore.getState().clearHistory();
-          }}
+          variant="danger"
+          onClick={() => setShowClearConfirmModal(true)}
           disabled={entries.length === 0}
         >
           پاک کردن همه
@@ -284,6 +308,93 @@ export const HistoryPanel: React.FC<HistoryPanelProps> = ({
             </div>
           )}
         </>
+      )}
+
+      {/* Clear History Confirmation Modal */}
+      {showClearConfirmModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 dark:bg-opacity-70 backdrop-blur-sm animate-fadeIn"
+          onClick={() => setShowClearConfirmModal(false)}
+        >
+          <div
+            className="w-full max-w-md m-4 bg-white dark:bg-gray-800 rounded-lg shadow-2xl animate-slideUp"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+              <div className="flex items-center gap-3">
+                <div className="flex-shrink-0 w-10 h-10 rounded-full bg-red-100 dark:bg-red-900/20 flex items-center justify-center">
+                  <svg
+                    className="w-6 h-6 text-red-600 dark:text-red-400"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                    />
+                  </svg>
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+                    هشدار
+                  </h2>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                    حذف تمام تاریخچه
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowClearConfirmModal(false)}
+                className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
+                aria-label="بستن"
+              >
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </button>
+            </div>
+
+            {/* Content */}
+            <div className="p-6">
+              <p className="text-gray-700 dark:text-gray-300 mb-4">
+                آیا مطمئن هستید که می‌خواهید تمام تاریخچه ترجمه را حذف کنید؟
+              </p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                این عمل قابل بازگشت نیست و تمام {entries.length} ورودی تاریخچه حذف خواهد شد.
+              </p>
+            </div>
+
+            {/* Footer */}
+            <div className="flex items-center justify-end gap-3 p-6 border-t border-gray-200 dark:border-gray-700">
+              <Button
+                variant="secondary"
+                onClick={() => setShowClearConfirmModal(false)}
+              >
+                لغو
+              </Button>
+              <Button
+                variant="danger"
+                onClick={handleClearHistory}
+              >
+                تایید و حذف
+              </Button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

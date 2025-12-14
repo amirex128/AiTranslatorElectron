@@ -73,6 +73,15 @@ const getEnvModel = (key: string): AIModel => {
   );
 };
 
+// Helper function to get shortcut from environment variable (optional, with default)
+const getEnvShortcut = (key: string, defaultValue: string): string => {
+  if (!isNodeEnv) {
+    return defaultValue;
+  }
+  const value = process.env[key];
+  return value || defaultValue;
+};
+
 // Create APP_CONFIG only in main process
 // In renderer process, this will throw an error at module load time
 // This is intentional - APP_CONFIG should only be used in main process
@@ -111,6 +120,14 @@ export const APP_CONFIG = (() => {
     windowSize: { 
       width: getEnvNumber('WINDOW_WIDTH'), 
       height: getEnvNumber('WINDOW_HEIGHT') 
+    },
+  
+  // Keyboard Shortcuts
+    shortcuts: {
+      persianToEnglish: getEnvShortcut('SHORTCUT_PERSIAN_TO_ENGLISH', 'Alt+Insert'),
+      englishToPersian: getEnvShortcut('SHORTCUT_ENGLISH_TO_PERSIAN', 'Alt+Home'),
+      grammar: getEnvShortcut('SHORTCUT_GRAMMAR', 'Alt+PageUp'),
+      responseSuggestions: getEnvShortcut('SHORTCUT_RESPONSE_SUGGESTIONS', 'Alt+PageDown'),
     },
 } as const;
 })();

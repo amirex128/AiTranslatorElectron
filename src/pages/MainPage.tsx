@@ -326,12 +326,13 @@ export const MainPage: React.FC<MainPageProps> = ({ onOpenSettings }) => {
                 setLastRequestTime(entry.responseTime);
               }
             }}
+            shortcut={settings?.shortcuts.persianToEnglish}
           />
           <TranslationInput
             label="انگلیسی به فارسی"
             value={englishToPersianInput}
             onChange={setEnglishToPersianInput}
-            placeholder="متن انگلیسی را وارد کنید..."
+            placeholder="Enter English text here or use theire Shortcut"
             autoFocus={false}
             dir="ltr"
             historyEntries={historyEntries.filter((e) => e.type === 'english-to-persian')}
@@ -344,12 +345,13 @@ export const MainPage: React.FC<MainPageProps> = ({ onOpenSettings }) => {
                 setLastRequestTime(entry.responseTime);
               }
             }}
+            shortcut={settings?.shortcuts.englishToPersian}
           />
-                              <TranslationInput
+          <TranslationInput
             label="جوابش چی میشه؟"
             value={responseSuggestionsInput}
             onChange={setResponseSuggestionsInput}
-            placeholder="متن انگلیسی را وارد کنید..."
+            placeholder="Enter English text here or use their shortcuts..."
             autoFocus={false}
             dir="ltr"
             historyEntries={historyEntries.filter((e) => e.type === 'response-suggestions')}
@@ -362,12 +364,20 @@ export const MainPage: React.FC<MainPageProps> = ({ onOpenSettings }) => {
                 setLastRequestTime(entry.responseTime);
               }
             }}
+            shortcut={settings?.shortcuts.responseSuggestions}
           />
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                اصلاح گرامر
-              </label>
+              <div className="flex items-center gap-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  اصلاح گرامر
+                </label>
+                {settings?.shortcuts.grammar && (
+                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-mono font-medium bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 dir-ltr">
+                    {settings.shortcuts.grammar.replace(/\+/g, ' + ')}
+                  </span>
+                )}
+              </div>
               <Switch
                 checked={grammarTeachingMode}
                 onChange={setGrammarTeachingMode}
@@ -378,7 +388,7 @@ export const MainPage: React.FC<MainPageProps> = ({ onOpenSettings }) => {
               label=""
             value={grammarInput}
             onChange={setGrammarInput}
-            placeholder="متن انگلیسی برای اصلاح را وارد کنید..."
+            placeholder="Enter English text here or use their shortcuts..."
             autoFocus={false}
             dir="ltr"
             historyEntries={historyEntries.filter((e) => 
@@ -399,6 +409,7 @@ export const MainPage: React.FC<MainPageProps> = ({ onOpenSettings }) => {
                 setLastRequestTime(entry.responseTime);
               }
             }}
+            shortcut={settings?.shortcuts.grammar}
           />
           </div>
         </div>
