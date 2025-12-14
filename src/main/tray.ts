@@ -19,70 +19,71 @@ export const createTray = (): void => {
   
   let icon: Electron.NativeImage;
   try {
-    if (existsSync(iconPath)) {
+    // Try to load icon even if existsSync returns false
+    // (because existsSync doesn't work for files inside asar archive)
+    const iconExists = existsSync(iconPath);
+    // #region agent log
+    fetch('http://127.0.0.1:7243/ingest/8f3b4518-966f-45c8-9d5c-af7cc357afc0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'src/main/tray.ts:createTray',message:'Attempting to load icon',data:{iconPath,exists:iconExists},timestamp:Date.now(),sessionId:'debug-session',runId:'runtime',hypothesisId:'B'})}).catch(()=>{});
+    // #endregion
+    
+    // Try to load icon using createFromPath first
+    // This works even for files inside asar archive
+    try {
+      icon = nativeImage.createFromPath(iconPath);
       // #region agent log
-      fetch('http://127.0.0.1:7243/ingest/8f3b4518-966f-45c8-9d5c-af7cc357afc0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'src/main/tray.ts:createTray',message:'Icon file exists, loading',data:{iconPath},timestamp:Date.now(),sessionId:'debug-session',runId:'runtime',hypothesisId:'B'})}).catch(()=>{});
+      fetch('http://127.0.0.1:7243/ingest/8f3b4518-966f-45c8-9d5c-af7cc357afc0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'src/main/tray.ts:createTray',message:'createFromPath result',data:{isEmpty:icon.isEmpty(),size:icon.isEmpty()?null:icon.getSize()},timestamp:Date.now(),sessionId:'debug-session',runId:'runtime',hypothesisId:'B'})}).catch(()=>{});
       // #endregion
-      // Try to load icon using createFromPath first
-      try {
-        icon = nativeImage.createFromPath(iconPath);
-        // #region agent log
-        fetch('http://127.0.0.1:7243/ingest/8f3b4518-966f-45c8-9d5c-af7cc357afc0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'src/main/tray.ts:createTray',message:'createFromPath result',data:{isEmpty:icon.isEmpty(),size:icon.isEmpty()?null:icon.getSize()},timestamp:Date.now(),sessionId:'debug-session',runId:'runtime',hypothesisId:'B'})}).catch(()=>{});
-        // #endregion
-        // If icon is empty, try reading from buffer
-        if (icon.isEmpty()) {
-          console.warn('[Tray] Icon from path is empty, trying buffer method');
+      // If icon is empty, try reading from buffer
+      if (icon.isEmpty()) {
+        console.warn('[Tray] Icon from path is empty, trying buffer method');
+        try {
           const iconBuffer = readFileSync(iconPath);
           icon = nativeImage.createFromBuffer(iconBuffer);
           // #region agent log
           fetch('http://127.0.0.1:7243/ingest/8f3b4518-966f-45c8-9d5c-af7cc357afc0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'src/main/tray.ts:createTray',message:'createFromBuffer result',data:{isEmpty:icon.isEmpty(),size:icon.isEmpty()?null:icon.getSize(),bufferSize:iconBuffer.length},timestamp:Date.now(),sessionId:'debug-session',runId:'runtime',hypothesisId:'B'})}).catch(()=>{});
           // #endregion
-        }
-      } catch (pathError) {
-        // If createFromPath fails, try reading from buffer
-        console.warn('[Tray] createFromPath failed, trying buffer method:', pathError);
-        // #region agent log
-        fetch('http://127.0.0.1:7243/ingest/8f3b4518-966f-45c8-9d5c-af7cc357afc0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'src/main/tray.ts:createTray',message:'createFromPath failed',data:{error:String(pathError)},timestamp:Date.now(),sessionId:'debug-session',runId:'runtime',hypothesisId:'B'})}).catch(()=>{});
-        // #endregion
-        try {
-          const iconBuffer = readFileSync(iconPath);
-          icon = nativeImage.createFromBuffer(iconBuffer);
-          // #region agent log
-          fetch('http://127.0.0.1:7243/ingest/8f3b4518-966f-45c8-9d5c-af7cc357afc0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'src/main/tray.ts:createTray',message:'createFromBuffer after path error',data:{isEmpty:icon.isEmpty(),size:icon.isEmpty()?null:icon.getSize()},timestamp:Date.now(),sessionId:'debug-session',runId:'runtime',hypothesisId:'B'})}).catch(()=>{});
-          // #endregion
         } catch (bufferError) {
-          console.error('[Tray] Both createFromPath and createFromBuffer failed:', bufferError);
-          // #region agent log
-          fetch('http://127.0.0.1:7243/ingest/8f3b4518-966f-45c8-9d5c-af7cc357afc0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'src/main/tray.ts:createTray',message:'Both methods failed',data:{bufferError:String(bufferError)},timestamp:Date.now(),sessionId:'debug-session',runId:'runtime',hypothesisId:'B'})}).catch(()=>{});
-          // #endregion
-          icon = nativeImage.createEmpty();
+          console.warn('[Tray] Buffer read failed:', bufferError);
         }
       }
-      
-      // If icon is still empty, create a fallback
-      if (icon.isEmpty()) {
-        console.warn('[Tray] Icon file is empty, creating fallback');
+    } catch (pathError) {
+      // If createFromPath fails, try reading from buffer
+      console.warn('[Tray] createFromPath failed, trying buffer method:', pathError);
+      // #region agent log
+      fetch('http://127.0.0.1:7243/ingest/8f3b4518-966f-45c8-9d5c-af7cc357afc0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'src/main/tray.ts:createTray',message:'createFromPath failed',data:{error:String(pathError)},timestamp:Date.now(),sessionId:'debug-session',runId:'runtime',hypothesisId:'B'})}).catch(()=>{});
+      // #endregion
+      try {
+        const iconBuffer = readFileSync(iconPath);
+        icon = nativeImage.createFromBuffer(iconBuffer);
         // #region agent log
-        fetch('http://127.0.0.1:7243/ingest/8f3b4518-966f-45c8-9d5c-af7cc357afc0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'src/main/tray.ts:createTray',message:'Icon is empty',data:{iconPath},timestamp:Date.now(),sessionId:'debug-session',runId:'runtime',hypothesisId:'C'})}).catch(()=>{});
+        fetch('http://127.0.0.1:7243/ingest/8f3b4518-966f-45c8-9d5c-af7cc357afc0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'src/main/tray.ts:createTray',message:'createFromBuffer after path error',data:{isEmpty:icon.isEmpty(),size:icon.isEmpty()?null:icon.getSize()},timestamp:Date.now(),sessionId:'debug-session',runId:'runtime',hypothesisId:'B'})}).catch(()=>{});
+        // #endregion
+      } catch (bufferError) {
+        console.error('[Tray] Both createFromPath and createFromBuffer failed:', bufferError);
+        // #region agent log
+        fetch('http://127.0.0.1:7243/ingest/8f3b4518-966f-45c8-9d5c-af7cc357afc0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'src/main/tray.ts:createTray',message:'Both methods failed',data:{bufferError:String(bufferError)},timestamp:Date.now(),sessionId:'debug-session',runId:'runtime',hypothesisId:'B'})}).catch(()=>{});
         // #endregion
         icon = nativeImage.createEmpty();
-      } else {
-        // Resize icon for tray (tray icons should be small, typically 16x16 or 32x32)
-        const size = icon.getSize();
-        if (size.width > 32 || size.height > 32) {
-          icon = icon.resize({ width: 32, height: 32 });
-        }
-        console.log('[Tray] Icon loaded successfully, size:', icon.getSize());
-        // #region agent log
-        fetch('http://127.0.0.1:7243/ingest/8f3b4518-966f-45c8-9d5c-af7cc357afc0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'src/main/tray.ts:createTray',message:'Icon loaded successfully',data:{size:icon.getSize()},timestamp:Date.now(),sessionId:'debug-session',runId:'runtime',hypothesisId:'B'})}).catch(()=>{});
-        // #endregion
       }
-    } else {
-      console.error('[Tray] Icon file not found at:', iconPath);
+    }
+    
+    // If icon is still empty, create a fallback
+    if (icon.isEmpty()) {
+      console.warn('[Tray] Icon file is empty or not found at:', iconPath);
       // #region agent log
-      fetch('http://127.0.0.1:7243/ingest/8f3b4518-966f-45c8-9d5c-af7cc357afc0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'src/main/tray.ts:createTray',message:'Icon file not found',data:{iconPath},timestamp:Date.now(),sessionId:'debug-session',runId:'runtime',hypothesisId:'A'})}).catch(()=>{});
+      fetch('http://127.0.0.1:7243/ingest/8f3b4518-966f-45c8-9d5c-af7cc357afc0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'src/main/tray.ts:createTray',message:'Icon is empty',data:{iconPath},timestamp:Date.now(),sessionId:'debug-session',runId:'runtime',hypothesisId:'C'})}).catch(()=>{});
       // #endregion
       icon = nativeImage.createEmpty();
+    } else {
+      // Resize icon for tray (tray icons should be small, typically 16x16 or 32x32)
+      const size = icon.getSize();
+      if (size.width > 32 || size.height > 32) {
+        icon = icon.resize({ width: 32, height: 32 });
+      }
+      console.log('[Tray] Icon loaded successfully, size:', icon.getSize());
+      // #region agent log
+      fetch('http://127.0.0.1:7243/ingest/8f3b4518-966f-45c8-9d5c-af7cc357afc0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'src/main/tray.ts:createTray',message:'Icon loaded successfully',data:{size:icon.getSize()},timestamp:Date.now(),sessionId:'debug-session',runId:'runtime',hypothesisId:'B'})}).catch(()=>{});
+      // #endregion
     }
   } catch (error) {
     console.error('[Tray] Error loading tray icon:', error);

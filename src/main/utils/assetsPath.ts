@@ -1,6 +1,6 @@
 import { app } from 'electron';
 import { join } from 'path';
-import { existsSync } from 'fs';
+import { existsSync, copyFileSync, readdirSync, statSync, mkdirSync } from 'fs';
 
 /**
  * Get the path to the assets directory
@@ -46,6 +46,10 @@ export function getAssetsPath(): string {
     // #region agent log
     fetch('http://127.0.0.1:7243/ingest/8f3b4518-966f-45c8-9d5c-af7cc357afc0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'src/main/utils/assetsPath.ts:getAssetsPath',message:'Strategy 1: Checking unpackedPath',data:{path:assetsPath,exists:existsSync(assetsPath),appPath,unpackedPath},timestamp:Date.now(),sessionId:'debug-session',runId:'runtime',hypothesisId:'A'})}).catch(()=>{});
     // #endregion
+    
+    // If unpacked path doesn't exist, try to verify if it's actually unpacked
+    // Sometimes existsSync returns false even if files are unpacked
+    // So we'll try to use it anyway if no other path works
     
     // Strategy 2: Try process.execPath directory (executable location)
     // This works for portable apps or when app is in a specific directory
@@ -95,26 +99,135 @@ export function getAssetsPath(): string {
       }
     }
     
-    // Strategy 6: Try reading from asar archive directly (if assets weren't unpacked)
-    // In Electron, we can read from asar using the app.asar path
-    if (!existsSync(assetsPath)) {
-      // Try app.asar/src/assets (inside the asar archive)
-      const asarAssetsPath = join(appPath, 'src', 'assets');
-      // Note: existsSync might not work for files inside asar, but we can try to read them
-      // For now, we'll use this as a fallback
-      assetsPath = asarAssetsPath;
-    }
-    
-    // Strategy 7: Try executable directory (where postmake script copies assets)
+    // Strategy 6: Try executable directory (where postmake script copies assets)
+    // This should be checked BEFORE trying asar archive
+    let foundAssets = false;
     if (!existsSync(assetsPath)) {
       const execDir = require('path').dirname(process.execPath);
       const execAssetsPath = join(execDir, 'assets');
       // #region agent log
-      fetch('http://127.0.0.1:7243/ingest/8f3b4518-966f-45c8-9d5c-af7cc357afc0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'src/main/utils/assetsPath.ts:getAssetsPath',message:'Strategy 7: Checking execDir assets',data:{path:execAssetsPath,exists:existsSync(execAssetsPath),execDir},timestamp:Date.now(),sessionId:'debug-session',runId:'runtime',hypothesisId:'E'})}).catch(()=>{});
+      fetch('http://127.0.0.1:7243/ingest/8f3b4518-966f-45c8-9d5c-af7cc357afc0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'src/main/utils/assetsPath.ts:getAssetsPath',message:'Strategy 6: Checking execDir assets',data:{path:execAssetsPath,exists:existsSync(execAssetsPath),execDir},timestamp:Date.now(),sessionId:'debug-session',runId:'runtime',hypothesisId:'A'})}).catch(()=>{});
       // #endregion
       if (existsSync(execAssetsPath)) {
         assetsPath = execAssetsPath;
+        foundAssets = true;
+        // #region agent log
+        fetch('http://127.0.0.1:7243/ingest/8f3b4518-966f-45c8-9d5c-af7cc357afc0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'src/main/utils/assetsPath.ts:getAssetsPath',message:'Strategy 6: Found assets in execDir',data:{path:assetsPath},timestamp:Date.now(),sessionId:'debug-session',runId:'runtime',hypothesisId:'A'})}).catch(()=>{});
+        // #endregion
       }
+    }
+    
+    // Strategy 7: Try executable directory even if existsSync returns false
+    // postmake script copies assets to executable directory, but existsSync might not work
+    // We'll try to use it anyway as a fallback
+    if (!foundAssets) {
+      const execDir = require('path').dirname(process.execPath);
+      const execAssetsPath = join(execDir, 'assets');
+      // #region agent log
+      fetch('http://127.0.0.1:7243/ingest/8f3b4518-966f-45c8-9d5c-af7cc357afc0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'src/main/utils/assetsPath.ts:getAssetsPath',message:'Strategy 7: Trying execDir assets as fallback',data:{path:execAssetsPath,exists:existsSync(execAssetsPath)},timestamp:Date.now(),sessionId:'debug-session',runId:'runtime',hypothesisId:'A'})}).catch(()=>{});
+      // #endregion
+      
+      // If assets don't exist in executable directory, try to copy from project root
+      if (!existsSync(execAssetsPath)) {
+        // Try to find project root by going up from executable
+        let searchDir = execDir;
+        let projectAssetsPath: string | null = null;
+        
+        for (let i = 0; i < 10; i++) {
+          const testPath = join(searchDir, 'src', 'assets');
+          if (existsSync(testPath)) {
+            projectAssetsPath = testPath;
+            break;
+          }
+          const parentDir = join(searchDir, '..');
+          if (parentDir === searchDir) break; // Reached root
+          searchDir = parentDir;
+        }
+        
+        // If found project root, copy assets to executable directory
+        if (projectAssetsPath) {
+          try {
+            console.log('[AssetsPath] Assets not found in executable directory, copying from project root...');
+            // Create assets directory
+            if (!existsSync(execAssetsPath)) {
+              mkdirSync(execAssetsPath, { recursive: true });
+            }
+            
+            // Copy all files from project assets to executable assets
+            const assetsFiles = readdirSync(projectAssetsPath);
+            assetsFiles.forEach((file) => {
+              const sourceFile = join(projectAssetsPath!, file);
+              const targetFile = join(execAssetsPath, file);
+              const stat = statSync(sourceFile);
+              
+              if (stat.isFile()) {
+                copyFileSync(sourceFile, targetFile);
+                console.log('[AssetsPath] Copied asset file:', file);
+              } else if (stat.isDirectory()) {
+                // Recursively copy directories
+                const copyRecursive = (src: string, dest: string) => {
+                  if (!existsSync(dest)) {
+                    mkdirSync(dest, { recursive: true });
+                  }
+                  const entries = readdirSync(src);
+                  entries.forEach((entry) => {
+                    const srcPath = join(src, entry);
+                    const destPath = join(dest, entry);
+                    const entryStat = statSync(srcPath);
+                    if (entryStat.isFile()) {
+                      copyFileSync(srcPath, destPath);
+                    } else if (entryStat.isDirectory()) {
+                      copyRecursive(srcPath, destPath);
+                    }
+                  });
+                };
+                copyRecursive(sourceFile, targetFile);
+                console.log('[AssetsPath] Copied asset directory:', file);
+              }
+            });
+            console.log('[AssetsPath] Successfully copied assets to:', execAssetsPath);
+            // #region agent log
+            fetch('http://127.0.0.1:7243/ingest/8f3b4518-966f-45c8-9d5c-af7cc357afc0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'src/main/utils/assetsPath.ts:getAssetsPath',message:'Strategy 7: Copied assets from project root',data:{source:projectAssetsPath,target:execAssetsPath},timestamp:Date.now(),sessionId:'debug-session',runId:'runtime',hypothesisId:'A'})}).catch(()=>{});
+            // #endregion
+          } catch (error) {
+            console.error('[AssetsPath] Error copying assets from project root:', error);
+            // #region agent log
+            fetch('http://127.0.0.1:7243/ingest/8f3b4518-966f-45c8-9d5c-af7cc357afc0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'src/main/utils/assetsPath.ts:getAssetsPath',message:'Strategy 7: Error copying assets',data:{error:String(error)},timestamp:Date.now(),sessionId:'debug-session',runId:'runtime',hypothesisId:'A'})}).catch(()=>{});
+            // #endregion
+          }
+        }
+      }
+      
+      // Use executable directory even if existsSync returns false
+      // (postmake might have copied assets but existsSync might not detect them)
+      assetsPath = execAssetsPath;
+      foundAssets = true; // Mark as found so we try this path
+    }
+    
+    // Strategy 8: Fallback to unpacked path even if existsSync returns false
+    // Sometimes existsSync returns false even if files are actually unpacked
+    // We'll use the unpacked path as a fallback before trying asar
+    if (!foundAssets && unpackedPath !== appPath) {
+      const unpackedAssetsPath = join(unpackedPath, 'src', 'assets');
+      // #region agent log
+      fetch('http://127.0.0.1:7243/ingest/8f3b4518-966f-45c8-9d5c-af7cc357afc0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'src/main/utils/assetsPath.ts:getAssetsPath',message:'Strategy 8: Using unpacked path as fallback',data:{path:unpackedAssetsPath,currentAssetsPath:assetsPath,foundAssets},timestamp:Date.now(),sessionId:'debug-session',runId:'runtime',hypothesisId:'C'})}).catch(()=>{});
+      // #endregion
+      assetsPath = unpackedAssetsPath;
+      foundAssets = true; // Mark as found so Strategy 9 doesn't override it
+    }
+    
+    // Strategy 9: Try reading from asar archive directly (ONLY if nothing else worked)
+    // In Electron, we can read from asar using the app.asar path
+    // Note: existsSync might not work for files inside asar, but we can try to read them
+    if (!foundAssets) {
+      // Try app.asar/src/assets (inside the asar archive)
+      const asarAssetsPath = join(appPath, 'src', 'assets');
+      // #region agent log
+      fetch('http://127.0.0.1:7243/ingest/8f3b4518-966f-45c8-9d5c-af7cc357afc0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'src/main/utils/assetsPath.ts:getAssetsPath',message:'Strategy 9: Trying asar archive as last resort',data:{path:asarAssetsPath},timestamp:Date.now(),sessionId:'debug-session',runId:'runtime',hypothesisId:'B'})}).catch(()=>{});
+      // #endregion
+      // Use asar path as last fallback even if existsSync returns false
+      // (because existsSync doesn't work for files inside asar)
+      assetsPath = asarAssetsPath;
     }
     
     console.log('[AssetsPath] Final assets path:', assetsPath);
