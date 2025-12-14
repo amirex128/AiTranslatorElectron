@@ -9,7 +9,10 @@
     "package": "electron-forge package",
     "make": "electron-forge make",
     "publish": "electron-forge publish",
-    "lint": "eslint --ext .ts,.tsx ."
+    "lint": "eslint --ext .ts,.tsx .",
+    "clean": "rimraf .webpack out",
+    "premake": "npm run clean",
+    "prepackage": "npm run clean"
   },
   "keywords": [],
   "author": {
@@ -44,6 +47,7 @@
     "node-loader": "^2.1.0",
     "postcss": "^8.5.6",
     "postcss-loader": "^8.2.0",
+    "rimraf": "^5.0.10",
     "style-loader": "^3.3.4",
     "tailwindcss": "^4.1.17",
     "ts-loader": "^9.5.4",
