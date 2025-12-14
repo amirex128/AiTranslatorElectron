@@ -90,28 +90,28 @@ export const APP_CONFIG = (() => {
   }
   
   return {
-    // Model Selection
+  // Model Selection
     selectedModel: getEnvModel('SELECTED_MODEL'),
-
-    // AI Provider Configuration
+  
+  // AI Provider Configuration
     aiProviderUrl: getEnv('AI_PROVIDER_URL'), // Ollama URL
-    
-    // OpenRouter Configuration
+  
+  // OpenRouter Configuration
     openRouterBaseUrl: getEnv('OPEN_ROUTER_BASE_URL'),
     openRouterApiKey1: getEnv('OPEN_ROUTER_API_KEY_1'),
     openRouterApiKey2: getEnv('OPEN_ROUTER_API_KEY_2'),
     openRouterReferer: getEnv('OPEN_ROUTER_REFERER'),
     openRouterSiteName: getEnv('OPEN_ROUTER_SITE_NAME'),
-    
-    // AI Configuration
+  
+  // AI Configuration
     temperature: getEnvNumber('TEMPERATURE'),
-    
-    // UI Configuration
+  
+  // UI Configuration
     fontSize: getEnvNumber('FONT_SIZE'),
     windowSize: { 
       width: getEnvNumber('WINDOW_WIDTH'), 
       height: getEnvNumber('WINDOW_HEIGHT') 
     },
-  } as const;
+} as const;
 })();
 
