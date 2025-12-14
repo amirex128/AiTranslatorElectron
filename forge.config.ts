@@ -26,6 +26,22 @@ const getIconPath = (): string => {
   return existsSync(fallbackPath) ? fallbackPath : iconPath;
 };
 
+// Get ICO icon path for Windows installer (MakerSquirrel requires .ico file)
+const getIcoIconPath = (): string | undefined => {
+  // Try to find .ico file
+  const icoPath = join(process.cwd(), 'src', 'assets', 'images.ico');
+  if (existsSync(icoPath)) {
+    return icoPath;
+  }
+  // Fallback: try __dirname
+  const fallbackPath = join(__dirname, 'src', 'assets', 'images.ico');
+  if (existsSync(fallbackPath)) {
+    return fallbackPath;
+  }
+  // If no .ico file exists, return undefined (MakerSquirrel will use default)
+  return undefined;
+};
+
 const config: ForgeConfig = {
   packagerConfig: {
     icon: getIconPath(), // Set icon for the packaged app (same as tray and window)
@@ -87,7 +103,7 @@ const config: ForgeConfig = {
     // Windows makers
     new MakerSquirrel({
       name: 'aitranslatorelectron',
-      setupIcon: getIconPath(), // Use same icon as tray and window
+      setupIcon: getIcoIconPath(), // Use .ico file if available (MakerSquirrel requires .ico, not .png)
       // Configure for Windows EXE installer
       authors: 'amir.shirdeli',
       description: 'AI Translator Electron Application',

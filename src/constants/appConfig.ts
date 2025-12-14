@@ -98,6 +98,15 @@ const getEnvBoolean = (key: string, defaultValue: boolean): boolean => {
 // This ensures that .env file is loaded before APP_CONFIG is accessed
 let _appConfig: ReturnType<typeof createAppConfig> | null = null;
 
+/**
+ * Reset APP_CONFIG cache to force re-initialization
+ * This should be called after .env file is updated
+ */
+export function resetAppConfig(): void {
+  _appConfig = null;
+  console.log('[AppConfig] Cache reset - will re-initialize on next access');
+}
+
 function createAppConfig() {
   if (!isNodeEnv) {
     // In renderer process, we can't read .env, so we'll use a placeholder

@@ -78,18 +78,26 @@ export const ApiKeySetupModal: React.FC<ApiKeySetupModalProps> = ({
       
       if (response.success) {
         setSuccess(true);
-        // Reload settings
+        
+        // Wait a bit to ensure .env file is written and APP_CONFIG is reset
+        await new Promise(resolve => setTimeout(resolve, 200));
+        
+        // Reload settings and wait for it to complete
         await loadSettings();
-        // Wait a bit for settings to reload, then check if API key is valid
-        setTimeout(() => {
-          // Check if API key is now valid
-          if (isValidApiKey(apiKey.trim())) {
-            onApiKeySaved();
-          } else {
-            setError('API Key ذخیره شد اما هنوز معتبر نیست. لطفاً دوباره تلاش کنید.');
-            setSuccess(false);
-          }
-        }, 500);
+        
+        // Wait a bit more to ensure settings are fully updated in the store
+        await new Promise(resolve => setTimeout(resolve, 300));
+        
+        // Verify the API key is valid before calling onApiKeySaved
+        // Use the trimmed API key that was saved
+        const savedApiKey = apiKey.trim();
+        if (isValidApiKey(savedApiKey)) {
+          // Call onApiKeySaved which will check again and close the modal
+          onApiKeySaved();
+        } else {
+          setError('API Key ذخیره شد اما هنوز معتبر نیست. لطفاً دوباره تلاش کنید.');
+          setSuccess(false);
+        }
       } else {
         const errorMessage = 'error' in response ? response.error : 'خطا در ذخیره API Key';
         setError(errorMessage);

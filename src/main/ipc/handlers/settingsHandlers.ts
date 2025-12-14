@@ -2,7 +2,7 @@ import { ipcMain, IpcMainInvokeEvent } from 'electron';
 import { join } from 'path';
 import { existsSync, promises as fs } from 'fs';
 import { handleIPC } from '../utils';
-import { APP_CONFIG } from '../../../constants/appConfig';
+import { APP_CONFIG, resetAppConfig } from '../../../constants/appConfig';
 import { AppSettings } from '../../../types/settings';
 import { AIModel } from '../../../models/AIModel';
 import { getEnvFilePath } from '../../utils/envPath';
@@ -214,7 +214,12 @@ export function registerSettingsHandlers(): void {
     }
     
     console.log('[Settings] Successfully reloaded .env file');
-    console.log('[Settings] SELECTED_MODEL after reload:', process.env.SELECTED_MODEL);
+    console.log('[Settings] OPEN_ROUTER_API_KEY_1 after reload:', process.env.OPEN_ROUTER_API_KEY_1?.substring(0, 10) + '...');
+    
+    // Reset APP_CONFIG cache to force re-initialization with new .env values
+    // This is needed because APP_CONFIG uses lazy initialization with a Proxy
+    resetAppConfig();
+    console.log('[Settings] APP_CONFIG cache reset - will re-initialize with new values');
     
     // Reload shortcuts with new configuration from the settings that were just saved
     // eslint-disable-next-line @typescript-eslint/no-var-requires

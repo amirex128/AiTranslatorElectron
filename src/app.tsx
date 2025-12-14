@@ -49,10 +49,25 @@ const App: React.FC = () => {
   const handleApiKeySaved = async () => {
     // Reload settings to get the updated API key
     await loadSettings();
+    
+    // Wait a bit to ensure settings are fully updated in the store
+    await new Promise(resolve => setTimeout(resolve, 300));
+    
     // Check again if API key is valid
     const isValid = checkApiKeyValid();
     if (isValid) {
       setShowApiKeyModal(false);
+    } else {
+      // If still not valid, try reloading one more time
+      console.log('[App] API key still not valid after reload, trying again...');
+      await loadSettings();
+      await new Promise(resolve => setTimeout(resolve, 300));
+      const isValidAfterReload = checkApiKeyValid();
+      if (isValidAfterReload) {
+        setShowApiKeyModal(false);
+      } else {
+        console.error('[App] API key validation failed even after reload');
+      }
     }
   };
 
