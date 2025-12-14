@@ -140,13 +140,7 @@ function createAppConfig() {
 // Using Proxy to defer initialization until first property access
 export const APP_CONFIG = new Proxy({} as ReturnType<typeof createAppConfig>, {
   get(target, prop) {
-    // #region agent log
-    fetch('http://127.0.0.1:7243/ingest/8f3b4518-966f-45c8-9d5c-af7cc357afc0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'src/constants/appConfig.ts:APP_CONFIG.get',message:'APP_CONFIG property accessed',data:{prop,initialized:!!_appConfig,selectedModel:process.env.SELECTED_MODEL},timestamp:Date.now(),sessionId:'debug-session',runId:'runtime',hypothesisId:'E'})}).catch(()=>{});
-    // #endregion
     if (!_appConfig) {
-      // #region agent log
-      fetch('http://127.0.0.1:7243/ingest/8f3b4518-966f-45c8-9d5c-af7cc357afc0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'src/constants/appConfig.ts:APP_CONFIG.get',message:'Initializing APP_CONFIG',data:{selectedModel:process.env.SELECTED_MODEL},timestamp:Date.now(),sessionId:'debug-session',runId:'runtime',hypothesisId:'E'})}).catch(()=>{});
-      // #endregion
       _appConfig = createAppConfig();
     }
     const value = _appConfig[prop as keyof typeof _appConfig];

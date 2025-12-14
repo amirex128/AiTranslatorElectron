@@ -29,20 +29,12 @@ const config: ForgeConfig = {
           const envPath = join(process.cwd(), '.env');
           const envExamplePath = join(process.cwd(), '.env.example');
           
-          // #region agent log
-          fetch('http://127.0.0.1:7243/ingest/8f3b4518-966f-45c8-9d5c-af7cc357afc0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'forge.config.ts:afterExtract',message:'afterExtract hook called',data:{buildPath,envExamplePath,envExampleExists:existsSync(envExamplePath),cwd:process.cwd()},timestamp:Date.now(),sessionId:'debug-session',runId:'build',hypothesisId:'A'})}).catch(()=>{});
-          // #endregion
-          
           // buildPath is typically: out/aitranslatorelectron-win32-x64/resources/app.asar.unpacked
           // We want to copy .env and .env.example to the executable directory (where .exe is)
           // Executable directory is: buildPath/../../ (two levels up from app.asar.unpacked)
           const executableDir = join(buildPath, '..', '..');
           const targetEnvPath = join(executableDir, '.env');
           const targetEnvExamplePath = join(executableDir, '.env.example');
-          
-          // #region agent log
-          fetch('http://127.0.0.1:7243/ingest/8f3b4518-966f-45c8-9d5c-af7cc357afc0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'forge.config.ts:afterExtract',message:'Calculated paths',data:{executableDir,targetEnvExamplePath},timestamp:Date.now(),sessionId:'debug-session',runId:'build',hypothesisId:'B'})}).catch(()=>{});
-          // #endregion
           
           // Ensure directory exists
           if (!existsSync(executableDir)) {
@@ -62,28 +54,16 @@ const config: ForgeConfig = {
           // Always copy .env.example so it can be used as fallback
           if (existsSync(envExamplePath)) {
             console.log('[Forge] Copying .env.example file to executable directory:', targetEnvExamplePath);
-            // #region agent log
-            fetch('http://127.0.0.1:7243/ingest/8f3b4518-966f-45c8-9d5c-af7cc357afc0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'forge.config.ts:afterExtract',message:'Before copyFileSync .env.example',data:{source:envExamplePath,target:targetEnvExamplePath},timestamp:Date.now(),sessionId:'debug-session',runId:'build',hypothesisId:'C'})}).catch(()=>{});
-            // #endregion
             copyFileSync(envExamplePath, targetEnvExamplePath);
-            // #region agent log
-            fetch('http://127.0.0.1:7243/ingest/8f3b4518-966f-45c8-9d5c-af7cc357afc0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'forge.config.ts:afterExtract',message:'After copyFileSync .env.example',data:{targetExists:existsSync(targetEnvExamplePath)},timestamp:Date.now(),sessionId:'debug-session',runId:'build',hypothesisId:'C'})}).catch(()=>{});
-            // #endregion
             console.log('[Forge] Successfully copied .env.example file');
           } else {
             console.warn('[Forge] Warning: .env.example file not found in project root.');
-            // #region agent log
-            fetch('http://127.0.0.1:7243/ingest/8f3b4518-966f-45c8-9d5c-af7cc357afc0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'forge.config.ts:afterExtract',message:'.env.example not found',data:{envExamplePath,checkedPath:envExamplePath},timestamp:Date.now(),sessionId:'debug-session',runId:'build',hypothesisId:'A'})}).catch(()=>{});
-            // #endregion
           }
           
           // Call callback to continue build
           callback();
         } catch (error) {
           console.error('[Forge] Error in afterExtract hook:', error);
-          // #region agent log
-          fetch('http://127.0.0.1:7243/ingest/8f3b4518-966f-45c8-9d5c-af7cc357afc0',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'forge.config.ts:afterExtract',message:'Error in afterExtract',data:{error:String(error)},timestamp:Date.now(),sessionId:'debug-session',runId:'build',hypothesisId:'C'})}).catch(()=>{});
-          // #endregion
           // Call callback even on error to continue build
           callback();
         }

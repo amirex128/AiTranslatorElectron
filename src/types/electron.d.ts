@@ -55,6 +55,10 @@ export interface ElectronAPI {
   clearHistory: () => Promise<IPCResponse<void>>;
   getSettings: () => Promise<IPCResponse<AppSettings>>;
   saveSettings: (settings: AppSettings) => Promise<IPCResponse<void>>;
+  openSettings: () => void;
+  openAbout: () => void;
+  clearHistoryWithConfirmation: () => Promise<IPCResponse<{ confirmed: boolean }>>;
+  openDevTools: () => Promise<void>;
   onSettingsOpenPage: (callback: () => void) => void;
   onAboutOpenPage: (callback: () => void) => void;
 }

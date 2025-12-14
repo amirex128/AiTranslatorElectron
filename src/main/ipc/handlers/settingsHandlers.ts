@@ -7,6 +7,7 @@ import { AppSettings } from '../../../types/settings';
 import { AIModel } from '../../../models/AIModel';
 import { getEnvFilePath } from '../../utils/envPath';
 import { reloadShortcuts } from '../../shortcuts';
+import { mainWindow } from '../../window';
 
 /**
  * Write settings to .env file
@@ -162,6 +163,20 @@ function getAppConfigAsPlainObject(): AppSettings {
 }
 
 export function registerSettingsHandlers(): void {
+  // Listen for settings:openPage event from renderer
+  ipcMain.on('settings:openPage', () => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('settings:openPage');
+    }
+  });
+
+  // Listen for about:openPage event from renderer
+  ipcMain.on('about:openPage', () => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('about:openPage');
+    }
+  });
+
   ipcMain.handle('settings:get', handleIPC(async () => {
     // Return settings from APP_CONFIG (read from .env in main process)
     // Convert Proxy to plain object for IPC serialization

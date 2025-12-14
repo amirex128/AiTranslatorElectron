@@ -61,6 +61,14 @@ export const electronAPI: ElectronAPI = {
   // Settings
   getSettings: () => ipcRenderer.invoke('settings:get'),
   saveSettings: (settings: AppSettings) => ipcRenderer.invoke('settings:save', settings),
+  openSettings: () => {
+    ipcRenderer.send('settings:openPage');
+  },
+  openAbout: () => {
+    ipcRenderer.send('about:openPage');
+  },
+  clearHistoryWithConfirmation: () => ipcRenderer.invoke('history:clearWithConfirmation'),
+  openDevTools: () => ipcRenderer.invoke('window:openDevTools'),
 
   onSettingsOpenPage: (callback: () => void) => {
     ipcRenderer.on('settings:openPage', () => callback());
