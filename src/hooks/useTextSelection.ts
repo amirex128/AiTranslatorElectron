@@ -27,10 +27,35 @@ export const useTextSelection = (
     return englishPattern.test(trimmed);
   };
 
-  const handleSelection = useCallback(() => {
+  const handleSelection = useCallback((e?: Event) => {
     if (!enabled) {
       setSelection(null);
       return;
+    }
+
+    // Ignore if click is on QuickTranslateBox or its children
+    if (e && e.target) {
+      // Check if target is an HTMLElement (has closest method)
+      // In selectionchange event, target might be a Node, not HTMLElement
+      if (e.target instanceof HTMLElement) {
+        const target = e.target;
+        // Check if click is inside QuickTranslateBox (has specific class or is inside a fixed positioned element)
+        const quickTranslateBox = target.closest('[class*="fixed"][class*="z-50"]');
+        if (quickTranslateBox) {
+          // Don't process selection if clicking inside QuickTranslateBox
+          return;
+        }
+      } else if (e.target instanceof Node) {
+        // If target is a Node (like TextNode), check its parent element
+        const parentElement = e.target.parentElement;
+        if (parentElement) {
+          const quickTranslateBox = parentElement.closest('[class*="fixed"][class*="z-50"]');
+          if (quickTranslateBox) {
+            // Don't process selection if clicking inside QuickTranslateBox
+            return;
+          }
+        }
+      }
     }
 
     // Clear previous debounce

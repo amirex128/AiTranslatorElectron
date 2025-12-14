@@ -21,14 +21,22 @@ export const QuickTranslateProvider: React.FC<QuickTranslateProviderProps> = ({ 
 
   const selection = useTextSelection(enabled, (newSelection) => {
     if (newSelection) {
-      setSelectedText(newSelection.text);
-      setPosition(newSelection.position);
-      setShowBox(true);
-      setTranslation(null);
+      // Only update if text actually changed (to avoid resetting when clicking TTS button)
+      if (newSelection.text !== selectedText) {
+        setSelectedText(newSelection.text);
+        setPosition(newSelection.position);
+        setShowBox(true);
+        setTranslation(null);
+      }
     } else {
-      setShowBox(false);
-      setSelectedText(null);
-      setTranslation(null);
+      // Only close box if selection is actually cleared (not just a click on the box)
+      // Check if selection is really empty, not just a click event
+      const currentSelection = window.getSelection()?.toString().trim() || '';
+      if (!currentSelection || currentSelection.length === 0) {
+        setShowBox(false);
+        setSelectedText(null);
+        setTranslation(null);
+      }
     }
   });
 

@@ -14,8 +14,21 @@ import { join } from 'path';
 import { mainConfig } from './webpack.main.config';
 import { rendererConfig } from './webpack.renderer.config';
 
+// Get icon path (same as used in tray and window)
+const getIconPath = (): string => {
+  // In forge config, we're in the project root
+  const iconPath = join(process.cwd(), 'src', 'assets', 'images.png');
+  if (existsSync(iconPath)) {
+    return iconPath;
+  }
+  // Fallback: try __dirname
+  const fallbackPath = join(__dirname, 'src', 'assets', 'images.png');
+  return existsSync(fallbackPath) ? fallbackPath : iconPath;
+};
+
 const config: ForgeConfig = {
   packagerConfig: {
+    icon: getIconPath(), // Set icon for the packaged app (same as tray and window)
     asar: {
       // Unpack assets folder for CSV files and images
       // Pattern matches files in assets directory
@@ -74,7 +87,7 @@ const config: ForgeConfig = {
     // Windows makers
     new MakerSquirrel({
       name: 'aitranslatorelectron',
-      setupIcon: undefined, // Add icon path if you have one
+      setupIcon: getIconPath(), // Use same icon as tray and window
       // Configure for Windows EXE installer
       authors: 'amir.shirdeli',
       description: 'AI Translator Electron Application',

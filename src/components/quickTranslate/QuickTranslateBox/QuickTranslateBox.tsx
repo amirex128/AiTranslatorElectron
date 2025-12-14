@@ -77,7 +77,11 @@ export const QuickTranslateBox: React.FC<QuickTranslateBoxProps> = ({
   const TTSButton: React.FC<{ text: string }> = ({ text }) => {
     const [isPlaying, setIsPlaying] = useState(false);
 
-    const handlePlay = async () => {
+    const handlePlay = async (e: React.MouseEvent) => {
+      // Prevent event propagation to avoid triggering selection change
+      e.preventDefault();
+      e.stopPropagation();
+      
       if (isPlaying) {
         ttsService.stop();
         setIsPlaying(false);
@@ -96,6 +100,11 @@ export const QuickTranslateBox: React.FC<QuickTranslateBoxProps> = ({
     return (
       <button
         onClick={handlePlay}
+        onMouseDown={(e) => {
+          // Prevent mousedown from affecting selection
+          e.preventDefault();
+          e.stopPropagation();
+        }}
         className="p-1.5 rounded-md hover:bg-white/20 text-white/80 hover:text-white transition-colors"
         title={isPlaying ? 'توقف' : 'پخش صدا'}
       >
@@ -120,6 +129,14 @@ export const QuickTranslateBox: React.FC<QuickTranslateBoxProps> = ({
         maxWidth: '400px',
         minWidth: '200px',
       }}
+      onMouseDown={(e) => {
+        // Prevent mousedown on box from affecting text selection
+        e.stopPropagation();
+      }}
+      onClick={(e) => {
+        // Prevent click on box from affecting text selection
+        e.stopPropagation();
+      }}
     >
       <div
         className="relative rounded-lg shadow-2xl border border-white/20 backdrop-blur-md"
@@ -128,10 +145,26 @@ export const QuickTranslateBox: React.FC<QuickTranslateBoxProps> = ({
           backdropFilter: 'blur(12px)',
           WebkitBackdropFilter: 'blur(12px)',
         }}
+        onMouseDown={(e) => {
+          // Prevent mousedown on inner div from affecting text selection
+          e.stopPropagation();
+        }}
+        onClick={(e) => {
+          // Prevent click on inner div from affecting text selection
+          e.stopPropagation();
+        }}
       >
         {/* Close button */}
         <button
-          onClick={onClose}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            onClose();
+          }}
+          onMouseDown={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+          }}
           className="absolute top-2 right-2 w-6 h-6 flex items-center justify-center rounded-full hover:bg-white/20 transition-colors text-white/80 hover:text-white z-10"
           aria-label="Close"
         >
