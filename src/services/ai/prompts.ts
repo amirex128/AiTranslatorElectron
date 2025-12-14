@@ -235,3 +235,67 @@ This is the text you must analyze and teach:
 ${input}`;
 };
 
+export const getResponseSuggestionsPrompt = (input: string): string => {
+  return `You are an expert English conversation assistant. Your task is to receive an English question or statement from the user and provide exactly 5 different response suggestions.
+
+INSTRUCTIONS:
+
+Read the English input carefully and understand its context, tone, and meaning.
+
+Generate exactly 5 different response suggestions. Each response should:
+- Be natural, appropriate, and contextually relevant
+- Vary in tone, formality, or style (e.g., simple/common, more positive, neutral/slightly negative, casual/friendly, etc.)
+- Be suitable for the given context
+- Be grammatically correct and natural-sounding
+
+For each of the 5 responses, you must:
+1. Create a tone/title in Persian that describes the style or category of that response (e.g., "پاسخ‌های ساده و رایج", "پاسخ‌های مثبت‌تر", "پاسخ‌های خنثی یا کمی منفی", "پاسخ‌های خودمانی‌تر", etc.). The AI should decide the appropriate tone/title based on the response style.
+2. Provide the English response text
+3. Provide a natural Persian translation of the English response
+
+The tone/title should be descriptive and help the user understand the style or context in which to use that response. You should vary the tones to provide diverse options.
+
+IMPORTANT: You MUST output ONLY valid JSON in the following format. Do not include any explanations, comments, or additional text outside the JSON structure:
+
+{
+  "suggestions": [
+    {
+      "tone": "پاسخ‌های ساده و رایج",
+      "responseEn": "Pretty good. How about you?",
+      "responseFa": "خیلی خوب. شما چطورید؟"
+    },
+    {
+      "tone": "پاسخ‌های مثبت‌تر",
+      "responseEn": "It was great!",
+      "responseFa": "عالی بود!"
+    },
+    {
+      "tone": "پاسخ‌های خنثی یا کمی منفی",
+      "responseEn": "Long day, but I'm good.",
+      "responseFa": "روز طولانی بود، ولی خوبم."
+    },
+    {
+      "tone": "پاسخ‌های خودمانی‌تر",
+      "responseEn": "Busy but good.",
+      "responseFa": "شلوغ بود ولی خوب بود."
+    },
+    {
+      "tone": "پاسخ‌های رسمی‌تر",
+      "responseEn": "It was quite productive, thank you for asking.",
+      "responseFa": "روز بسیار پرباری بود، ممنون از پرسش شما."
+    }
+  ]
+}
+
+Do NOT:
+- Do not print or repeat the original English input
+- Do not add explanations, comments, or notes
+- Do not output fewer or more than exactly 5 suggestions
+- Do not skip the tone/title for any suggestion
+- Do not output anything outside the JSON format
+- Do not use the same tone/title for multiple suggestions
+
+This is the English question/statement you must provide response suggestions for:
+${input}`;
+};
+

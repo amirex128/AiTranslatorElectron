@@ -17,7 +17,6 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
     try {
       // Settings are always read from .env via APP_CONFIG (main process) or IPC (renderer process)
       const settings = await getDefaultSettings();
-      console.log("xxxxxxxxxxxxxxxxxxxxxx settings",settings)
       set({ settings, isLoading: false });
     } catch (error) {
       console.error('Error loading settings:', error);

@@ -12,10 +12,11 @@ interface TranslationParams {
 
 interface HistoryEntry {
   input: string;
-  type: 'persian-to-english' | 'english-to-persian' | 'grammar' | 'grammar-teaching';
+  type: 'persian-to-english' | 'english-to-persian' | 'grammar' | 'grammar-teaching' | 'response-suggestions';
   model: AIModel;
-  result: TranslationResult | null; // null for grammar-teaching
+  result: TranslationResult | null; // null for grammar-teaching and response-suggestions
   grammarTeachingResult?: GrammarTeachingResult; // Only for grammar-teaching type
+  responseSuggestionsResult?: import('../types/responseSuggestions').ResponseSuggestionsResult; // Only for response-suggestions type
   responseTime?: number;
 }
 
@@ -46,6 +47,7 @@ export const electronAPI: ElectronAPI = {
   translateEnglishToPersian: (params: TranslationParams) => ipcRenderer.invoke('translate:english-to-persian', params),
   translateGrammar: (params: TranslationParams) => ipcRenderer.invoke('translate:grammar', params),
   translateGrammarTeaching: (params: TranslationParams) => ipcRenderer.invoke('translate:grammar-teaching', params),
+  translateResponseSuggestions: (params: TranslationParams) => ipcRenderer.invoke('translate:response-suggestions', params),
 
   // TTS
   fetchTTSAudio: (url: string) => ipcRenderer.invoke('tts:fetch-audio', url),

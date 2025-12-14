@@ -13,6 +13,7 @@ interface TranslationInputProps {
   className?: string;
   historyEntries?: HistoryEntry[];
   onSelectHistoryEntry?: (entry: HistoryEntry) => void;
+  dir?: 'ltr' | 'rtl' | 'auto';
 }
 
 export const TranslationInput: React.FC<TranslationInputProps> = ({
@@ -24,6 +25,7 @@ export const TranslationInput: React.FC<TranslationInputProps> = ({
   className = '',
   historyEntries = [],
   onSelectHistoryEntry,
+  dir = 'rtl',
 }) => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const undoRedoManager = useRef(new UndoRedoManager<string>());
@@ -126,6 +128,7 @@ export const TranslationInput: React.FC<TranslationInputProps> = ({
             placeholder={placeholder}
             rows={6}
             className={className}
+            dir={dir}
           />
           {/* Fullscreen Button - Bottom Left */}
           <button
@@ -186,6 +189,12 @@ export const TranslationInput: React.FC<TranslationInputProps> = ({
                   } else {
                     englishText = entry.input;
                   }
+                } else if (entry.type === 'response-suggestions') {
+                  // Input is English, responseSuggestionsResult has suggestions
+                  englishText = entry.input;
+                  if (entry.responseSuggestionsResult && entry.responseSuggestionsResult.suggestions.length > 0) {
+                    persianText = entry.responseSuggestionsResult.suggestions[0].responseFa || '';
+                  }
                 }
                 
                 // Get type label
@@ -194,6 +203,7 @@ export const TranslationInput: React.FC<TranslationInputProps> = ({
                   if (entry.type === 'english-to-persian') return 'انگلیسی به فارسی';
                   if (entry.type === 'grammar') return 'اصلاح گرامر';
                   if (entry.type === 'grammar-teaching') return 'آموزش گرامر';
+                  if (entry.type === 'response-suggestions') return 'پیشنهاد پاسخ';
                   return '';
                 };
 
@@ -237,6 +247,7 @@ export const TranslationInput: React.FC<TranslationInputProps> = ({
         onChange={onChange}
         label={label}
         placeholder={placeholder}
+        dir={dir}
       />
     </>
   );

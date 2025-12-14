@@ -4,6 +4,7 @@ import { TranslationResult } from '../utils/validation';
 import { GrammarTeachingResult } from '../services/ai/AIChatService';
 import { AIModel } from '../models/AIModel';
 import { AppSettings } from './settings';
+import { ResponseSuggestionsResult } from './responseSuggestions';
 
 interface TranslationParams {
   text: string;
@@ -12,10 +13,11 @@ interface TranslationParams {
 
 interface HistoryEntry {
   input: string;
-  type: 'persian-to-english' | 'english-to-persian' | 'grammar' | 'grammar-teaching';
+  type: 'persian-to-english' | 'english-to-persian' | 'grammar' | 'grammar-teaching' | 'response-suggestions';
   model: AIModel;
-  result: TranslationResult | null; // null for grammar-teaching
+  result: TranslationResult | null; // null for grammar-teaching and response-suggestions
   grammarTeachingResult?: GrammarTeachingResult; // Only for grammar-teaching type
+  responseSuggestionsResult?: ResponseSuggestionsResult; // Only for response-suggestions type
   responseTime?: number;
 }
 
@@ -45,6 +47,7 @@ export interface ElectronAPI {
   translateEnglishToPersian: (params: TranslationParams) => Promise<IPCResponse<TranslatorResponse>>;
   translateGrammar: (params: TranslationParams) => Promise<IPCResponse<TranslatorResponse>>;
   translateGrammarTeaching: (params: TranslationParams) => Promise<IPCResponse<{ result: GrammarTeachingResult }>>;
+  translateResponseSuggestions: (params: TranslationParams) => Promise<IPCResponse<{ result: ResponseSuggestionsResult }>>;
   fetchTTSAudio: (url: string) => Promise<IPCResponse<TTSAudioData>>;
   getAllHistory: () => Promise<IPCResponse<HistoryEntryWithId[]>>;
   addHistory: (entry: HistoryEntry) => Promise<IPCResponse<void>>;

@@ -30,5 +30,9 @@ export function registerTranslationHandlers(
   ipcMain.handle('translate:grammar-teaching', handleIPC(async (_event: IpcMainInvokeEvent, { text, model }: TranslationParams) => {
     return await aiTranslatorService.teachGrammar(text, model, {});
   }));
+
+  ipcMain.handle('translate:response-suggestions', handleIPC(async (_event: IpcMainInvokeEvent, { text, model }: TranslationParams) => {
+    return await aiTranslatorService.suggestResponses(text, model, {});
+  }));
 }
 

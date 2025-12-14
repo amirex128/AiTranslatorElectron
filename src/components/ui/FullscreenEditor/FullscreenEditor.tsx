@@ -7,6 +7,7 @@ interface FullscreenEditorProps {
   onChange: (value: string) => void;
   label: string;
   placeholder?: string;
+  dir?: 'ltr' | 'rtl' | 'auto';
 }
 
 export const FullscreenEditor: React.FC<FullscreenEditorProps> = ({
@@ -16,6 +17,7 @@ export const FullscreenEditor: React.FC<FullscreenEditorProps> = ({
   onChange,
   label,
   placeholder,
+  dir = 'rtl',
 }) => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -91,6 +93,7 @@ export const FullscreenEditor: React.FC<FullscreenEditorProps> = ({
             value={value}
             onChange={(e) => onChange(e.target.value)}
             placeholder={placeholder}
+            dir={dir}
             className="w-full h-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-900 dark:border-gray-700 dark:text-white resize-none text-lg leading-relaxed"
             style={{ minHeight: 'calc(90vh - 120px)' }}
           />

@@ -2,15 +2,17 @@ import { create } from 'zustand';
 import { TranslationResult } from '../utils/validation';
 import { AIModel } from '../models/AIModel';
 import { GrammarTeachingResult } from '../services/ai/AIChatService';
+import { ResponseSuggestionsResult } from '../types/responseSuggestions';
 
 export interface HistoryEntry {
   id: string;
   timestamp: number;
   input: string;
-  type: 'persian-to-english' | 'english-to-persian' | 'grammar' | 'grammar-teaching';
+  type: 'persian-to-english' | 'english-to-persian' | 'grammar' | 'grammar-teaching' | 'response-suggestions';
   model: AIModel;
-  result: TranslationResult | null; // null for grammar-teaching
+  result: TranslationResult | null; // null for grammar-teaching and response-suggestions
   grammarTeachingResult?: GrammarTeachingResult; // Only for grammar-teaching type
+  responseSuggestionsResult?: ResponseSuggestionsResult; // Only for response-suggestions type
   responseTime?: number; // Time in seconds
 }
 

@@ -5,6 +5,7 @@ import { Input } from '../../ui/Input/Input';
 import { Accordion } from '../../ui/Accordion/Accordion';
 import { AIModel, AI_MODELS } from '../../../models/AIModel';
 import { GrammarTeachingResultComponent } from '../../grammar/GrammarTeachingResult/GrammarTeachingResult';
+import { ResponseSuggestionsResult } from '../../response/ResponseSuggestionsResult/ResponseSuggestionsResult';
 
 interface HistoryPanelProps {
   onSelectEntry?: (entry: HistoryEntry) => void;
@@ -83,6 +84,10 @@ export const HistoryPanel: React.FC<HistoryPanelProps> = ({
         badgeText = 'Grammar Teaching';
         badgeColor = 'bg-orange-500 dark:bg-orange-600';
         break;
+      case 'response-suggestions':
+        badgeText = 'Response Suggestions';
+        badgeColor = 'bg-pink-500 dark:bg-pink-600';
+        break;
     }
 
     return (
@@ -132,7 +137,17 @@ export const HistoryPanel: React.FC<HistoryPanelProps> = ({
             </div>
           </div>
           
-          {entry.type === 'grammar-teaching' && entry.grammarTeachingResult ? (
+          {entry.type === 'response-suggestions' && entry.responseSuggestionsResult ? (
+            <div>
+              <ResponseSuggestionsResult
+                result={entry.responseSuggestionsResult}
+                onCopy={(text) => {
+                  // Copy functionality handled by component
+                }}
+                fontSize={14}
+              />
+            </div>
+          ) : entry.type === 'grammar-teaching' && entry.grammarTeachingResult ? (
             <div>
               <GrammarTeachingResultComponent
                 result={entry.grammarTeachingResult}
