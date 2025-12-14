@@ -345,6 +345,24 @@ export const MainPage: React.FC<MainPageProps> = ({ onOpenSettings }) => {
               }
             }}
           />
+                              <TranslationInput
+            label="جوابش چی میشه؟"
+            value={responseSuggestionsInput}
+            onChange={setResponseSuggestionsInput}
+            placeholder="متن انگلیسی را وارد کنید..."
+            autoFocus={false}
+            dir="ltr"
+            historyEntries={historyEntries.filter((e) => e.type === 'response-suggestions')}
+            onSelectHistoryEntry={(entry) => {
+              setResponseSuggestionsInput(entry.input);
+              if (entry.responseSuggestionsResult) {
+                setResponseSuggestionsResult(entry.responseSuggestionsResult);
+                setResults(null);
+                setGrammarTeachingResult(null);
+                setLastRequestTime(entry.responseTime);
+              }
+            }}
+          />
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -383,24 +401,6 @@ export const MainPage: React.FC<MainPageProps> = ({ onOpenSettings }) => {
             }}
           />
           </div>
-          <TranslationInput
-            label="جوابش چی میشه؟"
-            value={responseSuggestionsInput}
-            onChange={setResponseSuggestionsInput}
-            placeholder="متن انگلیسی را وارد کنید..."
-            autoFocus={false}
-            dir="ltr"
-            historyEntries={historyEntries.filter((e) => e.type === 'response-suggestions')}
-            onSelectHistoryEntry={(entry) => {
-              setResponseSuggestionsInput(entry.input);
-              if (entry.responseSuggestionsResult) {
-                setResponseSuggestionsResult(entry.responseSuggestionsResult);
-                setResults(null);
-                setGrammarTeachingResult(null);
-                setLastRequestTime(entry.responseTime);
-              }
-            }}
-          />
         </div>
 
         <div className="flex gap-2 justify-center flex-wrap">

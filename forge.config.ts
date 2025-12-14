@@ -17,28 +17,33 @@ const config: ForgeConfig = {
   packagerConfig: {
     asar: {
       // Unpack assets folder for CSV files
-      unpack: 'src/assets/**',
+      unpack: 'assets/**',
     },
     // Ensure assets folder is included in the package
     extraResource: [],
     // Hook to copy .env file to output directory after extract
     afterExtract: [
       async (buildPath, electronVersion, platform, arch) => {
-        const envPath = join(process.cwd(), '.env');
-        const targetEnvPath = join(buildPath, '.env');
-        
-        if (existsSync(envPath)) {
-          console.log('[Forge] Copying .env file to build directory:', targetEnvPath);
-          try {
+        try {
+          const envPath = join(process.cwd(), '.env');
+          const targetEnvPath = join(buildPath, '.env');
+          
+          if (existsSync(envPath)) {
+            console.log('[Forge] Copying .env file to build directory:', targetEnvPath);
+            // Ensure directory exists
+            const targetDir = require('path').dirname(targetEnvPath);
+            if (!existsSync(targetDir)) {
+              mkdirSync(targetDir, { recursive: true });
+            }
             copyFileSync(envPath, targetEnvPath);
             console.log('[Forge] Successfully copied .env file');
-          } catch (error) {
-            console.error('[Forge] Error copying .env file:', error);
+          } else {
+            console.warn('[Forge] Warning: .env file not found in project root.');
+            console.warn('[Forge] The application will look for .env in the executable directory at runtime.');
           }
-        } else {
-          console.warn('[Forge] Warning: .env file not found in project root.');
-          console.warn('[Forge] The application will look for .env in the executable directory at runtime.');
-          console.warn('[Forge] Please ensure .env file exists in the same directory as the executable.');
+        } catch (error) {
+          console.error('[Forge] Error in afterExtract hook:', error);
+          // Don't throw - continue with build even if .env copy fails
         }
       },
     ],
@@ -57,12 +62,6 @@ const config: ForgeConfig = {
     new MakerDeb({}),
   ],
   plugins: [
-    {
-      name: '@electron-forge/plugin-electronegativity',
-      config: {
-        isSarif: true
-      }
-    },
     new AutoUnpackNativesPlugin({}),
     new WebpackPlugin({
       mainConfig,
