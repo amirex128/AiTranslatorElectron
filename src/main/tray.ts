@@ -175,9 +175,28 @@ export const createTray = (): void => {
     },
     {
       label: 'خروج',
-      click: () => {
+      click: async () => {
+        console.log('[Tray] Quit requested from tray menu');
+        
+        // Destroy tray first
+        if (tray) {
+          tray.destroy();
+          tray = null;
+        }
+        
+        // Close all windows
         closeWindow();
-        app.quit();
+        
+        // Close database connections
+        try {
+          await databaseService.close();
+        } catch (error) {
+          console.error('[Tray] Error closing database:', error);
+        }
+        
+        // Force quit the application immediately
+        console.log('[Tray] Force quitting application');
+        app.exit(0);
       },
     },
   ]);

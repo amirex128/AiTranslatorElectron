@@ -185,10 +185,16 @@ export const restoreWindow = (): void => {
 };
 
 export const closeWindow = (): void => {
-  if (mainWindow) {
+  if (mainWindow && !mainWindow.isDestroyed()) {
     isQuitting = true;
+    // Remove all listeners to prevent issues
+    mainWindow.removeAllListeners();
     mainWindow.close();
   }
+  // Set to null after a short delay to ensure cleanup
+  setTimeout(() => {
+    mainWindow = null;
+  }, 100);
 };
 
 export const updateWindowSize = (width: number, height: number): void => {

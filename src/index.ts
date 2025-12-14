@@ -1,25 +1,114 @@
 // Load environment variables first, before any other imports
 import dotenv from 'dotenv';
-import { getEnvFilePath } from './main/utils/envPath';
+import { join } from 'path';
+import { existsSync } from 'fs';
 
 // Get .env file path and load it
 // In development, this will find .env in project root
 // In production, this will use userData or executable directory
-try {
-  const envPath = getEnvFilePath();
-  const result = dotenv.config({ path: envPath });
-  if (result.error) {
-    console.warn('[Main] Warning: Could not load .env file:', result.error.message);
-    // Fallback to default dotenv.config() behavior
+// NOTE: This must run BEFORE importing APP_CONFIG, which reads from process.env
+function loadEnvFile(): void {
+  let envPath: string;
+  
+  try {
+    // Check if app is available (might not be in early initialization)
+    let appPath: string;
+    let isPackaged = false;
+    
+    try {
+      const { app } = require('electron');
+      appPath = app.getAppPath();
+      isPackaged = app.isPackaged || false;
+    } catch (error) {
+      // App not ready yet, use process.cwd() as fallback
+      appPath = process.cwd();
+      // Try to detect if packaged by checking for .asar in path
+      isPackaged = process.execPath.includes('.asar') || process.execPath.includes('app.asar');
+    }
+    
+    if (isPackaged) {
+      // In production, check multiple locations
+      // 1. Executable directory (most common for portable apps)
+      const execPath = process.execPath;
+      const execDir = require('path').dirname(execPath);
+      const execEnvPath = join(execDir, '.env');
+      
+      // 2. UserData directory (writable location)
+      let userDataEnvPath: string | null = null;
+      try {
+        const { app } = require('electron');
+        const userDataPath = app.getPath('userData');
+        userDataEnvPath = join(userDataPath, '.env');
+      } catch (error) {
+        // App not ready, skip userData
+      }
+      
+      // Prefer executable directory (where user likely placed .env)
+      if (existsSync(execEnvPath)) {
+        envPath = execEnvPath;
+        console.log('[Main] Loading .env from executable directory:', envPath);
+      } else if (userDataEnvPath && existsSync(userDataEnvPath)) {
+        envPath = userDataEnvPath;
+        console.log('[Main] Loading .env from userData:', envPath);
+      } else {
+        // Default to executable directory (will create if needed)
+        envPath = execEnvPath;
+        console.log('[Main] .env not found, will use executable directory:', envPath);
+      }
+    } else {
+      // In development, .env is in project root
+      let projectRoot = appPath;
+      
+      // If we're in .webpack/main, go up 3 levels
+      if (appPath.includes('.webpack')) {
+        projectRoot = join(appPath, '..', '..', '..');
+      } else if (appPath.includes('src')) {
+        // If we're in src/, go up 1 level
+        projectRoot = join(appPath, '..');
+      } else {
+        // Try to find project root by looking for package.json
+        let currentPath = appPath;
+        for (let i = 0; i < 5; i++) {
+          if (existsSync(join(currentPath, 'package.json'))) {
+            projectRoot = currentPath;
+            break;
+          }
+          currentPath = join(currentPath, '..');
+        }
+      }
+      
+      envPath = join(projectRoot, '.env');
+      console.log('[Main] Loading .env from project root:', envPath);
+    }
+    
+    // Load .env file
+    const result = dotenv.config({ path: envPath });
+    if (result.error) {
+      console.warn('[Main] Warning: Could not load .env file:', result.error.message);
+      console.warn('[Main] Tried path:', envPath);
+      console.warn('[Main] File exists:', existsSync(envPath));
+      
+      // Fallback: try default dotenv.config() behavior (current directory)
+      const fallbackResult = dotenv.config();
+      if (fallbackResult.error) {
+        console.error('[Main] Error: Could not load .env file even with fallback:', fallbackResult.error.message);
+      } else {
+        console.log('[Main] Loaded .env using fallback (current directory)');
+      }
+    } else {
+      console.log('[Main] Successfully loaded .env file from:', envPath);
+      // Log some key variables to verify (without exposing sensitive data)
+      console.log('[Main] SELECTED_MODEL:', process.env.SELECTED_MODEL ? 'SET' : 'NOT SET');
+    }
+  } catch (error) {
+    console.error('[Main] Error loading .env file:', error);
+    // Last resort: try default dotenv.config()
     dotenv.config();
-  } else {
-    console.log('[Main] Loaded .env file from:', envPath);
   }
-} catch (error) {
-  console.warn('[Main] Warning: Could not determine .env path, using default:', error);
-  // Fallback to default dotenv.config() behavior
-  dotenv.config();
 }
+
+// Load .env file BEFORE any other imports that depend on process.env
+loadEnvFile();
 
 import { app, Menu } from 'electron';
 import { createWindow, showWindow } from './main/window';
@@ -84,7 +173,18 @@ app.on('activate', () => {
   showWindow();
 });
 
-app.on('will-quit', async () => {
+app.on('will-quit', async (event) => {
+  console.log('[App] will-quit event triggered');
   unregisterShortcuts();
-  await databaseService.close();
+  try {
+    await databaseService.close();
+  } catch (error) {
+    console.error('[App] Error closing database:', error);
+  }
+});
+
+// Handle before-quit to ensure cleanup
+app.on('before-quit', async (event) => {
+  console.log('[App] before-quit event triggered');
+  // Don't prevent default, allow quit to proceed
 });
