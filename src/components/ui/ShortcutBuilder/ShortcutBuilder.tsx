@@ -218,7 +218,7 @@ export const ShortcutBuilder: React.FC<ShortcutBuilderProps> = ({
 
   return (
     <div className="space-y-3">
-      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+      <label className="block text-sm font-semibold text-white dark:text-gray-200">
         {label}
       </label>
 
@@ -226,7 +226,7 @@ export const ShortcutBuilder: React.FC<ShortcutBuilderProps> = ({
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
           {/* Modifier 1 */}
           <div>
-            <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">
+            <label className="block text-xs text-white/70 dark:text-gray-300 mb-1.5">
               Modifier 1
             </label>
             <Select
@@ -239,7 +239,7 @@ export const ShortcutBuilder: React.FC<ShortcutBuilderProps> = ({
 
           {/* Modifier 2 */}
           <div>
-            <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">
+            <label className="block text-xs text-white/70 dark:text-gray-300 mb-1.5">
               Modifier 2
             </label>
             <Select
@@ -252,7 +252,7 @@ export const ShortcutBuilder: React.FC<ShortcutBuilderProps> = ({
 
           {/* Modifier 3 */}
           <div>
-            <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">
+            <label className="block text-xs text-white/70 dark:text-gray-300 mb-1.5">
               Modifier 3
             </label>
             <Select
@@ -265,7 +265,7 @@ export const ShortcutBuilder: React.FC<ShortcutBuilderProps> = ({
 
           {/* Modifier 4 */}
           <div>
-            <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">
+            <label className="block text-xs text-white/70 dark:text-gray-300 mb-1.5">
               Modifier 4
             </label>
             <Select
@@ -278,7 +278,7 @@ export const ShortcutBuilder: React.FC<ShortcutBuilderProps> = ({
 
           {/* Main Key */}
           <div>
-            <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">
+            <label className="block text-xs text-white/70 dark:text-gray-300 mb-1.5">
               کلید اصلی
             </label>
             <Select
@@ -293,16 +293,16 @@ export const ShortcutBuilder: React.FC<ShortcutBuilderProps> = ({
 
       {/* Preview */}
       {currentShortcut && (
-        <div className="mt-2 p-2 bg-gray-100 dark:bg-gray-700 rounded border border-gray-300 dark:border-gray-600">
-          <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">پیش‌نمایش:</p>
-          <p className="text-sm font-mono text-gray-900 dark:text-gray-100 dir-ltr text-left">
+        <div className="mt-3 p-3 backdrop-blur-md bg-white/10 dark:bg-gray-800/30 rounded-xl border border-white/20 dark:border-gray-700/30">
+          <p className="text-xs text-white/80 dark:text-gray-300 mb-1.5">پیش‌نمایش:</p>
+          <p className="text-sm font-mono text-white dark:text-gray-100 dir-ltr text-left bg-white/10 dark:bg-gray-900/20 px-3 py-2 rounded-lg">
             {currentShortcut}
           </p>
         </div>
       )}
 
       {!mainKey && (
-        <p className="text-xs text-gray-500 dark:text-gray-400">
+        <p className="text-xs text-white/70 dark:text-gray-400">
           لطفاً یک کلید اصلی انتخاب کنید
         </p>
       )}

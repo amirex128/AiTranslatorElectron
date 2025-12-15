@@ -249,12 +249,12 @@ export const TranslationInput: React.FC<TranslationInputProps> = ({
         <div className="relative">
           {/* Custom label with badge */}
           {label && (
-            <div className="flex items-center gap-2 mb-1">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            <div className="flex items-center gap-2 mb-2">
+              <label className="block text-sm font-semibold text-white dark:text-gray-200">
                 {label}
               </label>
               {shortcut && (
-                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-mono font-medium bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 dir-ltr">
+                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-mono font-medium bg-white/20 dark:bg-gray-800/30 text-white dark:text-gray-200 border border-white/30 dark:border-gray-600/30 dir-ltr">
                   {formatShortcut(shortcut)}
                 </span>
               )}
@@ -279,7 +279,7 @@ export const TranslationInput: React.FC<TranslationInputProps> = ({
           {/* Fullscreen Button - Bottom Left */}
           <button
             onClick={() => setIsFullscreen(true)}
-            className="absolute bottom-2 left-2 p-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-all duration-200 z-10 group"
+            className="absolute bottom-2 left-2 p-1.5 rounded-lg hover:bg-white/20 dark:hover:bg-gray-700/50 text-white dark:text-gray-300 hover:text-white dark:hover:text-gray-100 transition-all duration-300 z-10 group backdrop-blur-sm"
             aria-label="تمام صفحه"
             title="تمام صفحه"
           >
@@ -301,10 +301,10 @@ export const TranslationInput: React.FC<TranslationInputProps> = ({
           {/* Microphone Button - Next to Fullscreen Button */}
           <button
             onClick={handleMicrophoneClick}
-            className={`absolute bottom-2 left-10 p-1.5 rounded-md transition-all duration-200 z-10 group ${
+            className={`absolute bottom-2 left-10 p-1.5 rounded-lg transition-all duration-300 z-10 group backdrop-blur-sm ${
               isListening
-                ? 'bg-red-500 dark:bg-red-600 text-white animate-pulse'
-                : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+                ? 'bg-red-500 dark:bg-red-600 text-white animate-pulse shadow-lg'
+                : 'hover:bg-white/20 dark:hover:bg-gray-700/50 text-white dark:text-gray-300 hover:text-white dark:hover:text-gray-100'
             }`}
             aria-label="تبدیل صوت به متن"
             title="تبدیل صوت به متن"

@@ -32,7 +32,7 @@ export const Switch: React.FC<SwitchProps> = ({
     <div className={`flex items-center gap-2 ${className}`}>
       {label && (
         <label
-          className="text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer select-none"
+          className="text-sm font-semibold text-white dark:text-gray-200 cursor-pointer select-none"
           onClick={handleToggle}
         >
           {label}
