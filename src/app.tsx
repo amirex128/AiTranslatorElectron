@@ -124,6 +124,7 @@ const App: React.FC = () => {
             title="مترجم هوش مصنوعی" 
             iconPath={iconPath}
             onOpenBookmarks={() => setCurrentPage('bookmarks')}
+            onGoToMain={() => setCurrentPage('main')}
           />
         )}
         {shouldShowContent ? (

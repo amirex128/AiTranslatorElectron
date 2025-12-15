@@ -39,17 +39,17 @@ export const Accordion: React.FC<AccordionProps> = ({
         return (
           <div
             key={item.id}
-            className="border border-gray-300 dark:border-gray-700 rounded-lg overflow-hidden"
+            className="border-2 border-white/30 dark:border-white/20 rounded-xl overflow-hidden backdrop-blur-md bg-white/10"
           >
             <button
               onClick={() => toggleItem(item.id)}
-              className="w-full px-3 py-2 flex items-center justify-between bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              className="w-full px-4 py-3 flex items-center justify-between bg-white/10 hover:bg-white/20 transition-all duration-300"
             >
-              <span className="text-medium font-medium text-gray-900 dark:text-gray-100">
+              <span className="text-sm font-semibold text-white">
                 {item.title}
               </span>
               <svg
-                className={`w-5 h-5 text-gray-500 dark:text-gray-400 transition-transform ${
+                className={`w-5 h-5 text-white transition-transform duration-300 ${
                   isOpen ? 'transform rotate-180' : ''
                 }`}
                 fill="none"
@@ -65,7 +65,7 @@ export const Accordion: React.FC<AccordionProps> = ({
               </svg>
             </button>
             {isOpen && (
-              <div className="px-3 py-2 bg-white dark:bg-gray-900 border-t border-gray-300 dark:border-gray-700 text-sm">
+              <div className="px-4 py-3 bg-white/5 border-t border-white/20 text-sm">
                 {item.content}
               </div>
             )}

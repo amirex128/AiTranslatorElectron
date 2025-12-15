@@ -202,76 +202,109 @@ export const BookmarksPage: React.FC<BookmarksPageProps> = ({ onBack }) => {
 
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-3">
-      <div className="max-w-6xl mx-auto">
-        {/* Header */}
-        <div className="mb-6 flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-              مورد علاقه‌ها
-            </h1>
-            <p className="text-gray-600 dark:text-gray-400">
-              {total} مورد علاقه‌مندی
-            </p>
+    <div className="min-h-screen bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 dark:from-blue-900 dark:via-purple-900 dark:to-pink-900 p-4 md:p-6">
+      <div className="max-w-6xl mx-auto space-y-4 animate-fade-in">
+        {/* Header with Gradient */}
+        <div className="backdrop-blur-lg bg-white/10 dark:bg-gray-900/20 rounded-2xl p-6 shadow-xl border border-white/20 dark:border-gray-700/30">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-gradient-to-br from-indigo-400 to-purple-400 rounded-xl shadow-lg">
+                <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+                </svg>
+              </div>
+              <div>
+                <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-white to-indigo-100 dark:from-white dark:to-indigo-200 bg-clip-text text-transparent">
+                  مورد علاقه‌ها
+                </h1>
+                <p className="text-white/80 mt-1">
+                  {total} مورد علاقه‌مندی
+                </p>
+              </div>
+            </div>
+            <Button 
+              variant="secondary" 
+              onClick={onBack}
+              className="rounded-full backdrop-blur-md bg-white/10 border-white/20 text-white hover:bg-white/20 shadow-lg"
+            >
+              بازگشت
+            </Button>
           </div>
-          <Button variant="secondary" onClick={onBack}>
-            بازگشت
-          </Button>
         </div>
 
         {/* Search and Sort */}
-        <div className="mb-6 flex flex-col sm:flex-row gap-4">
-          <div className="flex-1">
-            <input
-              type="text"
-              placeholder="جستجو در مورد علاقه‌ها..."
-              value={searchQuery}
-              onChange={handleSearch}
-              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-          <div className="flex gap-2">
-            <Button
-              variant={sortBy === 'date' ? 'primary' : 'secondary'}
-              size="sm"
-              onClick={() => handleSortChange('date')}
-            >
-              تاریخ {sortBy === 'date' && (sortOrder === 'desc' ? '↓' : '↑')}
-            </Button>
-            <Button
-              variant={sortBy === 'alphabet' ? 'primary' : 'secondary'}
-              size="sm"
-              onClick={() => handleSortChange('alphabet')}
-            >
-              الفبا {sortBy === 'alphabet' && (sortOrder === 'desc' ? '↓' : '↑')}
-            </Button>
-            <Button
-              variant={sortBy === 'readCount' ? 'primary' : 'secondary'}
-              size="sm"
-              onClick={() => handleSortChange('readCount')}
-            >
-              تعداد خواندن {sortBy === 'readCount' && (sortOrder === 'desc' ? '↓' : '↑')}
-            </Button>
+        <div className="backdrop-blur-lg bg-white/10 dark:bg-gray-900/20 rounded-2xl p-6 shadow-xl border border-white/20 dark:border-gray-700/30">
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="flex-1">
+              <input
+                type="text"
+                placeholder="جستجو در مورد علاقه‌ها..."
+                value={searchQuery}
+                onChange={handleSearch}
+                className="w-full px-4 py-3 backdrop-blur-md bg-white/20 dark:bg-white/15 rounded-xl border-2 border-white/30 dark:border-white/20 text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 shadow-inner"
+              />
+            </div>
+            <div className="flex gap-2 flex-wrap">
+              <Button
+                variant={sortBy === 'date' ? 'primary' : 'secondary'}
+                size="sm"
+                onClick={() => handleSortChange('date')}
+                className={`rounded-full ${
+                  sortBy === 'date'
+                    ? 'bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white'
+                    : 'backdrop-blur-md bg-white/10 border-white/20 text-white hover:bg-white/20'
+                } shadow-lg`}
+              >
+                تاریخ {sortBy === 'date' && (sortOrder === 'desc' ? '↓' : '↑')}
+              </Button>
+              <Button
+                variant={sortBy === 'alphabet' ? 'primary' : 'secondary'}
+                size="sm"
+                onClick={() => handleSortChange('alphabet')}
+                className={`rounded-full ${
+                  sortBy === 'alphabet'
+                    ? 'bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white'
+                    : 'backdrop-blur-md bg-white/10 border-white/20 text-white hover:bg-white/20'
+                } shadow-lg`}
+              >
+                الفبا {sortBy === 'alphabet' && (sortOrder === 'desc' ? '↓' : '↑')}
+              </Button>
+              <Button
+                variant={sortBy === 'readCount' ? 'primary' : 'secondary'}
+                size="sm"
+                onClick={() => handleSortChange('readCount')}
+                className={`rounded-full ${
+                  sortBy === 'readCount'
+                    ? 'bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white'
+                    : 'backdrop-blur-md bg-white/10 border-white/20 text-white hover:bg-white/20'
+                } shadow-lg`}
+              >
+                تعداد خواندن {sortBy === 'readCount' && (sortOrder === 'desc' ? '↓' : '↑')}
+              </Button>
+            </div>
           </div>
         </div>
 
         {/* Bookmarks List */}
         {isLoading ? (
-          <div className="flex items-center justify-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+          <div className="flex items-center justify-center py-12 backdrop-blur-lg bg-white/10 dark:bg-gray-900/20 rounded-2xl shadow-xl border border-white/20 dark:border-gray-700/30">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white"></div>
           </div>
         ) : bookmarks.length === 0 ? (
-          <div className="text-center py-12">
-            <p className="text-gray-600 dark:text-gray-400 text-lg">
+          <div className="text-center py-12 backdrop-blur-lg bg-white/10 dark:bg-gray-900/20 rounded-2xl shadow-xl border border-white/20 dark:border-gray-700/30">
+            <svg className="w-16 h-16 text-white/50 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <p className="text-white/80 text-lg">
               {searchQuery ? 'نتیجه‌ای یافت نشد' : 'مورد علاقه‌ای وجود ندارد'}
             </p>
           </div>
         ) : (
-          <div className="space-y-2">
+          <div className="space-y-3">
             {bookmarks.map((bookmark) => (
               <div
                 key={bookmark.id}
-                className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-3 border border-gray-200 dark:border-gray-700"
+                className="backdrop-blur-xl bg-white/15 dark:bg-white/10 rounded-2xl shadow-lg p-4 border-2 border-white/30 dark:border-white/20 transition-all duration-300 hover:shadow-xl hover:scale-[1.01]"
               >
                 {/* Bookmark Header */}
                 <div className="flex items-start justify-between mb-2">
@@ -282,23 +315,32 @@ export const BookmarksPage: React.FC<BookmarksPageProps> = ({ onBack }) => {
                           type="text"
                           value={editText}
                           onChange={(e) => setEditText(e.target.value)}
-                          className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="flex-1 px-4 py-2 backdrop-blur-md bg-white/20 dark:bg-white/15 rounded-xl border-2 border-white/30 dark:border-white/20 text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 shadow-inner"
                           dir="ltr"
                           autoFocus
                         />
-                        <Button size="sm" onClick={() => handleSaveEdit(bookmark.id)}>
+                        <Button 
+                          size="sm" 
+                          onClick={() => handleSaveEdit(bookmark.id)}
+                          className="rounded-full bg-gradient-to-r from-green-500 to-teal-600 hover:from-green-600 hover:to-teal-700 text-white shadow-lg"
+                        >
                           ذخیره
                         </Button>
-                        <Button size="sm" variant="secondary" onClick={handleCancelEdit}>
+                        <Button 
+                          size="sm" 
+                          variant="secondary" 
+                          onClick={handleCancelEdit}
+                          className="rounded-full backdrop-blur-md bg-white/10 border-white/20 text-white hover:bg-white/20"
+                        >
                           لغو
                         </Button>
                       </div>
                     ) : (
                       <div>
-                        <div className="flex items-center gap-1 mb-1">
+                        <div className="flex items-center gap-2 mb-2">
                           <button
                             onClick={() => handlePlaySound(bookmark.englishText)}
-                            className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400 transition-colors"
+                            className="p-2 rounded-full backdrop-blur-md bg-white/10 border border-white/20 hover:bg-white/20 text-white transition-all duration-300 hover:scale-110"
                             title="پخش صدا"
                           >
                             <svg
@@ -311,7 +353,7 @@ export const BookmarksPage: React.FC<BookmarksPageProps> = ({ onBack }) => {
                           </button>
                           <button
                             onClick={() => handleEdit(bookmark)}
-                            className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400 transition-colors"
+                            className="p-2 rounded-full backdrop-blur-md bg-white/10 border border-white/20 hover:bg-white/20 text-white transition-all duration-300 hover:scale-110"
                             title="ویرایش"
                           >
                             <svg
@@ -330,7 +372,7 @@ export const BookmarksPage: React.FC<BookmarksPageProps> = ({ onBack }) => {
                           </button>
                           <button
                             onClick={() => handleIncrementReadCount(bookmark.id)}
-                            className="p-1 rounded hover:bg-blue-100 dark:hover:bg-blue-900/20 text-blue-600 dark:text-blue-400 transition-colors flex items-center gap-0.5"
+                            className="p-2 rounded-full backdrop-blur-md bg-blue-500/20 border border-blue-300/30 hover:bg-blue-500/30 text-white transition-all duration-300 hover:scale-110 flex items-center gap-1"
                             title="افزایش تعداد خواندن"
                           >
                             <svg
@@ -352,14 +394,14 @@ export const BookmarksPage: React.FC<BookmarksPageProps> = ({ onBack }) => {
                                 d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
                               />
                             </svg>
-                            <span className="text-xs font-medium">
+                            <span className="text-xs font-bold">
                               {bookmark.readCount ?? 0}
                             </span>
                           </button>
                           {(bookmark.readCount ?? 0) > 0 && (
                             <button
                               onClick={() => handleResetReadCount(bookmark.id)}
-                              className="p-1 rounded hover:bg-red-100 dark:hover:bg-red-900/20 text-red-600 dark:text-red-400 transition-colors"
+                              className="p-2 rounded-full backdrop-blur-md bg-red-500/20 border border-red-300/30 hover:bg-red-500/30 text-white transition-all duration-300 hover:scale-110"
                               title="صفر کردن تعداد خواندن"
                             >
                               <svg
@@ -379,12 +421,12 @@ export const BookmarksPage: React.FC<BookmarksPageProps> = ({ onBack }) => {
                           )}
                         </div>
                         <p
-                          className="text-gray-900 dark:text-white text-sm whitespace-pre-wrap break-words"
+                          className="text-white text-sm whitespace-pre-wrap break-words font-medium"
                           dir="ltr"
                         >
                           {bookmark.englishText}
                         </p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                        <p className="text-xs text-white/70 mt-1">
                           {formatDate(bookmark.timestamp)}
                         </p>
                       </div>
@@ -392,11 +434,11 @@ export const BookmarksPage: React.FC<BookmarksPageProps> = ({ onBack }) => {
                   </div>
                   <button
                     onClick={() => handleUnbookmark(bookmark.id)}
-                    className="p-1 rounded hover:bg-red-100 dark:hover:bg-red-900/20 text-red-600 dark:text-red-400 transition-colors"
+                    className="p-2 rounded-full backdrop-blur-md bg-red-500/20 border border-red-300/30 hover:bg-red-500/30 text-white transition-all duration-300 hover:scale-110"
                     title="حذف از علاقه‌مندی‌ها"
                   >
                     <svg
-                      className="w-4 h-4"
+                      className="w-5 h-5"
                       fill="currentColor"
                       viewBox="0 0 24 24"
                     >
@@ -404,20 +446,21 @@ export const BookmarksPage: React.FC<BookmarksPageProps> = ({ onBack }) => {
                         strokeLinecap="round"
                         strokeLinejoin="round"
                         strokeWidth={2}
-                        d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"
+                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
                       />
                     </svg>
                   </button>
                 </div>
 
                 {/* Translation and Example Buttons */}
-                <div className="flex flex-wrap gap-1.5 mb-2">
+                <div className="flex flex-wrap gap-2 mb-3">
                   <Button
                     size="xs"
                     variant="primary"
                     isLoading={translatingId === bookmark.id && translationType === 'main'}
                     onClick={() => handleTranslate(bookmark.id, 'main')}
                     disabled={!!bookmark.mainTranslation}
+                    className="rounded-full bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white shadow-lg"
                   >
                     {bookmark.mainTranslation ? '✓ اصلی' : 'اصلی'}
                   </Button>
@@ -427,6 +470,7 @@ export const BookmarksPage: React.FC<BookmarksPageProps> = ({ onBack }) => {
                     isLoading={translatingId === bookmark.id && translationType === 'fallback'}
                     onClick={() => handleTranslate(bookmark.id, 'fallback')}
                     disabled={!!bookmark.fallbackTranslation}
+                    className="rounded-full bg-gradient-to-r from-pink-500 to-red-600 hover:from-pink-600 hover:to-red-700 text-white shadow-lg"
                   >
                     {bookmark.fallbackTranslation ? '✓ جایگزین' : 'جایگزین'}
                   </Button>
@@ -436,6 +480,7 @@ export const BookmarksPage: React.FC<BookmarksPageProps> = ({ onBack }) => {
                     isLoading={translatingId === bookmark.id && translationType === 'quick'}
                     onClick={() => handleTranslate(bookmark.id, 'quick')}
                     disabled={!!(bookmark.quickTranslation || bookmark.persianTranslation)}
+                    className="rounded-full bg-gradient-to-r from-blue-500 to-cyan-600 hover:from-blue-600 hover:to-cyan-700 text-white shadow-lg"
                   >
                     {bookmark.quickTranslation || bookmark.persianTranslation
                       ? '✓ سریع'
@@ -447,6 +492,7 @@ export const BookmarksPage: React.FC<BookmarksPageProps> = ({ onBack }) => {
                     isLoading={generatingExamplesId === bookmark.id && exampleType === 'main'}
                     onClick={() => handleGenerateExamples(bookmark.id, 'main')}
                     disabled={!!bookmark.mainExamples && bookmark.mainExamples.length > 0}
+                    className="rounded-full backdrop-blur-md bg-white/10 border-white/20 text-white hover:bg-white/20 shadow-md"
                   >
                     {bookmark.mainExamples && bookmark.mainExamples.length > 0
                       ? '✓ مثال اصلی'
@@ -458,6 +504,7 @@ export const BookmarksPage: React.FC<BookmarksPageProps> = ({ onBack }) => {
                     isLoading={generatingExamplesId === bookmark.id && exampleType === 'fallback'}
                     onClick={() => handleGenerateExamples(bookmark.id, 'fallback')}
                     disabled={!!bookmark.fallbackExamples && bookmark.fallbackExamples.length > 0}
+                    className="rounded-full backdrop-blur-md bg-white/10 border-white/20 text-white hover:bg-white/20 shadow-md"
                   >
                     {bookmark.fallbackExamples && bookmark.fallbackExamples.length > 0
                       ? '✓ مثال جایگزین'
@@ -474,16 +521,17 @@ export const BookmarksPage: React.FC<BookmarksPageProps> = ({ onBack }) => {
 
         {/* Pagination */}
         {totalPages > 1 && (
-          <div className="mt-6 flex items-center justify-center gap-2">
+          <div className="backdrop-blur-lg bg-white/10 dark:bg-gray-900/20 rounded-2xl p-4 shadow-xl border border-white/20 dark:border-gray-700/30 flex items-center justify-center gap-3">
             <Button
               variant="secondary"
               size="sm"
               onClick={() => setFilters({ page: page - 1 })}
               disabled={page === 1}
+              className="rounded-full backdrop-blur-md bg-white/10 border-white/20 text-white hover:bg-white/20 shadow-md disabled:opacity-50"
             >
               قبلی
             </Button>
-            <span className="text-gray-600 dark:text-gray-400">
+            <span className="text-white font-medium">
               صفحه {page} از {totalPages}
             </span>
             <Button
@@ -491,6 +539,7 @@ export const BookmarksPage: React.FC<BookmarksPageProps> = ({ onBack }) => {
               size="sm"
               onClick={() => setFilters({ page: page + 1 })}
               disabled={page === totalPages}
+              className="rounded-full backdrop-blur-md bg-white/10 border-white/20 text-white hover:bg-white/20 shadow-md disabled:opacity-50"
             >
               بعدی
             </Button>

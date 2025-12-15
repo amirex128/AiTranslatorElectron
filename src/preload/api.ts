@@ -26,13 +26,53 @@ export const electronAPI: ElectronAPI = {
   writeClipboard: (text: string) => ipcRenderer.invoke('clipboard:write', text),
 
         // Window
-        minimize: () => ipcRenderer.invoke('window:minimize'),
-        maximize: () => ipcRenderer.invoke('window:maximize'),
-        restore: () => ipcRenderer.invoke('window:restore'),
-        isMaximized: () => ipcRenderer.invoke('window:isMaximized'),
-        close: () => ipcRenderer.invoke('window:close'),
-        show: () => ipcRenderer.invoke('window:show'),
-        focus: () => ipcRenderer.invoke('window:focus'),
+        minimize: async () => {
+          const response = await ipcRenderer.invoke('window:minimize');
+          if (response && 'success' in response && !response.success) {
+            throw new Error('error' in response ? response.error : 'Failed to minimize window');
+          }
+        },
+        maximize: async () => {
+          const response = await ipcRenderer.invoke('window:maximize');
+          if (response && 'success' in response && !response.success) {
+            throw new Error('error' in response ? response.error : 'Failed to maximize window');
+          }
+        },
+        restore: async () => {
+          const response = await ipcRenderer.invoke('window:restore');
+          if (response && 'success' in response && !response.success) {
+            throw new Error('error' in response ? response.error : 'Failed to restore window');
+          }
+        },
+        isMaximized: async () => {
+          const response = await ipcRenderer.invoke('window:isMaximized');
+          if (response && 'success' in response) {
+            if (response.success) {
+              return response.data as boolean;
+            } else {
+              throw new Error('error' in response ? response.error : 'Failed to check maximize state');
+            }
+          }
+          return false;
+        },
+        close: async () => {
+          const response = await ipcRenderer.invoke('window:close');
+          if (response && 'success' in response && !response.success) {
+            throw new Error('error' in response ? response.error : 'Failed to close window');
+          }
+        },
+        show: async () => {
+          const response = await ipcRenderer.invoke('window:show');
+          if (response && 'success' in response && !response.success) {
+            throw new Error('error' in response ? response.error : 'Failed to show window');
+          }
+        },
+        focus: async () => {
+          const response = await ipcRenderer.invoke('window:focus');
+          if (response && 'success' in response && !response.success) {
+            throw new Error('error' in response ? response.error : 'Failed to focus window');
+          }
+        },
 
   // Shortcuts
   onShortcut: (callback: (shortcut: { type: string; text: string }) => void) => {

@@ -4,9 +4,10 @@ interface TitleBarProps {
   title?: string;
   iconPath?: string;
   onOpenBookmarks?: () => void;
+  onGoToMain?: () => void;
 }
 
-export const TitleBar: React.FC<TitleBarProps> = ({ title = 'AI Translator', iconPath, onOpenBookmarks }) => {
+export const TitleBar: React.FC<TitleBarProps> = ({ title = 'AI Translator', iconPath, onOpenBookmarks, onGoToMain }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -38,17 +39,19 @@ export const TitleBar: React.FC<TitleBarProps> = ({ title = 'AI Translator', ico
       try {
         // Toggle maximize/restore
         const isMaximized = await window.electronAPI.isMaximized();
-        console.log('Current maximize state:', isMaximized);
+        console.log('[TitleBar] Current maximize state:', isMaximized);
         if (isMaximized) {
-          console.log('Restoring window...');
+          console.log('[TitleBar] Restoring window...');
           await window.electronAPI.restore();
         } else {
-          console.log('Maximizing window...');
+          console.log('[TitleBar] Maximizing window...');
           await window.electronAPI.maximize();
         }
       } catch (error) {
-        console.error('Error in handleMaximize:', error);
+        console.error('[TitleBar] Error in handleMaximize:', error);
       }
+    } else {
+      console.warn('[TitleBar] electronAPI not available');
     }
   };
 
@@ -140,6 +143,28 @@ export const TitleBar: React.FC<TitleBarProps> = ({ title = 'AI Translator', ico
 
       {/* Right side - Menu and Window controls */}
       <div className="flex items-center gap-1 no-drag">
+        {/* Home Button - Go to Main Page */}
+        {onGoToMain && (
+          <button
+            onClick={onGoToMain}
+            className="w-8 h-8 flex items-center justify-center hover:bg-gray-700 dark:hover:bg-gray-800 transition-colors rounded-sm group"
+            title="صفحه اصلی"
+          >
+            <svg
+              className="w-4 h-4 text-gray-400 group-hover:text-blue-400"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"
+              />
+            </svg>
+          </button>
+        )}
         {/* Bookmark Button */}
         <button
           onClick={handleOpenBookmarks}
