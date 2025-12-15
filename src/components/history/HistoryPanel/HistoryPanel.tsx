@@ -2,7 +2,8 @@ import React, { useState, useMemo } from 'react';
 import { useHistoryStore, HistoryEntry } from '../../../stores/historyStore';
 import { Button } from '../../ui/Button/Button';
 import { Input } from '../../ui/Input/Input';
-import { Accordion } from '../../ui/Accordion/Accordion';
+import { Tabs, TabItem } from '../../ui/Tabs/Tabs';
+import { Modal } from '../../ui/Modal/Modal';
 import { AIModel, AI_MODELS } from '../../../models/AIModel';
 import { GrammarTeachingResultComponent } from '../../grammar/GrammarTeachingResult/GrammarTeachingResult';
 import { ResponseSuggestionsResult } from '../../response/ResponseSuggestionsResult/ResponseSuggestionsResult';
@@ -12,7 +13,7 @@ interface HistoryPanelProps {
   className?: string;
 }
 
-const ITEMS_PER_PAGE = 5;
+const ITEMS_PER_PAGE = 6;
 
 export const HistoryPanel: React.FC<HistoryPanelProps> = ({
   onSelectEntry,
@@ -134,37 +135,115 @@ export const HistoryPanel: React.FC<HistoryPanelProps> = ({
     return text.trim().split(/\s+/).filter((word) => word.length > 0).length;
   };
 
-  const accordionItems = paginatedEntries.map((entry) => {
+  const getFirstWords = (text: string, count: number = 5): string => {
+    const words = text.trim().split(/\s+/).filter((word) => word.length > 0);
+    const firstWords = words.slice(0, count);
+    return firstWords.length === words.length ? firstWords.join(' ') : firstWords.join(' ') + '...';
+  };
+
+  const tabItems: TabItem[] = paginatedEntries.map((entry) => {
     const date = new Date(entry.timestamp);
     const dateStr = date.toLocaleString('fa-IR');
     const modelLabel = getModelLabel(entry.model);
     const wordCount = countWords(entry.input);
     const responseTimeStr = entry.responseTime ? formatTime(entry.responseTime) : 'N/A';
 
+    // Create translation tabs if result exists
+    let translationTabs: TabItem[] = [];
+    if (entry.result) {
+      translationTabs = [1, 2, 3]
+        .filter((index) => {
+          const englishKey = `english_${index}` as keyof typeof entry.result;
+          const persianKey = `persian_${index}` as keyof typeof entry.result;
+          const englishText = entry.result[englishKey] as string;
+          const persianText = entry.result[persianKey] as string;
+          return englishText || persianText;
+        })
+        .map((index) => {
+          const englishKey = `english_${index}` as keyof typeof entry.result;
+          const persianKey = `persian_${index}` as keyof typeof entry.result;
+          const englishText = entry.result[englishKey] as string;
+          const persianText = entry.result[persianKey] as string;
+
+          return {
+            id: `translation-${index}`,
+            label: `ترجمه ${index}`,
+            icon: (
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129" />
+              </svg>
+            ),
+            content: (
+              <div className="space-y-4">
+                <div>
+                  <label className="text-sm font-bold text-white mb-2 block flex items-center gap-2">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129" />
+                    </svg>
+                    انگلیسی:
+                  </label>
+                  <div className="p-4 backdrop-blur-md bg-white/20 dark:bg-white/15 rounded-xl border border-white/30 dark:border-white/20 text-white font-medium shadow-inner" dir="ltr">
+                    {englishText}
+                  </div>
+                </div>
+                <div>
+                  <label className="text-sm font-bold text-white mb-2 block flex items-center gap-2">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129" />
+                    </svg>
+                    فارسی:
+                  </label>
+                  <div className="p-4 backdrop-blur-md bg-white/20 dark:bg-white/15 rounded-xl border border-white/30 dark:border-white/20 text-white font-medium shadow-inner" dir="rtl">
+                    {persianText}
+                  </div>
+                </div>
+              </div>
+            ),
+          };
+        });
+    }
+
     return {
       id: entry.id,
-      title: (
-        <div className="flex items-center gap-2 flex-wrap">
-          {getTypeBadge(entry.type, wordCount)}
-          <span className="text-xs text-gray-500 dark:text-gray-400">{modelLabel}</span>
-          <span className="text-xs text-gray-500 dark:text-gray-400">⏱ {responseTimeStr}</span>
-          <span className="text-xs text-gray-500 dark:text-gray-400">{dateStr}</span>
+      label: (
+        <div className="flex flex-col gap-1">
+          <div className="flex items-center gap-2 flex-wrap">
+            {getTypeBadge(entry.type, wordCount)}
+            <span className="text-xs">{modelLabel}</span>
+            <span className="text-xs">⏱ {responseTimeStr}</span>
+          </div>
+          <div className="text-[10px] text-white/50 dark:text-gray-500 truncate max-w-full" dir="auto">
+            {getFirstWords(entry.input, 5)}
+          </div>
         </div>
       ),
-      defaultOpen: false,
+      icon: (
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      ),
       content: (
         <div className="space-y-4">
-          <div>
-            <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 block">
+          <div className="backdrop-blur-xl bg-white/15 dark:bg-white/10 rounded-2xl p-5 border-2 border-white/30 dark:border-white/20 shadow-lg">
+            <label className="text-sm font-bold text-white mb-3 block flex items-center gap-2">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+              </svg>
               متن ورودی:
             </label>
-            <div className="p-2 bg-gray-50 dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700 text-sm text-gray-900 dark:text-gray-100">
+            <div className="p-4 backdrop-blur-md bg-white/20 dark:bg-white/15 rounded-xl border border-white/30 dark:border-white/20 text-white font-medium shadow-inner">
               {entry.input}
+            </div>
+            <div className="mt-3 text-xs text-white/80 dark:text-gray-300 flex items-center gap-2">
+              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              {dateStr}
             </div>
           </div>
           
           {entry.type === 'response-suggestions' && entry.responseSuggestionsResult ? (
-            <div>
+            <div className="backdrop-blur-md bg-white/5 dark:bg-gray-900/10 rounded-xl p-4 border border-white/10 dark:border-gray-700/20">
               <ResponseSuggestionsResult
                 result={entry.responseSuggestionsResult}
                 onCopy={(text) => {
@@ -174,7 +253,7 @@ export const HistoryPanel: React.FC<HistoryPanelProps> = ({
               />
             </div>
           ) : entry.type === 'grammar-teaching' && entry.grammarTeachingResult ? (
-            <div>
+            <div className="backdrop-blur-md bg-white/5 dark:bg-gray-900/10 rounded-xl p-4 border border-white/10 dark:border-gray-700/20">
               <GrammarTeachingResultComponent
                 result={entry.grammarTeachingResult}
                 onCopy={(text) => {
@@ -183,54 +262,33 @@ export const HistoryPanel: React.FC<HistoryPanelProps> = ({
                 fontSize={14}
               />
             </div>
-          ) : entry.result ? (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-              {[1, 2, 3].map((index) => {
-                const englishKey = `english_${index}` as keyof typeof entry.result;
-                const persianKey = `persian_${index}` as keyof typeof entry.result;
-                const englishText = entry.result[englishKey] as string;
-                const persianText = entry.result[persianKey] as string;
-                
-                return (
-                  <div key={index} className="border border-gray-200 dark:border-gray-700 rounded p-2 space-y-2">
-                    <div className="text-xs font-medium text-gray-600 dark:text-gray-400">
-                      ترجمه {index}
-                    </div>
-                    <div className="p-2 bg-gray-50 dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700">
-                      <div className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
-                        انگلیسی:
-                      </div>
-                      <div className="text-sm text-gray-900 dark:text-gray-100" dir="ltr">
-                        {englishText}
-                      </div>
-                    </div>
-                    <div className="p-2 bg-gray-50 dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700">
-                      <div className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
-                        فارسی:
-                      </div>
-                      <div className="text-sm text-gray-900 dark:text-gray-100" dir="rtl">
-                        {persianText}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
+          ) : translationTabs.length > 0 ? (
+            <div className="backdrop-blur-xl bg-white/15 dark:bg-white/10 rounded-2xl p-5 border-2 border-white/30 dark:border-white/20 shadow-lg">
+              <Tabs items={translationTabs} />
             </div>
           ) : null}
           
-          <div className="flex gap-2">
+          <div className="flex gap-3 mt-4">
             <Button
               size="sm"
               variant="primary"
               onClick={() => handleSelect(entry)}
+              className="rounded-full bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
             >
+              <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+              </svg>
               استفاده
             </Button>
             <Button
               size="sm"
               variant="danger"
               onClick={(e) => handleDelete(entry.id, e)}
+              className="rounded-full bg-gradient-to-r from-red-500 to-pink-600 hover:from-red-600 hover:to-pink-700 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
             >
+              <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
               حذف
             </Button>
           </div>
@@ -240,16 +298,14 @@ export const HistoryPanel: React.FC<HistoryPanelProps> = ({
   });
 
   return (
-    <div className={`bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4 ${className}`}>
+    <div className={`${className}`}>
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-          تاریخچه ترجمه
-        </h2>
         <Button
           size="sm"
           variant="danger"
           onClick={() => setShowClearConfirmModal(true)}
           disabled={entries.length === 0}
+          className="rounded-full bg-gradient-to-r from-red-500 to-pink-600 hover:from-red-600 hover:to-pink-700"
         >
           پاک کردن همه
         </Button>
@@ -267,20 +323,24 @@ export const HistoryPanel: React.FC<HistoryPanelProps> = ({
       </div>
 
       {filteredEntries.length === 0 ? (
-        <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-          {searchQuery ? 'نتیجه‌ای یافت نشد' : 'تاریخچه خالی است'}
+        <div className="text-center py-12 text-white/80 dark:text-gray-300 backdrop-blur-md bg-white/10 rounded-xl border border-white/20 p-6">
+          <svg className="w-16 h-16 mx-auto mb-4 text-white/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>
+          <p className="text-lg font-medium">{searchQuery ? 'نتیجه‌ای یافت نشد' : 'تاریخچه خالی است'}</p>
         </div>
       ) : (
         <>
-          <Accordion items={accordionItems} />
+          {tabItems.length > 0 && <Tabs items={tabItems} />}
           
           {totalPages > 1 && (
-            <div className="flex items-center justify-center gap-2 mt-4">
+            <div className="flex items-center justify-center gap-2 mt-6">
               <Button
                 size="sm"
                 variant="secondary"
                 onClick={() => handlePageChange(currentPage - 1)}
                 disabled={currentPage === 1}
+                className="rounded-full backdrop-blur-md bg-white/20 hover:bg-white/30 border border-white/30"
               >
                 قبلی
               </Button>
@@ -291,7 +351,11 @@ export const HistoryPanel: React.FC<HistoryPanelProps> = ({
                     size="sm"
                     variant={currentPage === page ? 'primary' : 'secondary'}
                     onClick={() => handlePageChange(page)}
-                    className="min-w-10"
+                    className={`min-w-10 rounded-full transition-all duration-300 ${
+                      currentPage === page 
+                        ? 'bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 shadow-lg' 
+                        : 'backdrop-blur-md bg-white/20 hover:bg-white/30 border border-white/30'
+                    }`}
                   >
                     {page}
                   </Button>
@@ -302,6 +366,7 @@ export const HistoryPanel: React.FC<HistoryPanelProps> = ({
                 variant="secondary"
                 onClick={() => handlePageChange(currentPage + 1)}
                 disabled={currentPage === totalPages}
+                className="rounded-full backdrop-blur-md bg-white/20 hover:bg-white/30 border border-white/30"
               >
                 بعدی
               </Button>
@@ -311,91 +376,59 @@ export const HistoryPanel: React.FC<HistoryPanelProps> = ({
       )}
 
       {/* Clear History Confirmation Modal */}
-      {showClearConfirmModal && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 dark:bg-opacity-70 backdrop-blur-sm animate-fadeIn"
-          onClick={() => setShowClearConfirmModal(false)}
-        >
-          <div
-            className="w-full max-w-md m-4 bg-white dark:bg-gray-800 rounded-lg shadow-2xl animate-slideUp"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Header */}
-            <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
-              <div className="flex items-center gap-3">
-                <div className="flex-shrink-0 w-10 h-10 rounded-full bg-red-100 dark:bg-red-900/20 flex items-center justify-center">
-                  <svg
-                    className="w-6 h-6 text-red-600 dark:text-red-400"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-                    />
-                  </svg>
-                </div>
-                <div>
-                  <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-                    هشدار
-                  </h2>
-                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                    حذف تمام تاریخچه
-                  </p>
-                </div>
-              </div>
-              <button
-                onClick={() => setShowClearConfirmModal(false)}
-                className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
-                aria-label="بستن"
+      <Modal
+        isOpen={showClearConfirmModal}
+        onClose={() => setShowClearConfirmModal(false)}
+        title="هشدار"
+        className="max-w-md"
+      >
+        <div className="space-y-4">
+          <div className="flex items-center gap-3">
+            <div className="flex-shrink-0 w-10 h-10 rounded-full bg-red-500/20 flex items-center justify-center">
+              <svg
+                className="w-6 h-6 text-red-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
               >
-                <svg
-                  className="w-5 h-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M6 18L18 6M6 6l12 12"
-                  />
-                </svg>
-              </button>
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                />
+              </svg>
             </div>
-
-            {/* Content */}
-            <div className="p-6">
-              <p className="text-gray-700 dark:text-gray-300 mb-4">
-                آیا مطمئن هستید که می‌خواهید تمام تاریخچه ترجمه را حذف کنید؟
+            <div>
+              <p className="text-sm text-white/90 dark:text-gray-300">
+                حذف تمام تاریخچه
               </p>
-              <p className="text-sm text-gray-500 dark:text-gray-400">
-                این عمل قابل بازگشت نیست و تمام {entries.length} ورودی تاریخچه حذف خواهد شد.
-              </p>
-            </div>
-
-            {/* Footer */}
-            <div className="flex items-center justify-end gap-3 p-6 border-t border-gray-200 dark:border-gray-700">
-              <Button
-                variant="secondary"
-                onClick={() => setShowClearConfirmModal(false)}
-              >
-                لغو
-              </Button>
-              <Button
-                variant="danger"
-                onClick={handleClearHistory}
-              >
-                تایید و حذف
-              </Button>
             </div>
           </div>
+          <p className="text-white/80 dark:text-gray-300">
+            آیا مطمئن هستید که می‌خواهید تمام تاریخچه ترجمه را حذف کنید؟
+          </p>
+          <p className="text-sm text-white/70 dark:text-gray-400">
+            این عمل قابل بازگشت نیست و تمام {entries.length} ورودی تاریخچه حذف خواهد شد.
+          </p>
+          <div className="flex items-center justify-end gap-3 pt-4">
+            <Button
+              variant="secondary"
+              onClick={() => setShowClearConfirmModal(false)}
+              className="rounded-full"
+            >
+              لغو
+            </Button>
+            <Button
+              variant="danger"
+              onClick={handleClearHistory}
+              className="rounded-full bg-gradient-to-r from-red-500 to-pink-600 hover:from-red-600 hover:to-pink-700"
+            >
+              تایید و حذف
+            </Button>
+          </div>
         </div>
-      )}
+      </Modal>
     </div>
   );
 };

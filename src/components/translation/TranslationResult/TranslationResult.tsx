@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { TranslationResult as TranslationResultType } from '../../../utils/validation';
-import { Accordion } from '../../ui/Accordion/Accordion';
+import { Tabs, TabItem } from '../../ui/Tabs/Tabs';
 import { Button } from '../../ui/Button/Button';
 import { Textarea } from '../../ui/Textarea/Textarea';
 import { ttsService } from '../../../services/tts/TTSService';
@@ -113,180 +113,203 @@ export const TranslationResult: React.FC<TranslationResultProps> = ({
     setPlayingIndex(null);
   };
 
-  const items = [1, 2, 3].map((index) => {
-    const englishText = getResultText(index, 'english');
-    const persianText = getResultText(index, 'persian');
-    const isSelected = selectedIndex === index;
-    const isEditing = editingIndex === index;
+  const tabItems: TabItem[] = [1, 2, 3]
+    .filter((index) => {
+      const englishText = getResultText(index, 'english');
+      const persianText = getResultText(index, 'persian');
+      return englishText || persianText;
+    })
+    .map((index) => {
+      const englishText = getResultText(index, 'english');
+      const persianText = getResultText(index, 'persian');
+      const isSelected = selectedIndex === index;
+      const isEditing = editingIndex === index;
 
-    return {
-      id: `result-${index}`,
-      title: `ترجمه ${index}`,
-      defaultOpen: index === 1,
-      content: (
-        <div className="space-y-4">
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                انگلیسی:
-              </label>
-              <div className="flex gap-2">
-                {isEditing ? (
-                  <>
-                    <Button
-                      size="sm"
-                      variant="primary"
-                      onClick={() => handleSaveEdit(index, 'english')}
-                    >
-                      ذخیره
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="secondary"
-                      onClick={() => setEditingIndex(null)}
-                    >
-                      لغو
-                    </Button>
-                  </>
-                ) : (
-                  <>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => handleEdit(index, 'english')}
-                    >
-                      ویرایش
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="primary"
-                      onClick={() => handleCopy(index, 'english')}
-                    >
-                      کپی
-                    </Button>
-                    {playingIndex === index && isPlaying ? (
+      return {
+        id: `result-${index}`,
+        label: `ترجمه ${index}`,
+        icon: (
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129" />
+          </svg>
+        ),
+        content: (
+          <div className="space-y-4">
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-sm font-semibold text-white dark:text-gray-200">
+                  انگلیسی:
+                </label>
+                <div className="flex gap-2">
+                  {isEditing ? (
+                    <>
                       <Button
                         size="sm"
-                        variant="danger"
-                        onClick={handleCancel}
-                        isLoading={true}
+                        variant="primary"
+                        onClick={() => handleSaveEdit(index, 'english')}
+                        className="rounded-full bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700"
+                      >
+                        ذخیره
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={() => setEditingIndex(null)}
+                        className="rounded-full"
                       >
                         لغو
                       </Button>
-                    ) : (
+                    </>
+                  ) : (
+                    <>
                       <Button
                         size="sm"
                         variant="ghost"
-                        onClick={() => handlePlay(index)}
-                        disabled={playingIndex !== null && playingIndex !== index}
+                        onClick={() => handleEdit(index, 'english')}
+                        className="rounded-full"
                       >
-                        پخش صدا
+                        ویرایش
                       </Button>
-                    )}
-                  </>
-                )}
+                      <Button
+                        size="sm"
+                        variant="primary"
+                        onClick={() => handleCopy(index, 'english')}
+                        className="rounded-full bg-gradient-to-r from-green-500 to-teal-600 hover:from-green-600 hover:to-teal-700"
+                      >
+                        کپی
+                      </Button>
+                      {playingIndex === index && isPlaying ? (
+                        <Button
+                          size="sm"
+                          variant="danger"
+                          onClick={handleCancel}
+                          isLoading={true}
+                          className="rounded-full"
+                        >
+                          لغو
+                        </Button>
+                      ) : (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => handlePlay(index)}
+                          disabled={playingIndex !== null && playingIndex !== index}
+                          className="rounded-full"
+                        >
+                          پخش صدا
+                        </Button>
+                      )}
+                    </>
+                  )}
+                </div>
               </div>
+              {isEditing ? (
+                <Textarea
+                  value={editedTexts[`${index}_english`]?.english || englishText}
+                  onChange={(e) =>
+                    setEditedTexts({
+                      ...editedTexts,
+                      [`${index}_english`]: {
+                        ...editedTexts[`${index}_english`],
+                        english: e.target.value,
+                      },
+                    })
+                  }
+                  rows={3}
+                  dir="ltr"
+                />
+              ) : (
+                <div
+                  className="p-4 backdrop-blur-md bg-white/10 dark:bg-gray-800/30 rounded-xl border border-white/20 dark:border-gray-700/30 text-white dark:text-gray-100"
+                  style={{ fontSize: `${fontSize}px` }}
+                  dir="ltr"
+                >
+                  {englishText}
+                </div>
+              )}
             </div>
-            {isEditing ? (
-              <Textarea
-                value={editedTexts[`${index}_english`]?.english || englishText}
-                onChange={(e) =>
-                  setEditedTexts({
-                    ...editedTexts,
-                    [`${index}_english`]: {
-                      ...editedTexts[`${index}_english`],
-                      english: e.target.value,
-                    },
-                  })
-                }
-                rows={3}
-                dir="ltr"
-              />
-            ) : (
-              <div
-                className="p-3 bg-gray-50 dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100"
-                style={{ fontSize: `${fontSize}px` }}
-                dir="ltr"
-              >
-                {englishText}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-sm font-semibold text-white dark:text-gray-200">
+                  فارسی:
+                </label>
+                <div className="flex gap-2">
+                  {isEditing ? (
+                    <>
+                      <Button
+                        size="sm"
+                        variant="primary"
+                        onClick={() => handleSaveEdit(index, 'persian')}
+                        className="rounded-full bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700"
+                      >
+                        ذخیره
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={() => setEditingIndex(null)}
+                        className="rounded-full"
+                      >
+                        لغو
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => handleEdit(index, 'persian')}
+                        className="rounded-full"
+                      >
+                        ویرایش
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="primary"
+                        onClick={() => handleCopy(index, 'persian')}
+                        className="rounded-full bg-gradient-to-r from-green-500 to-teal-600 hover:from-green-600 hover:to-teal-700"
+                      >
+                        کپی
+                      </Button>
+                    </>
+                  )}
+                </div>
               </div>
-            )}
-          </div>
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                فارسی:
-              </label>
-              <div className="flex gap-2">
-                {isEditing ? (
-                  <>
-                    <Button
-                      size="sm"
-                      variant="primary"
-                      onClick={() => handleSaveEdit(index, 'persian')}
-                    >
-                      ذخیره
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="secondary"
-                      onClick={() => setEditingIndex(null)}
-                    >
-                      لغو
-                    </Button>
-                  </>
-                ) : (
-                  <>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => handleEdit(index, 'persian')}
-                    >
-                      ویرایش
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="primary"
-                      onClick={() => handleCopy(index, 'persian')}
-                    >
-                      کپی
-                    </Button>
-                  </>
-                )}
-              </div>
+              {isEditing ? (
+                <Textarea
+                  value={editedTexts[`${index}_persian`]?.persian || persianText}
+                  onChange={(e) =>
+                    setEditedTexts({
+                      ...editedTexts,
+                      [`${index}_persian`]: {
+                        ...editedTexts[`${index}_persian`],
+                        persian: e.target.value,
+                      },
+                    })
+                  }
+                  rows={3}
+                  dir="rtl"
+                />
+              ) : (
+                <div
+                  className="p-4 backdrop-blur-md bg-white/10 dark:bg-gray-800/30 rounded-xl border border-white/20 dark:border-gray-700/30 text-white dark:text-gray-100"
+                  style={{
+                    fontSize: `${fontSize}px`,
+                  }}
+                  dir="rtl"
+                >
+                  {persianText}
+                </div>
+              )}
             </div>
-            {isEditing ? (
-              <Textarea
-                value={editedTexts[`${index}_persian`]?.persian || persianText}
-                onChange={(e) =>
-                  setEditedTexts({
-                    ...editedTexts,
-                    [`${index}_persian`]: {
-                      ...editedTexts[`${index}_persian`],
-                      persian: e.target.value,
-                    },
-                  })
-                }
-                rows={3}
-                dir="rtl"
-              />
-            ) : (
-              <div
-                className="p-3 bg-gray-50 dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100"
-                style={{
-                  fontSize: `${fontSize}px`,
-                }}
-                dir="rtl"
-              >
-                {persianText}
-              </div>
-            )}
           </div>
-        </div>
-      ),
-    };
-  });
+        ),
+      };
+    });
 
-  return <Accordion items={items} />;
+  // Set default active tab to first translation or selected index
+  const defaultActiveId = selectedIndex ? `result-${selectedIndex}` : (tabItems.length > 0 ? tabItems[0].id : '');
+
+  return tabItems.length > 0 ? <Tabs items={tabItems} defaultActiveId={defaultActiveId} /> : null;
 };
 

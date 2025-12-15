@@ -11,6 +11,7 @@ import { Tabs, TabItem } from '../components/ui/Tabs/Tabs';
 import { ErrorDisplay } from '../components/ui/ErrorDisplay/ErrorDisplay';
 import { Toast } from '../components/ui/Toast/Toast';
 import { HistoryPanel } from '../components/history/HistoryPanel/HistoryPanel';
+import { Modal } from '../components/ui/Modal/Modal';
 import { TimerButton } from '../components/ui/TimerButton/TimerButton';
 import { LastRequestTime } from '../components/ui/LastRequestTime/LastRequestTime';
 import { Switch } from '../components/ui/Switch/Switch';
@@ -73,6 +74,14 @@ export const MainPage: React.FC<MainPageProps> = ({ onOpenSettings }) => {
   const [lastRequestTime, setLastRequestTime] = useState<number | null>(null);
   const [grammarTeachingMode, setGrammarTeachingMode] = useState(false);
   const [grammarTeachingResult, setGrammarTeachingResult] = useState<GrammarTeachingResult | null>(null);
+  
+  // Separate results for different translation types
+  const [mainResults, setMainResults] = useState<TranslationResultType | null>(null);
+  const [fallbackResults, setFallbackResults] = useState<TranslationResultType | null>(null);
+  const [quickTranslateResults, setQuickTranslateResults] = useState<TranslationResultType | null>(null);
+  const [selectedMainResult, setSelectedMainResult] = useState<number | null>(null);
+  const [selectedFallbackResult, setSelectedFallbackResult] = useState<number | null>(null);
+  const [selectedQuickTranslateResult, setSelectedQuickTranslateResult] = useState<number | null>(null);
 
   useEffect(() => {
     // Always enable dark mode
@@ -240,7 +249,9 @@ export const MainPage: React.FC<MainPageProps> = ({ onOpenSettings }) => {
     // Check cache first
     const cachedEntry = findCachedEntry(input, type, selectedModel);
     if (cachedEntry && cachedEntry.result) {
-      setResults(cachedEntry.result);
+      setMainResults(cachedEntry.result);
+      setSelectedMainResult(1);
+      setResults(cachedEntry.result); // Keep for backward compatibility
       setSelectedResult(1);
       setLastRequestTime(cachedEntry.responseTime);
       setGrammarTeachingResult(null);
@@ -259,7 +270,9 @@ export const MainPage: React.FC<MainPageProps> = ({ onOpenSettings }) => {
       const endTime = Date.now();
       const responseTime = Math.floor((endTime - requestStartTime) / 1000);
 
-      setResults(response.result);
+      setMainResults(response.result);
+      setSelectedMainResult(1);
+      setResults(response.result); // Keep for backward compatibility
       setSelectedResult(1);
       setLastRequestTime(responseTime);
       setResponseSuggestionsResult(null);
@@ -422,7 +435,9 @@ export const MainPage: React.FC<MainPageProps> = ({ onOpenSettings }) => {
     // Check cache first
     const cachedEntry = findCachedEntry(input, type, fallbackSelectedModel);
     if (cachedEntry && cachedEntry.result) {
-      setResults(cachedEntry.result);
+      setFallbackResults(cachedEntry.result);
+      setSelectedFallbackResult(1);
+      setResults(cachedEntry.result); // Keep for backward compatibility
       setSelectedResult(1);
       setLastRequestTime(cachedEntry.responseTime);
       setGrammarTeachingResult(null);
@@ -441,7 +456,9 @@ export const MainPage: React.FC<MainPageProps> = ({ onOpenSettings }) => {
       const endTime = Date.now();
       const responseTime = Math.floor((endTime - requestStartTime) / 1000);
 
-      setResults(response.result);
+      setFallbackResults(response.result);
+      setSelectedFallbackResult(1);
+      setResults(response.result); // Keep for backward compatibility
       setSelectedResult(1);
       setLastRequestTime(responseTime);
       setResponseSuggestionsResult(null);
@@ -549,7 +566,9 @@ export const MainPage: React.FC<MainPageProps> = ({ onOpenSettings }) => {
         };
       }
 
-      setResults(formattedResult);
+      setQuickTranslateResults(formattedResult);
+      setSelectedQuickTranslateResult(1);
+      setResults(formattedResult); // Keep for backward compatibility
       setSelectedResult(1);
       setLastRequestTime(responseTime);
       setResponseSuggestionsResult(null);
@@ -703,12 +722,14 @@ export const MainPage: React.FC<MainPageProps> = ({ onOpenSettings }) => {
     };
   }, [handleKeyDown]);
 
-  // Prepare tabs for results
+  // Prepare tabs for results - separate tabs for each translation type
   const resultTabs: TabItem[] = [];
-  if (results && !grammarTeachingResult && !responseSuggestionsResult) {
+  
+  // Main Model Results Tab
+  if (mainResults && !grammarTeachingResult && !responseSuggestionsResult) {
     resultTabs.push({
-      id: 'translation',
-      label: 'ترجمه',
+      id: 'main-translation',
+      label: 'ترجمه مدل اصلی',
       icon: (
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129" />
@@ -716,9 +737,53 @@ export const MainPage: React.FC<MainPageProps> = ({ onOpenSettings }) => {
       ),
       content: (
         <TranslationResult
-          result={results}
-          selectedIndex={selectedResult}
-          onSelect={setSelectedResult}
+          result={mainResults}
+          selectedIndex={selectedMainResult}
+          onSelect={setSelectedMainResult}
+          onCopy={handleCopy}
+          fontSize={settings?.fontSize || 16}
+        />
+      ),
+    });
+  }
+  
+  // Fallback Model Results Tab
+  if (fallbackResults && !grammarTeachingResult && !responseSuggestionsResult) {
+    resultTabs.push({
+      id: 'fallback-translation',
+      label: 'ترجمه مدل جایگزین',
+      icon: (
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129" />
+        </svg>
+      ),
+      content: (
+        <TranslationResult
+          result={fallbackResults}
+          selectedIndex={selectedFallbackResult}
+          onSelect={setSelectedFallbackResult}
+          onCopy={handleCopy}
+          fontSize={settings?.fontSize || 16}
+        />
+      ),
+    });
+  }
+  
+  // Quick Translate Results Tab
+  if (quickTranslateResults && !grammarTeachingResult && !responseSuggestionsResult) {
+    resultTabs.push({
+      id: 'quick-translate',
+      label: 'ترجمه سریع',
+      icon: (
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+        </svg>
+      ),
+      content: (
+        <TranslationResult
+          result={quickTranslateResults}
+          selectedIndex={selectedQuickTranslateResult}
+          onSelect={setSelectedQuickTranslateResult}
           onCopy={handleCopy}
           fontSize={settings?.fontSize || 16}
         />
@@ -1002,39 +1067,72 @@ export const MainPage: React.FC<MainPageProps> = ({ onOpenSettings }) => {
           </div>
         )}
 
-        {/* History Panel - Slide In */}
-        {showHistory && (
-          <div className="backdrop-blur-lg bg-white/10 dark:bg-gray-900/20 rounded-2xl p-6 shadow-xl border border-white/20 dark:border-gray-700/30 animate-slide-in-right">
-            <HistoryPanel
-              onSelectEntry={(entry) => {
-                if (entry.type === 'persian-to-english') {
-                  setPersianToEnglishInput(entry.input);
-                  setResults(entry.result);
-                  setGrammarTeachingResult(null);
-                } else if (entry.type === 'english-to-persian') {
-                  setEnglishToPersianInput(entry.input);
-                  setResults(entry.result);
-                  setGrammarTeachingResult(null);
-                } else if (entry.type === 'grammar') {
-                  setGrammarInput(entry.input);
-                  setResults(entry.result);
-                  setGrammarTeachingResult(null);
-                } else if (entry.type === 'grammar-teaching') {
-                  setGrammarInput(entry.input);
-                  setGrammarTeachingResult(entry.grammarTeachingResult || null);
-                  setResults(null);
-                  setResponseSuggestionsResult(null);
-                } else if (entry.type === 'response-suggestions') {
-                  setResponseSuggestionsInput(entry.input);
-                  setResponseSuggestionsResult(entry.responseSuggestionsResult || null);
-                  setResults(null);
-                  setGrammarTeachingResult(null);
+        {/* History Panel - Modal */}
+        <Modal
+          isOpen={showHistory}
+          onClose={() => setShowHistory(false)}
+          title="تاریخچه ترجمه"
+          className="max-w-6xl"
+        >
+          <HistoryPanel
+            onSelectEntry={(entry) => {
+              if (entry.type === 'persian-to-english') {
+                setPersianToEnglishInput(entry.input);
+                if (entry.result) {
+                  setMainResults(entry.result);
+                  setSelectedMainResult(1);
+                  setResults(entry.result); // Keep for backward compatibility
+                  setSelectedResult(1);
                 }
-                setShowHistory(false);
-              }}
-            />
-          </div>
-        )}
+                setFallbackResults(null);
+                setQuickTranslateResults(null);
+                setGrammarTeachingResult(null);
+                setResponseSuggestionsResult(null);
+              } else if (entry.type === 'english-to-persian') {
+                setEnglishToPersianInput(entry.input);
+                if (entry.result) {
+                  setMainResults(entry.result);
+                  setSelectedMainResult(1);
+                  setResults(entry.result); // Keep for backward compatibility
+                  setSelectedResult(1);
+                }
+                setFallbackResults(null);
+                setQuickTranslateResults(null);
+                setGrammarTeachingResult(null);
+                setResponseSuggestionsResult(null);
+              } else if (entry.type === 'grammar') {
+                setGrammarInput(entry.input);
+                if (entry.result) {
+                  setMainResults(entry.result);
+                  setSelectedMainResult(1);
+                  setResults(entry.result); // Keep for backward compatibility
+                  setSelectedResult(1);
+                }
+                setFallbackResults(null);
+                setQuickTranslateResults(null);
+                setGrammarTeachingResult(null);
+                setResponseSuggestionsResult(null);
+              } else if (entry.type === 'grammar-teaching') {
+                setGrammarInput(entry.input);
+                setGrammarTeachingResult(entry.grammarTeachingResult || null);
+                setMainResults(null);
+                setFallbackResults(null);
+                setQuickTranslateResults(null);
+                setResults(null);
+                setResponseSuggestionsResult(null);
+              } else if (entry.type === 'response-suggestions') {
+                setResponseSuggestionsInput(entry.input);
+                setResponseSuggestionsResult(entry.responseSuggestionsResult || null);
+                setMainResults(null);
+                setFallbackResults(null);
+                setQuickTranslateResults(null);
+                setResults(null);
+                setGrammarTeachingResult(null);
+              }
+              setShowHistory(false);
+            }}
+          />
+        </Modal>
 
         {toast && (
           <Toast

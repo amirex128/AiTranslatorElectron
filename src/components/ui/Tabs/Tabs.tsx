@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 
 export interface TabItem {
   id: string;
-  label: string;
+  label: string | React.ReactNode;
   icon?: React.ReactNode;
   content: React.ReactNode;
   badge?: number | string;
@@ -37,7 +37,7 @@ export const Tabs: React.FC<TabsProps> = ({
   return (
     <div className={`w-full ${className}`}>
       {/* Tab Headers */}
-      <div className="flex flex-wrap gap-2 border-b border-gray-200 dark:border-gray-700 mb-4">
+      <div className="flex flex-wrap gap-2 border-b-2 border-white/30 dark:border-white/20 mb-4 pb-2">
         {items.map((item) => {
           const isActive = activeId === item.id;
           return (
@@ -45,29 +45,29 @@ export const Tabs: React.FC<TabsProps> = ({
               key={item.id}
               onClick={() => handleTabClick(item.id)}
               className={`
-                relative px-4 py-2.5 text-sm font-medium transition-all duration-300 ease-in-out
-                flex items-center gap-2 rounded-t-lg
+                relative px-4 py-2.5 text-sm font-semibold transition-all duration-300 ease-in-out
+                flex items-start gap-2 rounded-t-xl min-w-0 backdrop-blur-md
                 ${
                   isActive
-                    ? 'text-indigo-600 dark:text-indigo-400 bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-900/20 dark:to-purple-900/20 border-b-2 border-indigo-500 dark:border-indigo-400'
-                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800'
+                    ? 'text-white bg-gradient-to-b from-blue-500/40 to-purple-500/40 border-b-2 border-blue-400 shadow-lg'
+                    : 'text-white/80 hover:text-white hover:bg-white/20 border-b-2 border-transparent'
                 }
               `}
             >
               {item.icon && (
-                <span className={`${isActive ? 'text-indigo-600 dark:text-indigo-400' : ''}`}>
+                <span className={`mt-0.5 flex-shrink-0 ${isActive ? 'text-white' : 'text-white/80'}`}>
                   {item.icon}
                 </span>
               )}
-              <span>{item.label}</span>
+              <span className="flex-1 min-w-0 text-left">{item.label}</span>
               {item.badge !== undefined && (
                 <span
                   className={`
                     ml-1 px-2 py-0.5 text-xs font-semibold rounded-full
                     ${
                       isActive
-                        ? 'bg-indigo-500 dark:bg-indigo-400 text-white'
-                        : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
+                        ? 'bg-blue-500 dark:bg-blue-400 text-white'
+                        : 'bg-white/20 dark:bg-gray-700 text-white/80 dark:text-gray-300'
                     }
                   `}
                 >
