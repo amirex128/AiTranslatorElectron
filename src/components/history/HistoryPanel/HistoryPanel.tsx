@@ -206,13 +206,13 @@ export const HistoryPanel: React.FC<HistoryPanelProps> = ({
     return {
       id: entry.id,
       label: (
-        <div className="flex flex-col gap-1">
+        <div className="flex flex-col gap-1.5">
           <div className="flex items-center gap-2 flex-wrap">
             {getTypeBadge(entry.type, wordCount)}
-            <span className="text-xs">{modelLabel}</span>
-            <span className="text-xs">⏱ {responseTimeStr}</span>
+            <span className="text-xs font-medium text-white/90">{modelLabel}</span>
+            <span className="text-xs font-medium text-white/90">⏱ {responseTimeStr}</span>
           </div>
-          <div className="text-[10px] text-white/50 dark:text-gray-500 truncate max-w-full" dir="auto">
+          <div className="text-xs font-medium text-white/90 dark:text-white/80 truncate max-w-full leading-tight" dir="auto">
             {getFirstWords(entry.input, 5)}
           </div>
         </div>

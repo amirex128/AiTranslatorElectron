@@ -722,14 +722,30 @@ export const MainPage: React.FC<MainPageProps> = ({ onOpenSettings }) => {
     };
   }, [handleKeyDown]);
 
-  // Prepare tabs for results - separate tabs for each translation type
+  // Prepare tabs for results - combine all translation results into one tab
   const resultTabs: TabItem[] = [];
   
-  // Main Model Results Tab
-  if (mainResults && !grammarTeachingResult && !responseSuggestionsResult) {
+  // Single Translation Tab - shows the most recent result (fallback > quick > main > results)
+  const displayResult = fallbackResults || quickTranslateResults || mainResults || results;
+  const displaySelected = fallbackResults 
+    ? selectedFallbackResult 
+    : quickTranslateResults 
+    ? selectedQuickTranslateResult 
+    : mainResults 
+    ? selectedMainResult 
+    : selectedResult;
+  const displaySetSelected = fallbackResults 
+    ? setSelectedFallbackResult 
+    : quickTranslateResults 
+    ? setSelectedQuickTranslateResult 
+    : mainResults 
+    ? setSelectedMainResult 
+    : setSelectedResult;
+  
+  if (displayResult && !grammarTeachingResult && !responseSuggestionsResult) {
     resultTabs.push({
-      id: 'main-translation',
-      label: 'ترجمه مدل اصلی',
+      id: 'translation',
+      label: 'ترجمه',
       icon: (
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129" />
@@ -737,53 +753,9 @@ export const MainPage: React.FC<MainPageProps> = ({ onOpenSettings }) => {
       ),
       content: (
         <TranslationResult
-          result={mainResults}
-          selectedIndex={selectedMainResult}
-          onSelect={setSelectedMainResult}
-          onCopy={handleCopy}
-          fontSize={settings?.fontSize || 16}
-        />
-      ),
-    });
-  }
-  
-  // Fallback Model Results Tab
-  if (fallbackResults && !grammarTeachingResult && !responseSuggestionsResult) {
-    resultTabs.push({
-      id: 'fallback-translation',
-      label: 'ترجمه مدل جایگزین',
-      icon: (
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129" />
-        </svg>
-      ),
-      content: (
-        <TranslationResult
-          result={fallbackResults}
-          selectedIndex={selectedFallbackResult}
-          onSelect={setSelectedFallbackResult}
-          onCopy={handleCopy}
-          fontSize={settings?.fontSize || 16}
-        />
-      ),
-    });
-  }
-  
-  // Quick Translate Results Tab
-  if (quickTranslateResults && !grammarTeachingResult && !responseSuggestionsResult) {
-    resultTabs.push({
-      id: 'quick-translate',
-      label: 'ترجمه سریع',
-      icon: (
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-        </svg>
-      ),
-      content: (
-        <TranslationResult
-          result={quickTranslateResults}
-          selectedIndex={selectedQuickTranslateResult}
-          onSelect={setSelectedQuickTranslateResult}
+          result={displayResult}
+          selectedIndex={displaySelected}
+          onSelect={displaySetSelected}
           onCopy={handleCopy}
           fontSize={settings?.fontSize || 16}
         />
@@ -839,17 +811,17 @@ export const MainPage: React.FC<MainPageProps> = ({ onOpenSettings }) => {
               </svg>
             </div>
             <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-white to-indigo-100 dark:from-white dark:to-indigo-200 bg-clip-text text-transparent">
-              مترجم هوش مصنوعی
-            </h1>
+          مترجم هوش مصنوعی
+        </h1>
           </div>
         </div>
 
         {/* Model Selectors - Pill Shaped */}
         <div className="flex flex-wrap gap-3 justify-center">
           <div className="backdrop-blur-lg bg-white/10 dark:bg-gray-900/20 rounded-full px-4 py-2 border border-white/20 dark:border-gray-700/30 shadow-lg transition-all duration-300 hover:scale-105">
-            <ModelSelector
-              selectedModel={selectedModel || (settings?.selectedModel as AIModel)}
-              onModelChange={setSelectedModel}
+        <ModelSelector
+          selectedModel={selectedModel || (settings?.selectedModel as AIModel)}
+          onModelChange={setSelectedModel}
               label="مدل اصلی"
             />
           </div>
@@ -865,12 +837,12 @@ export const MainPage: React.FC<MainPageProps> = ({ onOpenSettings }) => {
         {/* Input Fields - Glassmorphism Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
           <div className="backdrop-blur-lg bg-white/10 dark:bg-gray-900/20 rounded-xl p-4 shadow-xl border border-white/20 dark:border-gray-700/30 transition-all duration-300 hover:shadow-2xl hover:scale-[1.02]">
-            <TranslationInput
-              label="فارسی به انگلیسی"
-              value={persianToEnglishInput}
-              onChange={setPersianToEnglishInput}
-              placeholder="متن فارسی را وارد کنید..."
-              autoFocus={false}
+          <TranslationInput
+            label="فارسی به انگلیسی"
+            value={persianToEnglishInput}
+            onChange={setPersianToEnglishInput}
+            placeholder="متن فارسی را وارد کنید..."
+            autoFocus={false}
               historyEntries={historyEntries.filter((e) => e.type === 'persian-to-english')}
               onSelectHistoryEntry={(entry) => {
                 setPersianToEnglishInput(entry.input);
@@ -885,10 +857,10 @@ export const MainPage: React.FC<MainPageProps> = ({ onOpenSettings }) => {
             />
           </div>
           <div className="backdrop-blur-lg bg-white/10 dark:bg-gray-900/20 rounded-xl p-4 shadow-xl border border-white/20 dark:border-gray-700/30 transition-all duration-300 hover:shadow-2xl hover:scale-[1.02]">
-            <TranslationInput
-              label="انگلیسی به فارسی"
-              value={englishToPersianInput}
-              onChange={setEnglishToPersianInput}
+          <TranslationInput
+            label="انگلیسی به فارسی"
+            value={englishToPersianInput}
+            onChange={setEnglishToPersianInput}
               placeholder="Enter English text here or use theire Shortcut"
               autoFocus={false}
               dir="ltr"
@@ -911,7 +883,7 @@ export const MainPage: React.FC<MainPageProps> = ({ onOpenSettings }) => {
               value={responseSuggestionsInput}
               onChange={setResponseSuggestionsInput}
               placeholder="Enter English text here or use their shortcuts..."
-              autoFocus={false}
+            autoFocus={false}
               dir="ltr"
               historyEntries={historyEntries.filter((e) => e.type === 'response-suggestions')}
               onSelectHistoryEntry={(entry) => {
@@ -944,12 +916,12 @@ export const MainPage: React.FC<MainPageProps> = ({ onOpenSettings }) => {
                 label="حالت آموزش"
               />
             </div>
-            <TranslationInput
+          <TranslationInput
               label=""
-              value={grammarInput}
-              onChange={setGrammarInput}
+            value={grammarInput}
+            onChange={setGrammarInput}
               placeholder="Enter English text here or use their shortcuts..."
-              autoFocus={false}
+            autoFocus={false}
               dir="ltr"
               historyEntries={historyEntries.filter((e) => 
                 grammarTeachingMode 
@@ -990,8 +962,8 @@ export const MainPage: React.FC<MainPageProps> = ({ onOpenSettings }) => {
           ) : (
             <>
               <button
-                onClick={handleTranslate}
-                disabled={!canTranslate}
+              onClick={handleTranslate}
+              disabled={!canTranslate}
                 className="px-6 py-3 rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 text-white font-semibold shadow-lg transition-all duration-300 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center gap-2"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1051,12 +1023,12 @@ export const MainPage: React.FC<MainPageProps> = ({ onOpenSettings }) => {
         {/* Error Display */}
         {error && (
           <div className="backdrop-blur-lg bg-red-500/20 dark:bg-red-900/20 rounded-xl p-4 shadow-xl border border-red-300/30 dark:border-red-700/30 animate-fade-in">
-            <ErrorDisplay
-              error={error}
-              details={errorDetails || undefined}
-              showDetails={showErrorDetails}
-              onToggleDetails={toggleErrorDetails}
-            />
+          <ErrorDisplay
+            error={error}
+            details={errorDetails || undefined}
+            showDetails={showErrorDetails}
+            onToggleDetails={toggleErrorDetails}
+          />
           </div>
         )}
 
@@ -1074,10 +1046,10 @@ export const MainPage: React.FC<MainPageProps> = ({ onOpenSettings }) => {
           title="تاریخچه ترجمه"
           className="max-w-6xl"
         >
-          <HistoryPanel
-            onSelectEntry={(entry) => {
-              if (entry.type === 'persian-to-english') {
-                setPersianToEnglishInput(entry.input);
+            <HistoryPanel
+              onSelectEntry={(entry) => {
+                if (entry.type === 'persian-to-english') {
+                  setPersianToEnglishInput(entry.input);
                 if (entry.result) {
                   setMainResults(entry.result);
                   setSelectedMainResult(1);
@@ -1088,8 +1060,8 @@ export const MainPage: React.FC<MainPageProps> = ({ onOpenSettings }) => {
                 setQuickTranslateResults(null);
                 setGrammarTeachingResult(null);
                 setResponseSuggestionsResult(null);
-              } else if (entry.type === 'english-to-persian') {
-                setEnglishToPersianInput(entry.input);
+                } else if (entry.type === 'english-to-persian') {
+                  setEnglishToPersianInput(entry.input);
                 if (entry.result) {
                   setMainResults(entry.result);
                   setSelectedMainResult(1);
@@ -1100,8 +1072,8 @@ export const MainPage: React.FC<MainPageProps> = ({ onOpenSettings }) => {
                 setQuickTranslateResults(null);
                 setGrammarTeachingResult(null);
                 setResponseSuggestionsResult(null);
-              } else if (entry.type === 'grammar') {
-                setGrammarInput(entry.input);
+                } else if (entry.type === 'grammar') {
+                  setGrammarInput(entry.input);
                 if (entry.result) {
                   setMainResults(entry.result);
                   setSelectedMainResult(1);
@@ -1129,9 +1101,9 @@ export const MainPage: React.FC<MainPageProps> = ({ onOpenSettings }) => {
                 setResults(null);
                 setGrammarTeachingResult(null);
               }
-              setShowHistory(false);
-            }}
-          />
+                setShowHistory(false);
+              }}
+            />
         </Modal>
 
         {toast && (
