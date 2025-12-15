@@ -5,19 +5,36 @@ import { databaseService } from './database/DatabaseService';
 let tray: Tray | null = null;
 
 export const createTray = (): void => {
-  // Load icon using shared function (same as window)
-  let icon = loadAppIcon();
-  
-  // Resize icon for tray (tray icons should be small, typically 16x16 or 32x32)
-  if (!icon.isEmpty()) {
-    const size = icon.getSize();
-    if (size.width > 32 || size.height > 32) {
-      icon = icon.resize({ width: 32, height: 32 });
-      console.log('[Tray] Icon resized for tray, size:', icon.getSize());
+  try {
+    // Load icon using shared function (same as window)
+    let icon = loadAppIcon();
+    
+    // Resize icon for tray (tray icons should be small, typically 16x16 or 32x32)
+    // Cross-platform: Linux and Windows handle tray icons differently
+    if (!icon.isEmpty()) {
+      const size = icon.getSize();
+      // Linux typically uses 22x22 or 24x24, Windows uses 16x16 or 32x32
+      const maxSize = process.platform === 'linux' ? 24 : 32;
+      if (size.width > maxSize || size.height > maxSize) {
+        icon = icon.resize({ width: maxSize, height: maxSize });
+        console.log(`[Tray] Icon resized for ${process.platform} tray, size:`, icon.getSize());
+      }
+    } else {
+      console.warn('[Tray] Icon is empty, tray may not display correctly');
+    }
+    
+    tray = new Tray(icon);
+  } catch (error) {
+    console.error('[Tray] Error creating tray:', error);
+    // Try to create tray with empty icon as fallback
+    try {
+      tray = new Tray(nativeImage.createEmpty());
+      console.warn('[Tray] Created tray with empty icon as fallback');
+    } catch (fallbackError) {
+      console.error('[Tray] Failed to create tray even with empty icon:', fallbackError);
+      return; // Cannot create tray, exit function
     }
   }
-  
-  tray = new Tray(icon);
 
   const contextMenu = Menu.buildFromTemplate([
     {

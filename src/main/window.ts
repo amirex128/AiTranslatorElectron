@@ -63,14 +63,17 @@ export const createWindow = async (): Promise<void> => {
   const windowIcon = loadAppIcon();
   const iconPath = getAssetPath('images.png');
 
-  mainWindow = new BrowserWindow({
+  // Platform-specific window configuration
+  const isDev = !require('electron').app.isPackaged;
+  const windowOptions: Electron.BrowserWindowConstructorOptions = {
     width: windowSize.width,
     height: windowSize.height,
     minWidth: 600,
     minHeight: 400,
-    frame: false, // Remove default title bar
-    titleBarStyle: 'hidden',
-    // For Windows, use icon path directly (more reliable than NativeImage)
+    frame: false, // Remove default title bar (works on all platforms)
+    // titleBarStyle only works on macOS
+    ...(process.platform === 'darwin' ? { titleBarStyle: 'hidden' } : {}),
+    // Icon handling: Windows prefers path, Linux/macOS prefer NativeImage
     icon: process.platform === 'win32' ? iconPath : windowIcon,
     maximizable: true, // Enable maximize button
     minimizable: true, // Enable minimize button
@@ -81,10 +84,13 @@ export const createWindow = async (): Promise<void> => {
       nodeIntegration: false,
       contextIsolation: true,
       webSecurity: true,
-      sandbox: false, // Disable sandbox to avoid chrome-sandbox permission issues in development
+      // Sandbox: disable in development for easier debugging, enable in production for security
+      sandbox: !isDev,
     },
     show: false,
-  });
+  };
+
+  mainWindow = new BrowserWindow(windowOptions);
 
   // Set basic CSP for security (TTS is handled via IPC, no need for Google TTS CSP)
   const session = mainWindow.webContents.session;
@@ -138,33 +144,56 @@ export const createWindow = async (): Promise<void> => {
 
   mainWindow.loadURL(MAIN_WINDOW_WEBPACK_ENTRY);
 
-  // Set icon again after window is created (for Windows taskbar)
-  // This ensures the icon is properly displayed in the taskbar
-  if (process.platform === 'win32') {
-    // Try both path and NativeImage for Windows
-    try {
-      mainWindow.setIcon(iconPath);
-      console.log('[Window] Icon set for Windows taskbar using path:', iconPath);
-    } catch (error) {
-      console.warn('[Window] Failed to set icon using path, trying NativeImage:', error);
+  // Set icon again after window is created (platform-specific handling)
+  // Windows: prefer path, fallback to NativeImage
+  // Linux/macOS: use NativeImage
+  try {
+    if (process.platform === 'win32') {
+      // Try both path and NativeImage for Windows
+      try {
+        mainWindow.setIcon(iconPath);
+        console.log('[Window] Icon set for Windows taskbar using path:', iconPath);
+      } catch (error) {
+        console.warn('[Window] Failed to set icon using path, trying NativeImage:', error);
+        if (!windowIcon.isEmpty()) {
+          mainWindow.setIcon(windowIcon);
+          console.log('[Window] Icon set for Windows taskbar using NativeImage');
+        }
+      }
+    } else {
+      // Linux and macOS: use NativeImage
       if (!windowIcon.isEmpty()) {
         mainWindow.setIcon(windowIcon);
-        console.log('[Window] Icon set for Windows taskbar using NativeImage');
+        console.log(`[Window] Icon set for ${process.platform} using NativeImage`);
+      } else {
+        console.warn(`[Window] Icon is empty for ${process.platform}, using default`);
       }
     }
+  } catch (error) {
+    console.error('[Window] Error setting icon:', error);
   }
 
   mainWindow.once('ready-to-show', () => {
     mainWindow?.show();
-    // Set icon again after window is shown (for Windows taskbar)
-    if (process.platform === 'win32') {
-      try {
-        mainWindow?.setIcon(iconPath);
-      } catch (error) {
+    // Set icon again after window is shown (platform-specific)
+    try {
+      if (process.platform === 'win32') {
+        // Windows: try path first, fallback to NativeImage
+        try {
+          mainWindow?.setIcon(iconPath);
+        } catch (error) {
+          if (!windowIcon.isEmpty()) {
+            mainWindow?.setIcon(windowIcon);
+          }
+        }
+      } else {
+        // Linux and macOS: use NativeImage
         if (!windowIcon.isEmpty()) {
           mainWindow?.setIcon(windowIcon);
         }
       }
+    } catch (error) {
+      console.error('[Window] Error setting icon on ready-to-show:', error);
     }
   });
 

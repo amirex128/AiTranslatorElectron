@@ -235,8 +235,14 @@ app.on('ready', async () => {
   Menu.setApplicationMenu(null);
 
   // Set app user model ID for Windows (helps with taskbar icon)
+  // This is Windows-specific and should be set before creating windows
   if (process.platform === 'win32') {
-    app.setAppUserModelId('com.aitranslatorelectron.app');
+    try {
+      app.setAppUserModelId('com.aitranslatorelectron.app');
+      console.log('[App] Set app user model ID for Windows');
+    } catch (error) {
+      console.warn('[App] Failed to set app user model ID:', error);
+    }
   }
 
   // Initialize AI services with settings from APP_CONFIG
