@@ -31,7 +31,7 @@ const TTSButton: React.FC<{ text: string; className?: string }> = ({ text, class
   return (
     <button
       onClick={handlePlay}
-      className={`p-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors ${className}`}
+      className={`p-2 rounded-full backdrop-blur-md bg-white/10 border border-white/20 hover:bg-white/20 text-white transition-all duration-300 hover:scale-110 ${className}`}
       title={isPlaying ? 'توقف' : 'پخش صدا'}
     >
       {isPlaying ? (

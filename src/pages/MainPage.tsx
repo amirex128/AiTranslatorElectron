@@ -722,10 +722,10 @@ export const MainPage: React.FC<MainPageProps> = ({ onOpenSettings }) => {
     };
   }, [handleKeyDown]);
 
-  // Prepare tabs for results - combine all translation results into one tab
+  // Prepare tabs for results - only for grammar and response suggestions
   const resultTabs: TabItem[] = [];
   
-  // Single Translation Tab - shows the most recent result (fallback > quick > main > results)
+  // Get the most recent translation result (fallback > quick > main > results)
   const displayResult = fallbackResults || quickTranslateResults || mainResults || results;
   const displaySelected = fallbackResults 
     ? selectedFallbackResult 
@@ -742,26 +742,7 @@ export const MainPage: React.FC<MainPageProps> = ({ onOpenSettings }) => {
     ? setSelectedMainResult 
     : setSelectedResult;
   
-  if (displayResult && !grammarTeachingResult && !responseSuggestionsResult) {
-    resultTabs.push({
-      id: 'translation',
-      label: 'ترجمه',
-      icon: (
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129" />
-        </svg>
-      ),
-      content: (
-        <TranslationResult
-          result={displayResult}
-          selectedIndex={displaySelected}
-          onSelect={displaySetSelected}
-          onCopy={handleCopy}
-          fontSize={settings?.fontSize || 16}
-        />
-      ),
-    });
-  }
+  // Only add grammar and response suggestions to tabs, translation results are displayed directly
   if (grammarTeachingResult && !responseSuggestionsResult) {
     resultTabs.push({
       id: 'grammar',
@@ -1032,7 +1013,20 @@ export const MainPage: React.FC<MainPageProps> = ({ onOpenSettings }) => {
           </div>
         )}
 
-        {/* Results with Tabs */}
+        {/* Translation Results - Display directly without outer tab */}
+        {displayResult && !grammarTeachingResult && !responseSuggestionsResult && (
+          <div className="backdrop-blur-lg bg-white/10 dark:bg-gray-900/20 rounded-2xl p-6 shadow-xl border border-white/20 dark:border-gray-700/30 animate-fade-in">
+            <TranslationResult
+              result={displayResult}
+              selectedIndex={displaySelected}
+              onSelect={displaySetSelected}
+              onCopy={handleCopy}
+              fontSize={settings?.fontSize || 16}
+            />
+          </div>
+        )}
+
+        {/* Results with Tabs - Only for grammar and response suggestions */}
         {resultTabs.length > 0 && (
           <div className="backdrop-blur-lg bg-white/10 dark:bg-gray-900/20 rounded-2xl p-6 shadow-xl border border-white/20 dark:border-gray-700/30 animate-fade-in">
             <Tabs items={resultTabs} />
