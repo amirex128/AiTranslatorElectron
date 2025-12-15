@@ -73,11 +73,41 @@ const getEnvModel = (key: string): AIModel => {
   );
 };
 
-// Create APP_CONFIG only in main process
-// In renderer process, this will throw an error at module load time
-// This is intentional - APP_CONFIG should only be used in main process
-// For renderer process, use getDefaultSettings() which handles this gracefully
-export const APP_CONFIG = (() => {
+// Helper function to get shortcut from environment variable (optional, with default)
+const getEnvShortcut = (key: string, defaultValue: string): string => {
+  if (!isNodeEnv) {
+    return defaultValue;
+  }
+  const value = process.env[key];
+  return value || defaultValue;
+};
+
+// Helper function to get boolean from environment variable (optional, with default)
+const getEnvBoolean = (key: string, defaultValue: boolean): boolean => {
+  if (!isNodeEnv) {
+    return defaultValue;
+  }
+  const value = process.env[key];
+  if (value === undefined || value === '') {
+    return defaultValue;
+  }
+  return value.toLowerCase() === 'true';
+};
+
+// Lazy initialization for APP_CONFIG
+// This ensures that .env file is loaded before APP_CONFIG is accessed
+let _appConfig: ReturnType<typeof createAppConfig> | null = null;
+
+/**
+ * Reset APP_CONFIG cache to force re-initialization
+ * This should be called after .env file is updated
+ */
+export function resetAppConfig(): void {
+  _appConfig = null;
+  console.log('[AppConfig] Cache reset - will re-initialize on next access');
+}
+
+function createAppConfig() {
   if (!isNodeEnv) {
     // In renderer process, we can't read .env, so we'll use a placeholder
     // But this should never happen if the code is structured correctly
@@ -92,6 +122,7 @@ export const APP_CONFIG = (() => {
   return {
   // Model Selection
     selectedModel: getEnvModel('SELECTED_MODEL'),
+    fallbackSelectedModel: getEnvModel('FALLBACK_SELECTED_MODEL'),
   
   // AI Provider Configuration
     aiProviderUrl: getEnv('AI_PROVIDER_URL'), // Ollama URL
@@ -112,6 +143,56 @@ export const APP_CONFIG = (() => {
       width: getEnvNumber('WINDOW_WIDTH'), 
       height: getEnvNumber('WINDOW_HEIGHT') 
     },
+  
+  // Keyboard Shortcuts
+    shortcuts: {
+      persianToEnglish: getEnvShortcut('SHORTCUT_PERSIAN_TO_ENGLISH', 'Alt+Insert'),
+      englishToPersian: getEnvShortcut('SHORTCUT_ENGLISH_TO_PERSIAN', 'Alt+Home'),
+      grammar: getEnvShortcut('SHORTCUT_GRAMMAR', 'Alt+PageUp'),
+      responseSuggestions: getEnvShortcut('SHORTCUT_RESPONSE_SUGGESTIONS', 'Alt+PageDown'),
+      processMain: getEnvShortcut('SHORTCUT_PROCESS_MAIN', 'CommandOrControl+Enter'),
+      processFallback: getEnvShortcut('SHORTCUT_PROCESS_FALLBACK', 'Alt+Enter'),
+      processQuickTranslate: getEnvShortcut('SHORTCUT_PROCESS_QUICK_TRANSLATE', 'Alt+Shift+Enter'),
+      addBookmark: getEnvShortcut('SHORTCUT_ADD_BOOKMARK', 'Alt+Delete'),
+    },
+  
+  // Quick Translate Configuration
+    quickTranslateEnabled: getEnvBoolean('QUICK_TRANSLATE_ENABLED', true),
+    quickTranslateTimeout: getEnvNumber('QUICK_TRANSLATE_TIMEOUT'),
 } as const;
-})();
+}
+
+// Create APP_CONFIG only in main process
+// In renderer process, this will throw an error at module load time
+// This is intentional - APP_CONFIG should only be used in main process
+// For renderer process, use getDefaultSettings() which handles this gracefully
+// Using lazy initialization to ensure .env is loaded before accessing
+// Using Proxy to defer initialization until first property access
+export const APP_CONFIG = new Proxy({} as ReturnType<typeof createAppConfig>, {
+  get(target, prop) {
+    if (!_appConfig) {
+      _appConfig = createAppConfig();
+    }
+    const value = _appConfig[prop as keyof typeof _appConfig];
+    return value;
+  },
+  ownKeys() {
+    if (!_appConfig) {
+      _appConfig = createAppConfig();
+    }
+    return Reflect.ownKeys(_appConfig);
+  },
+  getOwnPropertyDescriptor(target, prop) {
+    if (!_appConfig) {
+      _appConfig = createAppConfig();
+    }
+    return Reflect.getOwnPropertyDescriptor(_appConfig, prop);
+  },
+  has(target, prop) {
+    if (!_appConfig) {
+      _appConfig = createAppConfig();
+    }
+    return prop in _appConfig;
+  },
+});
 

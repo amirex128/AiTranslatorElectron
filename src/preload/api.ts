@@ -12,10 +12,11 @@ interface TranslationParams {
 
 interface HistoryEntry {
   input: string;
-  type: 'persian-to-english' | 'english-to-persian' | 'grammar' | 'grammar-teaching';
+  type: 'persian-to-english' | 'english-to-persian' | 'grammar' | 'grammar-teaching' | 'response-suggestions';
   model: AIModel;
-  result: TranslationResult | null; // null for grammar-teaching
+  result: TranslationResult | null; // null for grammar-teaching and response-suggestions
   grammarTeachingResult?: GrammarTeachingResult; // Only for grammar-teaching type
+  responseSuggestionsResult?: import('../types/responseSuggestions').ResponseSuggestionsResult; // Only for response-suggestions type
   responseTime?: number;
 }
 
@@ -46,6 +47,7 @@ export const electronAPI: ElectronAPI = {
   translateEnglishToPersian: (params: TranslationParams) => ipcRenderer.invoke('translate:english-to-persian', params),
   translateGrammar: (params: TranslationParams) => ipcRenderer.invoke('translate:grammar', params),
   translateGrammarTeaching: (params: TranslationParams) => ipcRenderer.invoke('translate:grammar-teaching', params),
+  translateResponseSuggestions: (params: TranslationParams) => ipcRenderer.invoke('translate:response-suggestions', params),
 
   // TTS
   fetchTTSAudio: (url: string) => ipcRenderer.invoke('tts:fetch-audio', url),
@@ -59,12 +61,55 @@ export const electronAPI: ElectronAPI = {
   // Settings
   getSettings: () => ipcRenderer.invoke('settings:get'),
   saveSettings: (settings: AppSettings) => ipcRenderer.invoke('settings:save', settings),
+  openSettings: () => {
+    ipcRenderer.send('settings:openPage');
+  },
+  openAbout: () => {
+    ipcRenderer.send('about:openPage');
+  },
+  clearHistoryWithConfirmation: () => ipcRenderer.invoke('history:clearWithConfirmation'),
+  openDevTools: () => ipcRenderer.invoke('window:openDevTools'),
 
   onSettingsOpenPage: (callback: () => void) => {
     ipcRenderer.on('settings:openPage', () => callback());
   },
   onAboutOpenPage: (callback: () => void) => {
     ipcRenderer.on('about:openPage', () => callback());
+  },
+
+  // Speech Recognition
+  isSpeechRecognitionAvailable: () => ipcRenderer.invoke('speech:isAvailable'),
+  startSpeechRecognition: () => ipcRenderer.invoke('speech:start'),
+  stopSpeechRecognition: () => ipcRenderer.invoke('speech:stop'),
+  getSpeechRecognitionStatus: () => ipcRenderer.invoke('speech:getStatus'),
+  onSpeechStatus: (callback: (status: { isListening: boolean }) => void) => {
+    ipcRenderer.on('speech:status', (_event, status) => callback(status));
+  },
+
+  // Quick Translate
+  quickTranslateGetCached: (englishText: string) => ipcRenderer.invoke('quick-translate:get-cached', { englishText }),
+  quickTranslateSaveCached: (englishText: string, persianTranslation: string) => ipcRenderer.invoke('quick-translate:save-cached', { englishText, persianTranslation }),
+  quickTranslateTranslate: (englishText: string) => ipcRenderer.invoke('quick-translate:translate', { englishText }),
+
+  // Bookmarks
+  getAllBookmarks: (filters?: any) => ipcRenderer.invoke('bookmark:get-all', filters),
+  checkBookmark: (englishText: string) => ipcRenderer.invoke('bookmark:check', englishText),
+  addBookmark: (englishText: string) => ipcRenderer.invoke('bookmark:add', englishText),
+  removeBookmark: (id: string) => ipcRenderer.invoke('bookmark:remove', id),
+  updateBookmark: (id: string, updates: any) => ipcRenderer.invoke('bookmark:update', { id, updates }),
+  translateBookmarkMain: (id: string) => ipcRenderer.invoke('bookmark:translate-main', id),
+  translateBookmarkFallback: (id: string) => ipcRenderer.invoke('bookmark:translate-fallback', id),
+  translateBookmarkQuick: (id: string) => ipcRenderer.invoke('bookmark:translate-quick', id),
+  incrementBookmarkReadCount: (id: string) => ipcRenderer.invoke('bookmark:increment-read-count', id),
+  resetBookmarkReadCount: (id: string) => ipcRenderer.invoke('bookmark:reset-read-count', id),
+  generateBookmarkMainExamples: (id: string) => ipcRenderer.invoke('bookmark:generate-main-examples', id),
+  generateBookmarkFallbackExamples: (id: string) => ipcRenderer.invoke('bookmark:generate-fallback-examples', id),
+
+  // Data Import/Export
+  exportData: () => ipcRenderer.invoke('data:export'),
+  importData: () => ipcRenderer.invoke('data:import'),
+  onDataImported: (callback: () => void) => {
+    ipcRenderer.on('data:imported', () => callback());
   },
 };
 

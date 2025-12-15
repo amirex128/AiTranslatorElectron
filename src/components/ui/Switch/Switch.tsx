@@ -56,7 +56,7 @@ export const Switch: React.FC<SwitchProps> = ({
         <span
           className={`
             inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform duration-200 ease-in-out
-            ${checked ? 'translate-x-6' : 'translate-x-1'}
+            ${checked ? '-translate-x-6' : 'translate-x-1'}
           `}
         />
       </button>

@@ -8,6 +8,8 @@ import { ModelSelector } from '../components/translation/ModelSelector/ModelSele
 import { AIModel, AI_MODELS } from '../models/AIModel';
 import { Toast } from '../components/ui/Toast/Toast';
 import { OllamaGuideModal } from '../components/ui/OllamaGuideModal/OllamaGuideModal';
+import { ShortcutBuilder } from '../components/ui/ShortcutBuilder/ShortcutBuilder';
+import { Switch } from '../components/ui/Switch/Switch';
 
 interface SettingsPageProps {
   onBack?: () => void;
@@ -36,14 +38,25 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onBack }) => {
     }
   };
 
-  const handleChange = (field: keyof AppSettings, value: string | number | AIModel | { width: number; height: number }) => {
+  const handleChange = (field: keyof AppSettings, value: string | number | boolean | AIModel | { width: number; height: number }) => {
     if (!formData) return;
     
-    if (field === 'windowSize' && typeof value === 'object') {
+    if (field === 'windowSize' && typeof value === 'object' && 'width' in value) {
       setFormData({ ...formData, windowSize: value });
     } else {
       setFormData({ ...formData, [field]: value });
     }
+  };
+
+  const handleShortcutChange = (shortcutKey: keyof AppSettings['shortcuts'], value: string) => {
+    if (!formData) return;
+    setFormData({
+      ...formData,
+      shortcuts: {
+        ...formData.shortcuts,
+        [shortcutKey]: value,
+      },
+    });
   };
 
   const handleSave = async () => {
@@ -55,7 +68,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onBack }) => {
     try {
       const response = await window.electronAPI.saveSettings(formData);
       if (response.success) {
-        setToast({ message: 'تنظیمات با موفقیت ذخیره شد. لطفاً برنامه را مجدداً راه‌اندازی کنید.', type: 'success' });
+        setToast({ message: 'تنظیمات با موفقیت ذخیره شد. کلیدهای میانبر به‌صورت خودکار اعمال شدند.', type: 'success' });
         // Reload settings after save
         await loadSettings();
       } else {
@@ -103,22 +116,34 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onBack }) => {
                   تنظیمات از فایل .env خوانده می‌شوند
                 </p>
                 <p className="text-xs text-blue-600 dark:text-blue-300 mt-1">
-                  می‌توانید تنظیمات را در اینجا تغییر دهید و با دکمه ذخیره در فایل .env ذخیره کنید. پس از ذخیره، برنامه را مجدداً راه‌اندازی کنید.
+                  می‌توانید تنظیمات را در اینجا تغییر دهید و با دکمه ذخیره در فایل .env ذخیره کنید. کلیدهای میانبر به‌صورت خودکار اعمال می‌شوند. برای سایر تنظیمات ممکن است نیاز به راه‌اندازی مجدد باشد.
                 </p>
               </div>
             </div>
           </div>
 
           {/* Model Selection */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              مدل هوش مصنوعی
-            </label>
-            <ModelSelector
-              selectedModel={formData.selectedModel}
-              onModelChange={(model) => handleChange('selectedModel', model)}
-              disabled={false}
-            />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                مدل هوش مصنوعی
+              </label>
+              <ModelSelector
+                selectedModel={formData.selectedModel}
+                onModelChange={(model) => handleChange('selectedModel', model)}
+                disabled={false}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                مدل جایگزین
+              </label>
+              <ModelSelector
+                selectedModel={formData.fallbackSelectedModel}
+                onModelChange={(model) => handleChange('fallbackSelectedModel', model)}
+                disabled={false}
+              />
+            </div>
           </div>
 
           {/* AI Provider URL */}
@@ -148,9 +173,11 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onBack }) => {
 
           {/* OpenRouter Configuration */}
           <div className="border-t border-gray-200 dark:border-gray-700 pt-6">
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-              تنظیمات OpenRouter
-            </h2>
+            <div className="mb-4">
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+                تنظیمات OpenRouter
+              </h2>
+            </div>
 
             <div className="space-y-4">
               <Input
@@ -266,6 +293,104 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onBack }) => {
                   disabled={false}
                 />
               </div>
+            </div>
+          </div>
+
+          {/* Keyboard Shortcuts Configuration */}
+          <div className="border-t border-gray-200 dark:border-gray-700 pt-6">
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+              کلیدهای میانبر
+            </h2>
+
+            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-4">
+              <p className="text-sm text-blue-800 dark:text-blue-200">
+                <strong>راهنما:</strong> برای هر کلید میانبر، می‌توانید حداکثر 4 کلید modifier (Alt, Ctrl, Shift, Cmd) و یک کلید اصلی انتخاب کنید.
+                <br />
+                <strong>نکته:</strong> انتخاب modifierها اختیاری است. می‌توانید فقط با یک کلید اصلی یا ترکیب modifier + کلید اصلی، کلید میانبر بسازید.
+              </p>
+            </div>
+
+            <div className="space-y-6">
+              <ShortcutBuilder
+                label="فارسی به انگلیسی"
+                value={formData.shortcuts.persianToEnglish}
+                onChange={(value) => handleShortcutChange('persianToEnglish', value)}
+              />
+
+              <ShortcutBuilder
+                label="انگلیسی به فارسی"
+                value={formData.shortcuts.englishToPersian}
+                onChange={(value) => handleShortcutChange('englishToPersian', value)}
+              />
+
+              <ShortcutBuilder
+                label="اصلاح گرامر"
+                value={formData.shortcuts.grammar}
+                onChange={(value) => handleShortcutChange('grammar', value)}
+              />
+
+              <ShortcutBuilder
+                label="جوابش چی میشه؟"
+                value={formData.shortcuts.responseSuggestions}
+                onChange={(value) => handleShortcutChange('responseSuggestions', value)}
+              />
+
+              <ShortcutBuilder
+                label="پردازش (مدل اصلی)"
+                value={formData.shortcuts.processMain}
+                onChange={(value) => handleShortcutChange('processMain', value)}
+              />
+
+              <ShortcutBuilder
+                label="پردازش (مدل جایگزین)"
+                value={formData.shortcuts.processFallback}
+                onChange={(value) => handleShortcutChange('processFallback', value)}
+              />
+
+              <ShortcutBuilder
+                label="ترجمه سریع"
+                value={formData.shortcuts.processQuickTranslate}
+                onChange={(value) => handleShortcutChange('processQuickTranslate', value)}
+              />
+
+              <ShortcutBuilder
+                label="افزودن به علاقه‌مندی‌ها"
+                value={formData.shortcuts.addBookmark}
+                onChange={(value) => handleShortcutChange('addBookmark', value)}
+              />
+            </div>
+          </div>
+
+          {/* Quick Translate Configuration */}
+          <div className="border-t border-gray-200 dark:border-gray-700 pt-6">
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+              ترجمه سریع
+            </h2>
+
+            <div className="space-y-4">
+              <Switch
+                label="فعال‌سازی ترجمه سریع"
+                checked={formData.quickTranslateEnabled}
+                onChange={(checked: boolean) => handleChange('quickTranslateEnabled', checked)}
+              />
+
+              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-4">
+                <p className="text-sm text-blue-800 dark:text-blue-200">
+                  <strong>راهنما:</strong> با فعال‌سازی این قابلیت، با انتخاب متن انگلیسی در برنامه، یک باکس شیشه‌ای کنار موس نمایش داده می‌شود که متن را به فارسی ترجمه می‌کند.
+                </p>
+              </div>
+
+              <Input
+                label="زمان بسته شدن خودکار (ثانیه)"
+                type="number"
+                min="0"
+                max="60"
+                value={formData.quickTranslateTimeout}
+                onChange={(e) => handleChange('quickTranslateTimeout', parseInt(e.target.value, 10))}
+                placeholder="5"
+                disabled={!formData.quickTranslateEnabled}
+                helperText="0 = بسته نشدن خودکار"
+              />
             </div>
           </div>
 

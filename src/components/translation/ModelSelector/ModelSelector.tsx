@@ -7,6 +7,7 @@ interface ModelSelectorProps {
   onModelChange: (model: AIModel) => void;
   className?: string;
   disabled?: boolean;
+  label?: string;
 }
 
 export const ModelSelector: React.FC<ModelSelectorProps> = ({
@@ -14,6 +15,7 @@ export const ModelSelector: React.FC<ModelSelectorProps> = ({
   onModelChange,
   className = '',
   disabled = false,
+  label = 'مدل هوش مصنوعی',
 }) => {
   const options = AI_MODELS.map((model) => ({
     key: model.key,
@@ -23,7 +25,7 @@ export const ModelSelector: React.FC<ModelSelectorProps> = ({
 
   return (
     <Select
-      label="مدل هوش مصنوعی"
+      label={label}
       options={options}
       value={selectedModel}
       onChange={(e) => onModelChange(e.target.value as AIModel)}

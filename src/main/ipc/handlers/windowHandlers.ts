@@ -41,5 +41,11 @@ export function registerWindowHandlers(): void {
   ipcMain.handle('ai-provider:check', handleIPC((_event: IpcMainInvokeEvent, url: string) => {
     return checkAIProviderConnection(url);
   }));
+
+  ipcMain.handle('window:openDevTools', handleIPCSync(() => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.openDevTools();
+    }
+  }));
 }
 

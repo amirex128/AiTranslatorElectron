@@ -35,6 +35,7 @@ class AIChatService {
       maxRetries = this.defaultMaxRetries,
       abortSignal,
       onProgress,
+      skipValidation = false,
     } = options;
 
     // Retry logic
@@ -53,7 +54,8 @@ class AIChatService {
             request,
             timeout,
             abortSignal,
-            onProgress
+            onProgress,
+            skipValidation
           );
         } else {
           const aiProviderUrl = request.aiProviderUrl || this.config.aiProviderUrl;
@@ -63,7 +65,8 @@ class AIChatService {
             request,
             timeout,
             abortSignal,
-            onProgress
+            onProgress,
+            skipValidation
           );
         }
 
@@ -330,7 +333,8 @@ class AIChatService {
     request: AIChatRequest,
     timeout: number,
     abortSignal?: AbortSignal,
-    onProgress?: (progress: number) => void
+    onProgress?: (progress: number) => void,
+    skipValidation: boolean = false
   ): Promise<TranslationResult | null> {
     return new Promise((resolve, reject) => {
       const timeoutId = setTimeout(() => {
@@ -379,15 +383,24 @@ class AIChatService {
             if (jsonMatch) {
               const jsonStr = jsonMatch[0];
               const parsed = JSON.parse(jsonStr);
-              const validated = validateTranslationResult(parsed);
-
-              if (validated) {
+              
+              if (skipValidation) {
+                // Return raw parsed JSON without validation
                 if (onProgress) {
                   onProgress(100);
                 }
-                resolve(validated);
+                resolve(parsed as TranslationResult);
               } else {
-                reject(new Error('Invalid JSON structure'));
+                const validated = validateTranslationResult(parsed);
+
+                if (validated) {
+                  if (onProgress) {
+                    onProgress(100);
+                  }
+                  resolve(validated);
+                } else {
+                  reject(new Error('Invalid JSON structure'));
+                }
               }
             } else {
               reject(new Error('No JSON found in response'));
@@ -408,7 +421,8 @@ class AIChatService {
     request: AIChatRequest,
     timeout: number,
     abortSignal?: AbortSignal,
-    onProgress?: (progress: number) => void
+    onProgress?: (progress: number) => void,
+    skipValidation: boolean = false
   ): Promise<TranslationResult | null> {
     return new Promise((resolve, reject) => {
       const timeoutId = setTimeout(() => {

@@ -4,6 +4,7 @@ import { TranslationResult } from '../utils/validation';
 import { GrammarTeachingResult } from '../services/ai/AIChatService';
 import { AIModel } from '../models/AIModel';
 import { AppSettings } from './settings';
+import { ResponseSuggestionsResult } from './responseSuggestions';
 
 interface TranslationParams {
   text: string;
@@ -12,10 +13,11 @@ interface TranslationParams {
 
 interface HistoryEntry {
   input: string;
-  type: 'persian-to-english' | 'english-to-persian' | 'grammar' | 'grammar-teaching';
+  type: 'persian-to-english' | 'english-to-persian' | 'grammar' | 'grammar-teaching' | 'response-suggestions';
   model: AIModel;
-  result: TranslationResult | null; // null for grammar-teaching
+  result: TranslationResult | null; // null for grammar-teaching and response-suggestions
   grammarTeachingResult?: GrammarTeachingResult; // Only for grammar-teaching type
+  responseSuggestionsResult?: ResponseSuggestionsResult; // Only for response-suggestions type
   responseTime?: number;
 }
 
@@ -30,8 +32,8 @@ interface TTSAudioData {
 }
 
 export interface ElectronAPI {
-  readClipboard: () => Promise<string>;
-  writeClipboard: (text: string) => Promise<boolean>;
+  readClipboard: () => Promise<IPCResponse<string>>;
+  writeClipboard: (text: string) => Promise<IPCResponse<boolean>>;
   minimize: () => Promise<void>;
   maximize: () => Promise<void>;
   restore: () => Promise<void>;
@@ -45,6 +47,7 @@ export interface ElectronAPI {
   translateEnglishToPersian: (params: TranslationParams) => Promise<IPCResponse<TranslatorResponse>>;
   translateGrammar: (params: TranslationParams) => Promise<IPCResponse<TranslatorResponse>>;
   translateGrammarTeaching: (params: TranslationParams) => Promise<IPCResponse<{ result: GrammarTeachingResult }>>;
+  translateResponseSuggestions: (params: TranslationParams) => Promise<IPCResponse<{ result: ResponseSuggestionsResult }>>;
   fetchTTSAudio: (url: string) => Promise<IPCResponse<TTSAudioData>>;
   getAllHistory: () => Promise<IPCResponse<HistoryEntryWithId[]>>;
   addHistory: (entry: HistoryEntry) => Promise<IPCResponse<void>>;
@@ -52,8 +55,47 @@ export interface ElectronAPI {
   clearHistory: () => Promise<IPCResponse<void>>;
   getSettings: () => Promise<IPCResponse<AppSettings>>;
   saveSettings: (settings: AppSettings) => Promise<IPCResponse<void>>;
+  openSettings: () => void;
+  openAbout: () => void;
+  clearHistoryWithConfirmation: () => Promise<IPCResponse<{ confirmed: boolean }>>;
+  openDevTools: () => Promise<void>;
   onSettingsOpenPage: (callback: () => void) => void;
   onAboutOpenPage: (callback: () => void) => void;
+  isSpeechRecognitionAvailable: () => Promise<IPCResponse<boolean>>;
+  startSpeechRecognition: () => Promise<IPCResponse<{ success: boolean }>>;
+  stopSpeechRecognition: () => Promise<IPCResponse<{ success: boolean }>>;
+  getSpeechRecognitionStatus: () => Promise<IPCResponse<{ isListening: boolean }>>;
+  onSpeechStatus: (callback: (status: { isListening: boolean }) => void) => void;
+  quickTranslateGetCached: (englishText: string) => Promise<IPCResponse<string | null>>;
+  quickTranslateSaveCached: (englishText: string, persianTranslation: string) => Promise<IPCResponse<boolean>>;
+  quickTranslateTranslate: (englishText: string) => Promise<IPCResponse<string>>;
+  getAllBookmarks: (filters?: {
+    searchQuery?: string;
+    sortBy?: 'date' | 'alphabet' | 'readCount';
+    sortOrder?: 'asc' | 'desc';
+    page?: number;
+    pageSize?: number;
+  }) => Promise<IPCResponse<{
+    bookmarks: import('../main/database/BookmarkService').Bookmark[];
+    total: number;
+    page: number;
+    pageSize: number;
+    totalPages: number;
+  }>>;
+  checkBookmark: (englishText: string) => Promise<IPCResponse<import('../main/database/BookmarkService').Bookmark | null>>;
+  addBookmark: (englishText: string) => Promise<IPCResponse<import('../main/database/BookmarkService').Bookmark>>;
+  removeBookmark: (id: string) => Promise<IPCResponse<boolean>>;
+  updateBookmark: (id: string, updates: Partial<import('../main/database/BookmarkService').Bookmark>) => Promise<IPCResponse<import('../main/database/BookmarkService').Bookmark | null>>;
+  translateBookmarkMain: (id: string) => Promise<IPCResponse<import('../main/database/BookmarkService').Bookmark | null>>;
+  translateBookmarkFallback: (id: string) => Promise<IPCResponse<import('../main/database/BookmarkService').Bookmark | null>>;
+  translateBookmarkQuick: (id: string) => Promise<IPCResponse<import('../main/database/BookmarkService').Bookmark | null>>;
+  incrementBookmarkReadCount: (id: string) => Promise<IPCResponse<import('../main/database/BookmarkService').Bookmark | null>>;
+  resetBookmarkReadCount: (id: string) => Promise<IPCResponse<import('../main/database/BookmarkService').Bookmark | null>>;
+  generateBookmarkMainExamples: (id: string) => Promise<IPCResponse<import('../main/database/BookmarkService').Bookmark | null>>;
+  generateBookmarkFallbackExamples: (id: string) => Promise<IPCResponse<import('../main/database/BookmarkService').Bookmark | null>>;
+  exportData: () => Promise<IPCResponse<{ success: boolean; filePath?: string; canceled?: boolean }>>;
+  importData: () => Promise<IPCResponse<{ success: boolean; canceled?: boolean }>>;
+  onDataImported: (callback: () => void) => void;
 }
 
 declare global {

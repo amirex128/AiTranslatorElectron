@@ -1,7 +1,7 @@
 // Load environment variables first, before any other imports
 import dotenv from 'dotenv';
 import { join } from 'path';
-import { existsSync } from 'fs';
+import { existsSync, copyFileSync } from 'fs';
 
 // Get .env file path and load it
 // In development, this will find .env in project root
@@ -9,12 +9,12 @@ import { existsSync } from 'fs';
 // NOTE: This must run BEFORE importing APP_CONFIG, which reads from process.env
 function loadEnvFile(): void {
   let envPath: string;
-  
+
   try {
     // Check if app is available (might not be in early initialization)
     let appPath: string;
     let isPackaged = false;
-    
+
     try {
       const { app } = require('electron');
       appPath = app.getAppPath();
@@ -25,14 +25,14 @@ function loadEnvFile(): void {
       // Try to detect if packaged by checking for .asar in path
       isPackaged = process.execPath.includes('.asar') || process.execPath.includes('app.asar');
     }
-    
+
     if (isPackaged) {
       // In production, check multiple locations
       // 1. Executable directory (most common for portable apps)
       const execPath = process.execPath;
       const execDir = require('path').dirname(execPath);
       const execEnvPath = join(execDir, '.env');
-      
+
       // 2. UserData directory (writable location)
       let userDataEnvPath: string | null = null;
       try {
@@ -42,7 +42,7 @@ function loadEnvFile(): void {
       } catch (error) {
         // App not ready, skip userData
       }
-      
+
       // Prefer executable directory (where user likely placed .env)
       if (existsSync(execEnvPath)) {
         envPath = execEnvPath;
@@ -51,14 +51,105 @@ function loadEnvFile(): void {
         envPath = userDataEnvPath;
         console.log('[Main] Loading .env from userData:', envPath);
       } else {
-        // Default to executable directory (will create if needed)
-        envPath = execEnvPath;
-        console.log('[Main] .env not found, will use executable directory:', envPath);
+        // .env not found, try to create from .env.example
+        // Try multiple locations for .env.example
+        let envExamplePath: string | null = null;
+
+        // 1. Try executable directory first
+        const execEnvExamplePath = join(execDir, '.env.example');
+        if (existsSync(execEnvExamplePath)) {
+          envExamplePath = execEnvExamplePath;
+        } else {
+          // 2. Try app.asar.unpacked (where forge copies it)
+          try {
+            const { app } = require('electron');
+            const appPath = app.getAppPath();
+            const unpackedPath = appPath.replace('app.asar', 'app.asar.unpacked');
+            const unpackedEnvExamplePath = join(unpackedPath, '.env.example');
+            if (existsSync(unpackedEnvExamplePath)) {
+              envExamplePath = unpackedEnvExamplePath;
+            }
+          } catch (error) {
+            // App not ready, skip
+          }
+
+          // 3. Try resources directory
+          if (!envExamplePath) {
+            try {
+              const { app } = require('electron');
+              const appPath = app.getAppPath();
+              const resourcesPath = join(appPath, '..', '..', 'resources');
+              const resourcesEnvExamplePath = join(resourcesPath, 'app.asar.unpacked', '.env.example');
+              if (existsSync(resourcesEnvExamplePath)) {
+                envExamplePath = resourcesEnvExamplePath;
+              }
+            } catch (error) {
+              // App not ready, skip
+            }
+          }
+
+          // 4. Last resort: Try to run the copy script if .env.example exists in project root
+          // This is a fallback in case postmake didn't run
+          if (!envExamplePath) {
+            try {
+              // Try to find project root by going up from executable
+              let searchDir = execDir;
+              for (let i = 0; i < 10; i++) {
+                const projectRootEnvExample = join(searchDir, '.env.example');
+                if (existsSync(projectRootEnvExample)) {
+                  // Found project root, copy to executable directory
+                  console.log('[Main] Found .env.example in project root, copying to executable directory...');
+                  copyFileSync(projectRootEnvExample, execEnvExamplePath);
+                  envExamplePath = execEnvExamplePath;
+                  break;
+                }
+                const parentDir = join(searchDir, '..');
+                if (parentDir === searchDir) break; // Reached root
+                searchDir = parentDir;
+              }
+            } catch (error) {
+              // Ignore errors in fallback
+            }
+          }
+        }
+
+        if (envExamplePath) {
+          console.log('[Main] .env not found, creating from .env.example...');
+          console.log('[Main] Found .env.example at:', envExamplePath);
+          console.log('[Main] Executable directory:', execDir);
+          console.log('[Main] Target .env path:', execEnvPath);
+          try {
+            copyFileSync(envExamplePath, execEnvPath);
+            console.log('[Main] Successfully created .env from .env.example at:', execEnvPath);
+            console.log('[Main] Verifying .env file exists:', existsSync(execEnvPath));
+            envPath = execEnvPath;
+          } catch (error) {
+            console.error('[Main] Error creating .env from .env.example:', error);
+            // Fallback to executable directory anyway
+            envPath = execEnvPath;
+          }
+        } else {
+          // Default to executable directory (will create if needed)
+          envPath = execEnvPath;
+          console.log('[Main] .env not found, will use executable directory:', envPath);
+          console.log('[Main] Executable directory:', execDir);
+          console.log('[Main] Searched for .env.example in:');
+          console.log('[Main]   -', join(execDir, '.env.example'));
+          try {
+            const { app } = require('electron');
+            const appPath = app.getAppPath();
+            console.log('[Main]   -', join(appPath.replace('app.asar', 'app.asar.unpacked'), '.env.example'));
+            console.log('[Main]   -', join(appPath, '..', '..', 'resources', 'app.asar.unpacked', '.env.example'));
+          } catch (error) {
+            // App not ready, skip
+          }
+          console.log('[Main] Please create .env file or ensure .env.example exists in:', execDir);
+        }
       }
     } else {
       // In development, .env is in project root
       let projectRoot = appPath;
-      
+
       // If we're in .webpack/main, go up 3 levels
       if (appPath.includes('.webpack')) {
         projectRoot = join(appPath, '..', '..', '..');
@@ -76,18 +167,18 @@ function loadEnvFile(): void {
           currentPath = join(currentPath, '..');
         }
       }
-      
+
       envPath = join(projectRoot, '.env');
       console.log('[Main] Loading .env from project root:', envPath);
     }
-    
+
     // Load .env file
     const result = dotenv.config({ path: envPath });
     if (result.error) {
       console.warn('[Main] Warning: Could not load .env file:', result.error.message);
       console.warn('[Main] Tried path:', envPath);
       console.warn('[Main] File exists:', existsSync(envPath));
-      
+
       // Fallback: try default dotenv.config() behavior (current directory)
       const fallbackResult = dotenv.config();
       if (fallbackResult.error) {
@@ -143,6 +234,11 @@ app.on('ready', async () => {
   // Remove default menu bar
   Menu.setApplicationMenu(null);
 
+  // Set app user model ID for Windows (helps with taskbar icon)
+  if (process.platform === 'win32') {
+    app.setAppUserModelId('com.aitranslatorelectron.app');
+  }
+
   // Initialize AI services with settings from APP_CONFIG
   const settings = APP_CONFIG as AppSettings;
   const aiService = aiServiceFactory.createService(settings);
@@ -157,7 +253,7 @@ app.on('ready', async () => {
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   const windowModule = require('./main/window');
   if (windowModule.mainWindow) {
-    registerShortcuts(windowModule.mainWindow);
+    registerShortcuts(windowModule.mainWindow, APP_CONFIG.shortcuts);
   }
 
   // Health check on startup

@@ -67,10 +67,31 @@ jobs:
           }
           
           if ($zipFile -and (Test-Path $zipFile.FullName)) {
-            Write-Host "zip_file=$($zipFile.FullName)" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
-            Write-Host "zip_name=$($zipFile.Name)" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
-            Write-Host "Found ZIP file: $($zipFile.FullName)"
-            Get-Item $zipFile.FullName | Format-List
+            # Get relative path from workspace root
+            $workspaceRoot = $env:GITHUB_WORKSPACE
+            if (-not $workspaceRoot) {
+              $workspaceRoot = $PWD
+            }
+            # Normalize paths for comparison
+            $fullPath = $zipFile.FullName
+            $workspaceRootNormalized = $workspaceRoot.TrimEnd('\', '/')
+            $fullPathNormalized = $fullPath.TrimEnd('\', '/')
+            
+            if ($fullPathNormalized.StartsWith($workspaceRootNormalized)) {
+              $relativePath = $fullPathNormalized.Substring($workspaceRootNormalized.Length).TrimStart('\', '/')
+            } else {
+              # If not under workspace, use just the filename
+              $relativePath = $zipFile.Name
+            }
+            
+            # Set output using proper format for GitHub Actions
+            # GitHub Actions requires key=value format with newline
+            [System.IO.File]::AppendAllText($env:GITHUB_OUTPUT, "zip_file=$relativePath`n")
+            [System.IO.File]::AppendAllText($env:GITHUB_OUTPUT, "zip_name=$($zipFile.Name)`n")
+            Write-Host "Found ZIP file: $fullPath"
+            Write-Host "Workspace root: $workspaceRoot"
+            Write-Host "Relative path: $relativePath"
+            Write-Host "Output file path: $env:GITHUB_OUTPUT"
           } else {
             Write-Host "No ZIP file found or created"
             Write-Host "Contents of out directory:"
@@ -116,9 +137,13 @@ jobs:
           fi
           
           if [ -n "$ZIP_FILE" ] && [ -f "$ZIP_FILE" ]; then
-            echo "zip_file=$ZIP_FILE" >> $GITHUB_OUTPUT
+            # Get relative path from workspace root
+            WORKSPACE_ROOT="${GITHUB_WORKSPACE:-$(pwd)}"
+            RELATIVE_PATH="${ZIP_FILE#$WORKSPACE_ROOT/}"
+            echo "zip_file=$RELATIVE_PATH" >> $GITHUB_OUTPUT
             echo "zip_name=$(basename "$ZIP_FILE")" >> $GITHUB_OUTPUT
             echo "Found ZIP file: $ZIP_FILE"
+            echo "Relative path: $RELATIVE_PATH"
             ls -lh "$ZIP_FILE"
           else
             echo "No ZIP file found or created"
@@ -128,21 +153,25 @@ jobs:
             exit 1
           fi
 
-      - name: Set ZIP file path
-        id: set-zip-path
-        shell: bash
-        run: |
-          if [ "${{ matrix.platform }}" == "win32" ]; then
-            echo "zip_file=${{ steps.find-zip-win.outputs.zip_file }}" >> $GITHUB_OUTPUT
-          else
-            echo "zip_file=${{ steps.find-zip-unix.outputs.zip_file }}" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Upload ZIP artifact
+      - name: Upload ZIP artifact (Windows)
+        if: matrix.platform == 'win32'
         uses: actions/upload-artifact@v4
         with:
           name: aitranslatorelectron-${{ matrix.platform }}-${{ github.ref_name }}
-          path: ${{ steps.set-zip-path.outputs.zip_file }}
+          path: |
+            out/make/zip/**/*.zip
+            out/**/aitranslatorelectron-win32-*.zip
+          retention-days: 30
+          if-no-files-found: error
+
+      - name: Upload ZIP artifact (Unix)
+        if: matrix.platform != 'win32'
+        uses: actions/upload-artifact@v4
+        with:
+          name: aitranslatorelectron-${{ matrix.platform }}-${{ github.ref_name }}
+          path: |
+            out/make/zip/**/*.zip
+            out/**/aitranslatorelectron-${{ matrix.platform }}-*.zip
           retention-days: 30
           if-no-files-found: error
 
@@ -169,25 +198,47 @@ jobs:
           echo "Tag name: $TAG_NAME"
 
       - name: Create Release
-        uses: softprops/action-gh-release@v1
-        with:
-          tag_name: ${{ steps.tag.outputs.tag_name }}
-          name: Release ${{ steps.tag.outputs.tag_name }}
-          body: |
-            ## Changes in this Release
-            
-            See the [changelog](https://github.com/${{ github.repository }}/compare/${{ steps.tag.outputs.tag_name }}) for details.
-            
-            ## Downloads
-            
-            Download the appropriate build for your platform:
-            - **Windows**: `aitranslatorelectron-win32-*.zip`
-            - **macOS**: `aitranslatorelectron-darwin-*.zip`
-            - **Linux**: `aitranslatorelectron-linux-*.zip`
-          files: |
-            artifacts/**/*.zip
-          draft: false
-          prerelease: false
+        run: |
+          TAG_NAME="${{ steps.tag.outputs.tag_name }}"
+          
+          # Create release body file
+          cat > release_body.md << EOF
+          ## Changes in this Release
+          
+          See the [changelog](https://github.com/${{ github.repository }}/compare/$TAG_NAME) for details.
+          
+          ## Downloads
+          
+          Download the appropriate build for your platform:
+          - **Windows**: \`aitranslatorelectron-win32-*.zip\`
+          - **macOS**: \`aitranslatorelectron-darwin-*.zip\`
+          - **Linux**: \`aitranslatorelectron-linux-*.zip\`
+          EOF
+
+          # Find all ZIP files in artifacts directory
+          ZIP_FILES=$(find artifacts -name "*.zip" -type f 2>/dev/null || true)
+          
+          if [ -z "$ZIP_FILES" ]; then
+            echo "Error: No ZIP files found in artifacts directory"
+            echo "Contents of artifacts directory:"
+            ls -la artifacts/ || echo "artifacts directory does not exist"
+            exit 1
+          fi
+          
+          echo "Found ZIP files:"
+          echo "$ZIP_FILES"
+          
+          # Create release using GitHub CLI (gh is pre-installed in GitHub Actions runners)
+          export GITHUB_TOKEN="${{ secrets.GITHUB_TOKEN }}"
+          
+          # Use xargs to pass files to gh release create, or use array
+          # Convert newline-separated list to space-separated for gh command
+          ZIP_FILES_ARRAY=$(echo "$ZIP_FILES" | tr '\n' ' ')
+          
+          gh release create "$TAG_NAME" \
+            --title "Release $TAG_NAME" \
+            --notes-file release_body.md \
+            $ZIP_FILES_ARRAY
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

@@ -33,10 +33,31 @@ export const OllamaGuideModal: React.FC<OllamaGuideModalProps> = ({
     };
   }, [isOpen, onClose]);
 
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text).then(() => {
-      // Could show a toast here
-    });
+  const copyToClipboard = async (text: string) => {
+    // Use IPC method (Electron's clipboard API) which doesn't require permissions
+    if (typeof window !== 'undefined' && window.electronAPI) {
+      try {
+        await window.electronAPI.writeClipboard(text);
+        // Could show a toast here
+      } catch (error) {
+        console.error('Error copying to clipboard:', error);
+        // Fallback to browser API
+        if (navigator.clipboard) {
+          try {
+            await navigator.clipboard.writeText(text);
+          } catch (browserError) {
+            console.error('Error copying to clipboard via browser API:', browserError);
+          }
+        }
+      }
+    } else if (navigator.clipboard) {
+      // Fallback to browser API if IPC is not available
+      try {
+        await navigator.clipboard.writeText(text);
+      } catch (error) {
+        console.error('Error copying to clipboard:', error);
+      }
+    }
   };
 
   if (!isOpen) return null;

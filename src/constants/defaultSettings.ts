@@ -15,6 +15,7 @@ export async function getDefaultSettings(): Promise<AppSettings> {
     const { APP_CONFIG } = require('./appConfig');
     return {
       selectedModel: APP_CONFIG.selectedModel,
+      fallbackSelectedModel: APP_CONFIG.fallbackSelectedModel,
       aiProviderUrl: APP_CONFIG.aiProviderUrl,
       openRouterBaseUrl: APP_CONFIG.openRouterBaseUrl,
       openRouterApiKey1: APP_CONFIG.openRouterApiKey1,
@@ -24,6 +25,18 @@ export async function getDefaultSettings(): Promise<AppSettings> {
       temperature: APP_CONFIG.temperature,
       fontSize: APP_CONFIG.fontSize,
       windowSize: APP_CONFIG.windowSize,
+      shortcuts: {
+        persianToEnglish: APP_CONFIG.shortcuts.persianToEnglish,
+        englishToPersian: APP_CONFIG.shortcuts.englishToPersian,
+        grammar: APP_CONFIG.shortcuts.grammar,
+        responseSuggestions: APP_CONFIG.shortcuts.responseSuggestions,
+        processMain: APP_CONFIG.shortcuts.processMain,
+        processFallback: APP_CONFIG.shortcuts.processFallback,
+        processQuickTranslate: APP_CONFIG.shortcuts.processQuickTranslate,
+        addBookmark: APP_CONFIG.shortcuts.addBookmark,
+      },
+      quickTranslateEnabled: APP_CONFIG.quickTranslateEnabled,
+      quickTranslateTimeout: APP_CONFIG.quickTranslateTimeout,
     };
   } else {
     // In renderer process, get settings from main process via IPC

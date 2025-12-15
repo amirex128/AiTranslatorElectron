@@ -1,70 +1,67 @@
-import { BrowserWindow } from 'electron';
+import { BrowserWindow, nativeImage } from 'electron';
 import { APP_CONFIG } from '../constants/appConfig';
+import { getAssetPath } from './utils/assetsPath';
+import { existsSync, readFileSync } from 'fs';
 
 export let mainWindow: BrowserWindow | null = null;
 let isQuitting = false;
 
-export const createWindow = async (): Promise<void> => {
-  const windowSize = APP_CONFIG.windowSize;
-
-  // Get icon path - use same logic as tray.ts
-  const path = require('path');
-  const { app } = require('electron');
-  const { existsSync } = require('fs');
+// Shared function to load icon (used by both window and tray)
+export function loadAppIcon(): Electron.NativeImage {
+  const iconPath = getAssetPath('images.png');
+  console.log('[AppIcon] Loading icon from:', iconPath);
   
-  const isDev = !app.isPackaged;
-  let iconPath: string;
-  
-  if (isDev) {
-    // In development, use src/assets directly from project root
-    const appPath = app.getAppPath();
-    let projectRoot = appPath;
-    
-    // If we're in .webpack/main, go up 3 levels
-    if (appPath.includes('.webpack')) {
-      projectRoot = path.join(appPath, '..', '..', '..');
-    } else if (appPath.includes('src')) {
-      // If we're in src/, go up 1 level
-      projectRoot = path.join(appPath, '..');
-    } else {
-      // Try to find project root by looking for package.json
-      let currentPath = appPath;
-      for (let i = 0; i < 5; i++) {
-        if (existsSync(path.join(currentPath, 'package.json'))) {
-          projectRoot = currentPath;
-          break;
+  let icon: Electron.NativeImage;
+  try {
+    // Try to load icon even if existsSync returns false
+    // (because existsSync doesn't work for files inside asar archive)
+    // Try to load icon using createFromPath first
+    // This works even for files inside asar archive
+    try {
+      icon = nativeImage.createFromPath(iconPath);
+      // If icon is empty, try reading from buffer
+      if (icon.isEmpty()) {
+        console.warn('[AppIcon] Icon from path is empty, trying buffer method');
+        try {
+          const iconBuffer = readFileSync(iconPath);
+          icon = nativeImage.createFromBuffer(iconBuffer);
+        } catch (bufferError) {
+          console.warn('[AppIcon] Buffer read failed:', bufferError);
         }
-        currentPath = path.join(currentPath, '..');
+      }
+    } catch (pathError) {
+      // If createFromPath fails, try reading from buffer
+      console.warn('[AppIcon] createFromPath failed, trying buffer method:', pathError);
+      try {
+        const iconBuffer = readFileSync(iconPath);
+        icon = nativeImage.createFromBuffer(iconBuffer);
+      } catch (bufferError) {
+        console.error('[AppIcon] Both createFromPath and createFromBuffer failed:', bufferError);
+        icon = nativeImage.createEmpty();
       }
     }
     
-    iconPath = path.join(projectRoot, 'src', 'assets', 'images.png');
-  } else {
-    // In production, assets are unpacked from asar
-    const appPath = app.getAppPath();
-    
-    // Try app.asar.unpacked first (where unpacked files go)
-    const unpackedPath = appPath.replace('app.asar', 'app.asar.unpacked');
-    iconPath = path.join(unpackedPath, 'src', 'assets', 'images.png');
-    
-    // If unpacked path doesn't exist, try resources/app/src/assets
-    if (!existsSync(iconPath)) {
-      const resourcesPath = path.join(appPath, '..', '..', 'resources');
-      iconPath = path.join(resourcesPath, 'app', 'src', 'assets', 'images.png');
+    // If icon is still empty, create a fallback
+    if (icon.isEmpty()) {
+      console.warn('[AppIcon] Icon file is empty or not found at:', iconPath);
+      icon = nativeImage.createEmpty();
+    } else {
+      console.log('[AppIcon] Icon loaded successfully, size:', icon.getSize());
     }
-    
-    // Fallback: try process.resourcesPath
-    if (!existsSync(iconPath) && process.resourcesPath) {
-      iconPath = path.join(process.resourcesPath, 'app', 'src', 'assets', 'images.png');
-    }
-    
-    // Last fallback: try app path directly
-    if (!existsSync(iconPath)) {
-      iconPath = path.join(appPath, 'src', 'assets', 'images.png');
-    }
+  } catch (error) {
+    console.error('[AppIcon] Error loading icon:', error);
+    icon = nativeImage.createEmpty();
   }
   
-  console.log('[Window] Loading icon from:', iconPath);
+  return icon;
+}
+
+export const createWindow = async (): Promise<void> => {
+  const windowSize = APP_CONFIG.windowSize;
+
+  // Load icon using shared function (same as tray)
+  const windowIcon = loadAppIcon();
+  const iconPath = getAssetPath('images.png');
 
   mainWindow = new BrowserWindow({
     width: windowSize.width,
@@ -73,7 +70,8 @@ export const createWindow = async (): Promise<void> => {
     minHeight: 400,
     frame: false, // Remove default title bar
     titleBarStyle: 'hidden',
-    icon: iconPath, // Set window icon
+    // For Windows, use icon path directly (more reliable than NativeImage)
+    icon: process.platform === 'win32' ? iconPath : windowIcon,
     maximizable: true, // Enable maximize button
     minimizable: true, // Enable minimize button
     closable: true, // Enable close button
@@ -90,15 +88,42 @@ export const createWindow = async (): Promise<void> => {
 
   // Set basic CSP for security (TTS is handled via IPC, no need for Google TTS CSP)
   const session = mainWindow.webContents.session;
+  
+  // Handle permissions for various features
+  session.setPermissionRequestHandler((webContents, permission, callback) => {
+    // Allow media (microphone) access for speech recognition
+    if (permission === 'media') {
+      callback(true);
+    }
+    // Note: Clipboard access via Electron's IPC API doesn't require permissions
+    // The browser API fallback in our code will handle permission errors gracefully
+    else {
+      callback(false);
+    }
+  });
+
   session.webRequest.onHeadersReceived((details, callback) => {
-    const cspHeader = 
-      "default-src 'self' 'unsafe-inline' 'unsafe-eval' data:; " +
-      "media-src 'self' blob: data:; " +
-      "connect-src 'self' ws://localhost:* ws://0.0.0.0:* http://localhost:* http://0.0.0.0:*; " +
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval'; " +
-      "style-src 'self' 'unsafe-inline'; " +
-      "img-src 'self' data: https:; " +
-      "font-src 'self' data:;";
+    // In development, we need 'unsafe-eval' for webpack HMR
+    // In production, this warning won't appear as mentioned in Electron docs
+    const isDev = !require('electron').app.isPackaged;
+    
+    const cspHeader = isDev
+      ? // Development CSP (allows webpack HMR)
+        "default-src 'self' 'unsafe-inline' 'unsafe-eval' data:; " +
+        "media-src 'self' blob: data: https:; " +
+        "connect-src 'self' ws://localhost:* ws://0.0.0.0:* http://localhost:* http://0.0.0.0:* https://www.google.com https://speech.googleapis.com; " +
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval'; " +
+        "style-src 'self' 'unsafe-inline'; " +
+        "img-src 'self' data: https:; " +
+        "font-src 'self' data:;"
+      : // Production CSP (more restrictive, no unsafe-eval)
+        "default-src 'self' 'unsafe-inline' data:; " +
+        "media-src 'self' blob: data: https:; " +
+        "connect-src 'self' https://www.google.com https://speech.googleapis.com https://api.openrouter.ai; " +
+        "script-src 'self' 'unsafe-inline'; " +
+        "style-src 'self' 'unsafe-inline'; " +
+        "img-src 'self' data: https:; " +
+        "font-src 'self' data:;";
 
     const responseHeaders: Record<string, string | string[]> = {
       ...details.responseHeaders,
@@ -113,8 +138,34 @@ export const createWindow = async (): Promise<void> => {
 
   mainWindow.loadURL(MAIN_WINDOW_WEBPACK_ENTRY);
 
+  // Set icon again after window is created (for Windows taskbar)
+  // This ensures the icon is properly displayed in the taskbar
+  if (process.platform === 'win32') {
+    // Try both path and NativeImage for Windows
+    try {
+      mainWindow.setIcon(iconPath);
+      console.log('[Window] Icon set for Windows taskbar using path:', iconPath);
+    } catch (error) {
+      console.warn('[Window] Failed to set icon using path, trying NativeImage:', error);
+      if (!windowIcon.isEmpty()) {
+        mainWindow.setIcon(windowIcon);
+        console.log('[Window] Icon set for Windows taskbar using NativeImage');
+      }
+    }
+  }
+
   mainWindow.once('ready-to-show', () => {
     mainWindow?.show();
+    // Set icon again after window is shown (for Windows taskbar)
+    if (process.platform === 'win32') {
+      try {
+        mainWindow?.setIcon(iconPath);
+      } catch (error) {
+        if (!windowIcon.isEmpty()) {
+          mainWindow?.setIcon(windowIcon);
+        }
+      }
+    }
   });
 
   // Prevent window from closing, minimize to tray instead

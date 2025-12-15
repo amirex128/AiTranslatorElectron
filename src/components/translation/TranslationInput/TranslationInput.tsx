@@ -13,6 +13,8 @@ interface TranslationInputProps {
   className?: string;
   historyEntries?: HistoryEntry[];
   onSelectHistoryEntry?: (entry: HistoryEntry) => void;
+  dir?: 'ltr' | 'rtl' | 'auto';
+  shortcut?: string;
 }
 
 export const TranslationInput: React.FC<TranslationInputProps> = ({
@@ -24,12 +26,17 @@ export const TranslationInput: React.FC<TranslationInputProps> = ({
   className = '',
   historyEntries = [],
   onSelectHistoryEntry,
+  dir = 'rtl',
+  shortcut,
 }) => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const undoRedoManager = useRef(new UndoRedoManager<string>());
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showAutocomplete, setShowAutocomplete] = useState(false);
   const autocompleteRef = useRef<HTMLDivElement>(null);
+  const [isListening, setIsListening] = useState(false);
+  const recognitionRef = useRef<any>(null);
+  const speechStatusListenerRef = useRef<((status: { isListening: boolean }) => void) | null>(null);
 
   useEffect(() => {
     if (autoFocus && textareaRef.current) {
@@ -108,13 +115,154 @@ export const TranslationInput: React.FC<TranslationInputProps> = ({
     }
   };
 
+  // Format shortcut for display (replace + with space for better readability)
+  const formatShortcut = (shortcut: string): string => {
+    return shortcut.replace(/\+/g, ' + ');
+  };
+
+  // Speech Recognition handlers
+  const handleMicrophoneClick = async () => {
+    if (isListening) {
+      // Stop recognition
+      if (recognitionRef.current) {
+        recognitionRef.current.stop();
+        recognitionRef.current = null;
+      }
+      if (typeof window !== 'undefined' && window.electronAPI) {
+        try {
+          await window.electronAPI.stopSpeechRecognition();
+        } catch (error) {
+          console.error('Error stopping speech recognition:', error);
+        }
+      }
+      setIsListening(false);
+      return;
+    }
+
+    // Focus the textarea first to ensure text is inserted here
+    if (textareaRef.current) {
+      textareaRef.current.focus();
+    }
+
+    // Try Windows Speech Recognition first (Win+H) - works better than Web Speech API
+    // Web Speech API has network issues and requires Google services
+    if (typeof window !== 'undefined' && window.electronAPI) {
+      try {
+        const available = await window.electronAPI.isSpeechRecognitionAvailable();
+        if ('data' in available && available.data) {
+          // Focus the textarea before starting recognition
+          if (textareaRef.current) {
+            textareaRef.current.focus();
+            // Small delay to ensure focus is set
+            await new Promise(resolve => setTimeout(resolve, 150));
+          }
+          
+          await window.electronAPI.startSpeechRecognition();
+          setIsListening(true);
+          
+          // Listen for status updates
+          const statusHandler = (status: { isListening: boolean }) => {
+            setIsListening(status.isListening);
+          };
+          speechStatusListenerRef.current = statusHandler;
+          window.electronAPI.onSpeechStatus(statusHandler);
+          
+          // Show instruction to user
+          console.log('[SpeechInput] Windows Speech Recognition activated. Speak now and text will be typed into the input field.');
+          return;
+        }
+      } catch (error) {
+        console.error('Error starting Windows Speech Recognition:', error);
+        // Fall through to Web Speech API as fallback
+      }
+    }
+
+    // Fallback: Try Web Speech API (works on all platforms but may have network issues)
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      alert('تبدیل صوت به متن در دسترس نیست. لطفاً از Windows Speech Recognition (Win+H) استفاده کنید.');
+      return;
+    }
+
+    // Use Web Speech API
+    try {
+      const recognition = new SpeechRecognition();
+      recognition.continuous = false;
+      recognition.interimResults = false;
+      recognition.lang = 'en-US'; // Default to English, can be made configurable
+
+      recognition.onstart = () => {
+        setIsListening(true);
+      };
+
+      recognition.onresult = (event: any) => {
+        const transcript = event.results[0][0].transcript;
+        onChange(value + (value ? ' ' : '') + transcript);
+      };
+
+      recognition.onerror = (event: any) => {
+        console.error('Speech recognition error:', event.error);
+        setIsListening(false);
+        if (event.error === 'no-speech') {
+          // User didn't speak, just stop silently
+        } else if (event.error === 'not-allowed') {
+          alert('دسترسی به میکروفون مجاز نیست. لطفاً دسترسی را در تنظیمات فعال کنید.');
+        } else if (event.error === 'network') {
+          // Network error - suggest using Windows Speech Recognition
+          alert('خطا در اتصال به سرویس تشخیص صوت. لطفاً از Windows Speech Recognition (Win+H) استفاده کنید یا اتصال اینترنت خود را بررسی کنید.');
+        } else {
+          console.warn(`Speech recognition error: ${event.error}`);
+          // Don't show alert for minor errors
+        }
+      };
+
+      recognition.onend = () => {
+        setIsListening(false);
+        recognitionRef.current = null;
+      };
+
+      recognitionRef.current = recognition;
+      recognition.start();
+    } catch (error) {
+      console.error('Error initializing speech recognition:', error);
+      alert('خطا در شروع تبدیل صوت به متن. لطفاً از Windows Speech Recognition (Win+H) استفاده کنید.');
+    }
+  };
+
+  // Cleanup speech status listener on unmount
+  useEffect(() => {
+    return () => {
+      if (speechStatusListenerRef.current && typeof window !== 'undefined' && window.electronAPI) {
+        // Note: IPC listeners are automatically cleaned up when component unmounts
+        speechStatusListenerRef.current = null;
+      }
+      if (recognitionRef.current) {
+        recognitionRef.current.stop();
+        recognitionRef.current = null;
+      }
+    };
+  }, []);
+
   return (
     <>
       <div className="relative">
         <div className="relative">
+          {/* Custom label with badge */}
+          {label && (
+            <div className="flex items-center gap-2 mb-1">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                {label}
+              </label>
+              {shortcut && (
+                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-mono font-medium bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 dir-ltr">
+                  {formatShortcut(shortcut)}
+                </span>
+              )}
+            </div>
+          )}
           <Textarea
             ref={textareaRef}
-            label={label}
+            label={undefined}
             value={value}
             onChange={handleChange}
             onKeyDown={handleKeyDown}
@@ -126,6 +274,7 @@ export const TranslationInput: React.FC<TranslationInputProps> = ({
             placeholder={placeholder}
             rows={6}
             className={className}
+            dir={dir}
           />
           {/* Fullscreen Button - Bottom Left */}
           <button
@@ -145,6 +294,32 @@ export const TranslationInput: React.FC<TranslationInputProps> = ({
                 strokeLinejoin="round"
                 strokeWidth={2}
                 d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"
+              />
+            </svg>
+          </button>
+
+          {/* Microphone Button - Next to Fullscreen Button */}
+          <button
+            onClick={handleMicrophoneClick}
+            className={`absolute bottom-2 left-10 p-1.5 rounded-md transition-all duration-200 z-10 group ${
+              isListening
+                ? 'bg-red-500 dark:bg-red-600 text-white animate-pulse'
+                : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+            }`}
+            aria-label="تبدیل صوت به متن"
+            title="تبدیل صوت به متن"
+          >
+            <svg
+              className="w-4 h-4 group-hover:scale-110 transition-transform"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"
               />
             </svg>
           </button>
@@ -186,6 +361,12 @@ export const TranslationInput: React.FC<TranslationInputProps> = ({
                   } else {
                     englishText = entry.input;
                   }
+                } else if (entry.type === 'response-suggestions') {
+                  // Input is English, responseSuggestionsResult has suggestions
+                  englishText = entry.input;
+                  if (entry.responseSuggestionsResult && entry.responseSuggestionsResult.suggestions.length > 0) {
+                    persianText = entry.responseSuggestionsResult.suggestions[0].responseFa || '';
+                  }
                 }
                 
                 // Get type label
@@ -194,6 +375,7 @@ export const TranslationInput: React.FC<TranslationInputProps> = ({
                   if (entry.type === 'english-to-persian') return 'انگلیسی به فارسی';
                   if (entry.type === 'grammar') return 'اصلاح گرامر';
                   if (entry.type === 'grammar-teaching') return 'آموزش گرامر';
+                  if (entry.type === 'response-suggestions') return 'پیشنهاد پاسخ';
                   return '';
                 };
 
@@ -237,6 +419,7 @@ export const TranslationInput: React.FC<TranslationInputProps> = ({
         onChange={onChange}
         label={label}
         placeholder={placeholder}
+        dir={dir}
       />
     </>
   );
