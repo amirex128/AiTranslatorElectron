@@ -7,7 +7,6 @@ import { GrammarTeachingResultComponent } from '../components/grammar/GrammarTea
 import { ResponseSuggestionsResult } from '../components/response/ResponseSuggestionsResult/ResponseSuggestionsResult';
 import { ModelSelector } from '../components/translation/ModelSelector/ModelSelector';
 import { Button } from '../components/ui/Button/Button';
-import { Tabs, TabItem } from '../components/ui/Tabs/Tabs';
 import { ErrorDisplay } from '../components/ui/ErrorDisplay/ErrorDisplay';
 import { Toast } from '../components/ui/Toast/Toast';
 import { HistoryPanel } from '../components/history/HistoryPanel/HistoryPanel';
@@ -722,9 +721,6 @@ export const MainPage: React.FC<MainPageProps> = ({ onOpenSettings }) => {
     };
   }, [handleKeyDown]);
 
-  // Prepare tabs for results - only for grammar and response suggestions
-  const resultTabs: TabItem[] = [];
-  
   // Get the most recent translation result (fallback > quick > main > results)
   const displayResult = fallbackResults || quickTranslateResults || mainResults || results;
   const displaySelected = fallbackResults 
@@ -741,44 +737,6 @@ export const MainPage: React.FC<MainPageProps> = ({ onOpenSettings }) => {
     : mainResults 
     ? setSelectedMainResult 
     : setSelectedResult;
-  
-  // Only add grammar and response suggestions to tabs, translation results are displayed directly
-  if (grammarTeachingResult && !responseSuggestionsResult) {
-    resultTabs.push({
-      id: 'grammar',
-      label: 'آموزش گرامر',
-      icon: (
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-        </svg>
-      ),
-      content: (
-        <GrammarTeachingResultComponent
-          result={grammarTeachingResult}
-          onCopy={handleCopy}
-          fontSize={settings?.fontSize || 16}
-        />
-      ),
-    });
-  }
-  if (responseSuggestionsResult) {
-    resultTabs.push({
-      id: 'response-suggestions',
-      label: 'پیشنهادات پاسخ',
-      icon: (
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
-        </svg>
-      ),
-      content: (
-        <ResponseSuggestionsResult
-          result={responseSuggestionsResult}
-          onCopy={handleCopy}
-          fontSize={settings?.fontSize || 16}
-        />
-      ),
-    });
-  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 dark:from-blue-900 dark:via-purple-900 dark:to-pink-900 p-4 md:p-6">
@@ -1026,10 +984,25 @@ export const MainPage: React.FC<MainPageProps> = ({ onOpenSettings }) => {
           </div>
         )}
 
-        {/* Results with Tabs - Only for grammar and response suggestions */}
-        {resultTabs.length > 0 && (
+        {/* Grammar Results - Display directly without outer tab */}
+        {grammarTeachingResult && !responseSuggestionsResult && (
           <div className="backdrop-blur-lg bg-white/10 dark:bg-gray-900/20 rounded-2xl p-6 shadow-xl border border-white/20 dark:border-gray-700/30 animate-fade-in">
-            <Tabs items={resultTabs} />
+            <GrammarTeachingResultComponent
+              result={grammarTeachingResult}
+              onCopy={handleCopy}
+              fontSize={settings?.fontSize || 16}
+            />
+          </div>
+        )}
+
+        {/* Response Suggestions Results - Display directly without outer tab */}
+        {responseSuggestionsResult && (
+          <div className="backdrop-blur-lg bg-white/10 dark:bg-gray-900/20 rounded-2xl p-6 shadow-xl border border-white/20 dark:border-gray-700/30 animate-fade-in">
+            <ResponseSuggestionsResult
+              result={responseSuggestionsResult}
+              onCopy={handleCopy}
+              fontSize={settings?.fontSize || 16}
+            />
           </div>
         )}
 
