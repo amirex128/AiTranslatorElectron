@@ -9,12 +9,12 @@ import { existsSync, copyFileSync } from 'fs';
 // NOTE: This must run BEFORE importing APP_CONFIG, which reads from process.env
 function loadEnvFile(): void {
   let envPath: string;
-  
+
   try {
     // Check if app is available (might not be in early initialization)
     let appPath: string;
     let isPackaged = false;
-    
+
     try {
       const { app } = require('electron');
       appPath = app.getAppPath();
@@ -25,14 +25,14 @@ function loadEnvFile(): void {
       // Try to detect if packaged by checking for .asar in path
       isPackaged = process.execPath.includes('.asar') || process.execPath.includes('app.asar');
     }
-    
+
     if (isPackaged) {
       // In production, check multiple locations
       // 1. Executable directory (most common for portable apps)
       const execPath = process.execPath;
       const execDir = require('path').dirname(execPath);
       const execEnvPath = join(execDir, '.env');
-      
+
       // 2. UserData directory (writable location)
       let userDataEnvPath: string | null = null;
       try {
@@ -42,7 +42,7 @@ function loadEnvFile(): void {
       } catch (error) {
         // App not ready, skip userData
       }
-      
+
       // Prefer executable directory (where user likely placed .env)
       if (existsSync(execEnvPath)) {
         envPath = execEnvPath;
@@ -54,7 +54,7 @@ function loadEnvFile(): void {
         // .env not found, try to create from .env.example
         // Try multiple locations for .env.example
         let envExamplePath: string | null = null;
-        
+
         // 1. Try executable directory first
         const execEnvExamplePath = join(execDir, '.env.example');
         if (existsSync(execEnvExamplePath)) {
@@ -72,7 +72,7 @@ function loadEnvFile(): void {
           } catch (error) {
             // App not ready, skip
           }
-          
+
           // 3. Try resources directory
           if (!envExamplePath) {
             try {
@@ -87,7 +87,7 @@ function loadEnvFile(): void {
               // App not ready, skip
             }
           }
-          
+
           // 4. Last resort: Try to run the copy script if .env.example exists in project root
           // This is a fallback in case postmake didn't run
           if (!envExamplePath) {
@@ -112,7 +112,7 @@ function loadEnvFile(): void {
             }
           }
         }
-        
+
         if (envExamplePath) {
           console.log('[Main] .env not found, creating from .env.example...');
           console.log('[Main] Found .env.example at:', envExamplePath);
@@ -149,7 +149,7 @@ function loadEnvFile(): void {
     } else {
       // In development, .env is in project root
       let projectRoot = appPath;
-      
+
       // If we're in .webpack/main, go up 3 levels
       if (appPath.includes('.webpack')) {
         projectRoot = join(appPath, '..', '..', '..');
@@ -167,18 +167,18 @@ function loadEnvFile(): void {
           currentPath = join(currentPath, '..');
         }
       }
-      
+
       envPath = join(projectRoot, '.env');
       console.log('[Main] Loading .env from project root:', envPath);
     }
-    
+
     // Load .env file
     const result = dotenv.config({ path: envPath });
     if (result.error) {
       console.warn('[Main] Warning: Could not load .env file:', result.error.message);
       console.warn('[Main] Tried path:', envPath);
       console.warn('[Main] File exists:', existsSync(envPath));
-      
+
       // Fallback: try default dotenv.config() behavior (current directory)
       const fallbackResult = dotenv.config();
       if (fallbackResult.error) {
@@ -226,24 +226,29 @@ registerAllIPCHandlers();
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 app.on('ready', async () => {
+  // Disable sandbox for development to avoid chrome-sandbox permission issues
+  if (!app.isPackaged) {
+    app.commandLine.appendSwitch('--no-sandbox');
+  }
+
   // Remove default menu bar
   Menu.setApplicationMenu(null);
-  
+
   // Set app user model ID for Windows (helps with taskbar icon)
   if (process.platform === 'win32') {
     app.setAppUserModelId('com.aitranslatorelectron.app');
   }
-  
+
   // Initialize AI services with settings from APP_CONFIG
   const settings = APP_CONFIG as AppSettings;
   const aiService = aiServiceFactory.createService(settings);
-  
+
   // Register translation handlers now that service is available
   registerTranslationIPCHandlers(aiService);
-  
+
   await createWindow();
   createTray();
-  
+
   // Get mainWindow after it's created
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   const windowModule = require('./main/window');
