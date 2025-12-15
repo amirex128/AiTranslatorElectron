@@ -100,6 +100,28 @@ export const TitleBar: React.FC<TitleBarProps> = ({ title = 'AI Translator', ico
     setIsMenuOpen(false);
   };
 
+  const handleExportData = async () => {
+    if (window.electronAPI) {
+      try {
+        await window.electronAPI.exportData();
+      } catch (error) {
+        console.error('Error exporting data:', error);
+      }
+    }
+    setIsMenuOpen(false);
+  };
+
+  const handleImportData = async () => {
+    if (window.electronAPI) {
+      try {
+        await window.electronAPI.importData();
+      } catch (error) {
+        console.error('Error importing data:', error);
+      }
+    }
+    setIsMenuOpen(false);
+  };
+
   return (
     <div className="title-bar bg-gray-800 dark:bg-gray-900 h-8 flex items-center justify-between px-2 select-none">
       {/* Left side - Logo and Title */}
@@ -181,6 +203,19 @@ export const TitleBar: React.FC<TitleBarProps> = ({ title = 'AI Translator', ico
                   className="w-full text-right px-4 py-2 text-sm text-gray-200 hover:bg-gray-600 dark:hover:bg-gray-700 transition-colors"
                 >
                   پاکسازی کش
+                </button>
+                <div className="border-t border-gray-600 dark:border-gray-700 my-1"></div>
+                <button
+                  onClick={handleExportData}
+                  className="w-full text-right px-4 py-2 text-sm text-gray-200 hover:bg-gray-600 dark:hover:bg-gray-700 transition-colors"
+                >
+                  خروجی گرفتن از داده‌ها
+                </button>
+                <button
+                  onClick={handleImportData}
+                  className="w-full text-right px-4 py-2 text-sm text-gray-200 hover:bg-gray-600 dark:hover:bg-gray-700 transition-colors"
+                >
+                  وارد کردن داده‌ها
                 </button>
                 <div className="border-t border-gray-600 dark:border-gray-700 my-1"></div>
                 <button

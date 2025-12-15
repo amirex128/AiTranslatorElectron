@@ -93,6 +93,9 @@ export interface ElectronAPI {
   resetBookmarkReadCount: (id: string) => Promise<IPCResponse<import('../main/database/BookmarkService').Bookmark | null>>;
   generateBookmarkMainExamples: (id: string) => Promise<IPCResponse<import('../main/database/BookmarkService').Bookmark | null>>;
   generateBookmarkFallbackExamples: (id: string) => Promise<IPCResponse<import('../main/database/BookmarkService').Bookmark | null>>;
+  exportData: () => Promise<IPCResponse<{ success: boolean; filePath?: string; canceled?: boolean }>>;
+  importData: () => Promise<IPCResponse<{ success: boolean; canceled?: boolean }>>;
+  onDataImported: (callback: () => void) => void;
 }
 
 declare global {

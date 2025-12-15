@@ -70,6 +70,21 @@ const App: React.FC = () => {
           }
         }
       });
+
+      // Listen for data imported event to reload stores
+      window.electronAPI.onDataImported(() => {
+        console.log('[App] Data imported, reloading stores...');
+        // Reload bookmark store
+        import('./stores/bookmarkStore').then(({ useBookmarkStore }) => {
+          const bookmarkStore = useBookmarkStore.getState();
+          bookmarkStore.loadBookmarks(bookmarkStore.filters);
+        });
+        // Reload history store
+        import('./stores/historyStore').then(({ useHistoryStore }) => {
+          const historyStore = useHistoryStore.getState();
+          historyStore.loadEntries();
+        });
+      });
     }
   }, []);
 

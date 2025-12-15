@@ -104,6 +104,13 @@ export const electronAPI: ElectronAPI = {
   resetBookmarkReadCount: (id: string) => ipcRenderer.invoke('bookmark:reset-read-count', id),
   generateBookmarkMainExamples: (id: string) => ipcRenderer.invoke('bookmark:generate-main-examples', id),
   generateBookmarkFallbackExamples: (id: string) => ipcRenderer.invoke('bookmark:generate-fallback-examples', id),
+
+  // Data Import/Export
+  exportData: () => ipcRenderer.invoke('data:export'),
+  importData: () => ipcRenderer.invoke('data:import'),
+  onDataImported: (callback: () => void) => {
+    ipcRenderer.on('data:imported', () => callback());
+  },
 };
 
 contextBridge.exposeInMainWorld('electronAPI', electronAPI);
