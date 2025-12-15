@@ -129,7 +129,17 @@ export const electronAPI: ElectronAPI = {
   // Quick Translate
   quickTranslateGetCached: (englishText: string) => ipcRenderer.invoke('quick-translate:get-cached', { englishText }),
   quickTranslateSaveCached: (englishText: string, persianTranslation: string) => ipcRenderer.invoke('quick-translate:save-cached', { englishText, persianTranslation }),
-  quickTranslateTranslate: (englishText: string) => ipcRenderer.invoke('quick-translate:translate', { englishText }),
+  quickTranslateTranslate: async (text: string, direction?: 'en-to-fa' | 'fa-to-en') => {
+    const response = await ipcRenderer.invoke('quick-translate:translate', { text, direction });
+    if (response && 'success' in response) {
+      if (response.success) {
+        return response.data;
+      } else {
+        throw new Error('error' in response ? response.error : 'Failed to quick translate');
+      }
+    }
+    throw new Error('Invalid IPC response for quick translate');
+  },
 
   // Bookmarks
   getAllBookmarks: (filters?: any) => ipcRenderer.invoke('bookmark:get-all', filters),

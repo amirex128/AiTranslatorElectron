@@ -9,6 +9,7 @@ interface QuickTranslateBoxProps {
   position: { x: number; y: number };
   onClose: () => void;
   timeout?: number; // seconds
+  direction?: 'en-to-fa' | 'fa-to-en'; // Translation direction
 }
 
 export const QuickTranslateBox: React.FC<QuickTranslateBoxProps> = ({
@@ -18,7 +19,16 @@ export const QuickTranslateBox: React.FC<QuickTranslateBoxProps> = ({
   position,
   onClose,
   timeout = 5,
+  direction = 'en-to-fa', // Default to English to Persian
 }) => {
+  // Detect language if direction not provided
+  const detectLanguage = (text: string): 'en-to-fa' | 'fa-to-en' => {
+    const persianRegex = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/;
+    return persianRegex.test(text) ? 'fa-to-en' : 'en-to-fa';
+  };
+  
+  const actualDirection = direction || detectLanguage(text);
+  const isPersianToEnglish = actualDirection === 'fa-to-en';
   const boxRef = useRef<HTMLDivElement>(null);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const { checkBookmark, addBookmark, removeBookmark } = useBookmarkStore();
@@ -255,13 +265,15 @@ export const QuickTranslateBox: React.FC<QuickTranslateBoxProps> = ({
           {/* Original text */}
           <div className="mb-3">
             <div className="flex items-center justify-between mb-1">
-              <div className="text-xs text-white/60">متن انگلیسی:</div>
+              <div className="text-xs text-white/60">
+                {isPersianToEnglish ? 'متن فارسی:' : 'متن انگلیسی:'}
+              </div>
               <div className="flex items-center gap-1">
                 <BookmarkButton />
                 <TTSButton text={text} />
               </div>
             </div>
-            <div className="text-sm text-white/90 font-medium" dir="ltr">
+            <div className={`text-sm text-white/90 font-medium ${isPersianToEnglish ? 'dir-rtl' : 'dir-ltr'}`} dir={isPersianToEnglish ? 'rtl' : 'ltr'}>
               {text}
             </div>
           </div>
@@ -294,8 +306,10 @@ export const QuickTranslateBox: React.FC<QuickTranslateBoxProps> = ({
             </div>
           ) : translation ? (
             <div>
-              <div className="text-xs text-white/60 mb-1">ترجمه فارسی:</div>
-              <div className="text-sm text-white font-medium" dir="rtl">
+              <div className="text-xs text-white/60 mb-1">
+                {isPersianToEnglish ? 'ترجمه انگلیسی:' : 'ترجمه فارسی:'}
+              </div>
+              <div className={`text-sm text-white font-medium ${isPersianToEnglish ? 'dir-ltr' : 'dir-rtl'}`} dir={isPersianToEnglish ? 'ltr' : 'rtl'}>
                 {translation}
               </div>
             </div>

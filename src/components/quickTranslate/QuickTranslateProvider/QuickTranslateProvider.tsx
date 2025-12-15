@@ -18,15 +18,27 @@ export const QuickTranslateProvider: React.FC<QuickTranslateProviderProps> = ({ 
 
   const enabled = settings?.quickTranslateEnabled ?? true;
   const timeout = settings?.quickTranslateTimeout ?? 5;
+  const [translationDirection, setTranslationDirection] = useState<'en-to-fa' | 'fa-to-en'>('en-to-fa');
+
+  // Detect if text is Persian or English
+  const detectLanguage = (text: string): 'en-to-fa' | 'fa-to-en' => {
+    // Simple detection: if text contains Persian characters (Arabic script), it's Persian
+    // Persian Unicode range: \u0600-\u06FF
+    const persianRegex = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/;
+    return persianRegex.test(text) ? 'fa-to-en' : 'en-to-fa';
+  };
 
   const selection = useTextSelection(enabled, (newSelection) => {
     if (newSelection) {
       // Only update if text actually changed (to avoid resetting when clicking TTS button)
       if (newSelection.text !== selectedText) {
-        setSelectedText(newSelection.text);
-        setPosition(newSelection.position);
-        setShowBox(true);
-        setTranslation(null);
+      setSelectedText(newSelection.text);
+      setPosition(newSelection.position);
+      setShowBox(true);
+      setTranslation(null);
+      // Detect and set translation direction
+      const direction = detectLanguage(newSelection.text);
+      setTranslationDirection(direction);
       }
     } else {
       // Only close box if selection is actually cleared (not just a click on the box)
@@ -61,20 +73,20 @@ export const QuickTranslateProvider: React.FC<QuickTranslateProviderProps> = ({ 
       abortControllerRef.current = new AbortController();
 
       try {
-        const response = await window.electronAPI.quickTranslateTranslate(selectedText);
+        // Use the detected direction
+        // quickTranslateTranslate now returns string directly (unwrapped from IPCResponse)
+        const translation = await window.electronAPI.quickTranslateTranslate(selectedText, translationDirection);
         
         // Check if request was aborted
         if (abortControllerRef.current?.signal.aborted) {
           return;
         }
 
-        if (response && 'success' in response) {
-          if (response.success && 'data' in response) {
-            setTranslation(response.data);
-          } else if ('error' in response) {
-            console.error('[QuickTranslate] Translation error:', response.error);
-            setTranslation(null);
-          }
+        if (translation && translation.trim()) {
+          setTranslation(translation);
+        } else {
+          console.error('[QuickTranslate] Translation is empty');
+          setTranslation(null);
         }
       } catch (error) {
         if (error instanceof Error && error.name === 'AbortError') {
@@ -123,6 +135,7 @@ export const QuickTranslateProvider: React.FC<QuickTranslateProviderProps> = ({ 
           position={position}
           onClose={handleClose}
           timeout={timeout}
+          direction={translationDirection}
         />
       )}
     </>

@@ -13,7 +13,8 @@ interface SaveCachedParams {
 }
 
 interface TranslateParams {
-  englishText: string;
+  text: string;
+  direction?: 'en-to-fa' | 'fa-to-en';
 }
 
 /**
@@ -34,17 +35,24 @@ export function registerQuickTranslateHandlers(): void {
 
   // Translate text using Google Translate
   ipcMain.handle('quick-translate:translate', handleIPC(async (_event: IpcMainInvokeEvent, params: TranslateParams) => {
-    // Check cache first
-    const cached = await quickTranslateCacheService.getCached(params.englishText);
-    if (cached) {
-      return cached;
+    const direction = params.direction || 'en-to-fa';
+    
+    // For caching, we use the text as key (cache works for both directions separately)
+    // Check cache first (only for en-to-fa direction to maintain backward compatibility)
+    if (direction === 'en-to-fa') {
+      const cached = await quickTranslateCacheService.getCached(params.text);
+      if (cached) {
+        return cached;
+      }
     }
 
     // Translate using Google Translate
-    const translation = await quickTranslateService.translate(params.englishText);
+    const translation = await quickTranslateService.translate(params.text, direction);
 
-    // Save to cache
-    await quickTranslateCacheService.saveCache(params.englishText, translation);
+    // Save to cache (only for en-to-fa direction to maintain backward compatibility)
+    if (direction === 'en-to-fa') {
+      await quickTranslateCacheService.saveCache(params.text, translation);
+    }
 
     return translation;
   }));

@@ -68,7 +68,7 @@ export interface ElectronAPI {
   onSpeechStatus: (callback: (status: { isListening: boolean }) => void) => void;
   quickTranslateGetCached: (englishText: string) => Promise<IPCResponse<string | null>>;
   quickTranslateSaveCached: (englishText: string, persianTranslation: string) => Promise<IPCResponse<boolean>>;
-  quickTranslateTranslate: (englishText: string) => Promise<IPCResponse<string>>;
+  quickTranslateTranslate: (text: string, direction?: 'en-to-fa' | 'fa-to-en') => Promise<string>;
   getAllBookmarks: (filters?: {
     searchQuery?: string;
     sortBy?: 'date' | 'alphabet' | 'readCount';

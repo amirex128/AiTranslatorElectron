@@ -492,6 +492,20 @@ export const MainPage: React.FC<MainPageProps> = ({ onOpenSettings }) => {
     }
   };
 
+  // Clean input text by removing error messages and stack traces
+  const cleanInput = useCallback((text: string): string => {
+    // Remove error messages and stack traces
+    return text
+      .replace(/Error:.*$/gm, '')
+      .replace(/at eval.*$/gm, '')
+      .replace(/at Generator\.next.*$/gm, '')
+      .replace(/at fulfilled.*$/gm, '')
+      .replace(/webpack-internal:.*$/gm, '')
+      .replace(/^\s*Error:.*$/gm, '') // Error at start of line
+      .replace(/\n\s*Error:.*$/gm, '') // Error after newline
+      .trim();
+  }, []);
+
   const handleQuickTranslate = useCallback(async () => {
     if (!settings || !window.electronAPI) {
       setError('تنظیمات یا API در دسترس نیست');
@@ -513,6 +527,15 @@ export const MainPage: React.FC<MainPageProps> = ({ onOpenSettings }) => {
       return;
     }
 
+    // Clean input to remove any error messages or stack traces
+    input = cleanInput(input);
+    
+    // Validate cleaned input
+    if (!input || input.trim() === '') {
+      setError('متن ورودی معتبر نیست. لطفاً متن را دوباره وارد کنید.');
+      return;
+    }
+
     // Only work for translation inputs, not grammar or response suggestions
     if (grammarInput.trim() || responseSuggestionsInput.trim()) {
       setError('ترجمه سریع فقط برای ورودی‌های ترجمه کار می‌کند');
@@ -525,18 +548,38 @@ export const MainPage: React.FC<MainPageProps> = ({ onOpenSettings }) => {
       const requestStartTime = Date.now();
       setStartTime(requestStartTime);
 
-      // Call Google Translate API
-      const response = await window.electronAPI.quickTranslateTranslate(input);
+      // Determine translation direction for QuickTranslate service
+      const direction: 'en-to-fa' | 'fa-to-en' = type === 'english-to-persian' ? 'en-to-fa' : 'fa-to-en';
       
-      if (!response || 'error' in response) {
-        throw new Error('error' in response ? response.error : 'خطا در ترجمه');
+      // Call Google Translate API with correct direction
+      // quickTranslateTranslate now returns string directly (unwrapped from IPCResponse)
+      const translation = await window.electronAPI.quickTranslateTranslate(input, direction);
+      
+      // Validate translation result - be more lenient
+      if (!translation || typeof translation !== 'string') {
+        console.error('[QuickTranslate] Invalid translation response:', translation);
+        throw new Error('ترجمه دریافت نشد. لطفاً دوباره تلاش کنید.');
       }
-
-      if (!response.success || !('data' in response)) {
-        throw new Error('پاسخ نامعتبر از سرور');
+      
+      const trimmedTranslation = translation.trim();
+      if (trimmedTranslation === '' || trimmedTranslation === 'تعریف نشده' || trimmedTranslation.toLowerCase() === 'undefined') {
+        console.error('[QuickTranslate] Translation is empty or undefined:', trimmedTranslation);
+        throw new Error('ترجمه دریافت نشد. لطفاً دوباره تلاش کنید.');
       }
-
-      const translation = response.data;
+      
+      // Check if translation contains error indicators
+      if (trimmedTranslation.includes('Error:') || 
+          trimmedTranslation.includes('at eval') ||
+          trimmedTranslation.includes('at Generator.next') ||
+          trimmedTranslation.includes('at fulfilled') ||
+          trimmedTranslation.includes('webpack-internal:')) {
+        console.error('[QuickTranslate] Translation contains error:', trimmedTranslation);
+        throw new Error('ترجمه شامل خطا است. لطفاً دوباره تلاش کنید.');
+      }
+      
+      // Use trimmed translation
+      const finalTranslation = trimmedTranslation;
+      
       const endTime = Date.now();
       const responseTime = Math.floor((endTime - requestStartTime) / 1000);
 
@@ -546,29 +589,36 @@ export const MainPage: React.FC<MainPageProps> = ({ onOpenSettings }) => {
       if (type === 'persian-to-english') {
         // Persian to English: input is Persian, translation is English
         formattedResult = {
-          english_1: translation,
-          persian_1: input,
+          english_1: finalTranslation,
+          persian_1: input.trim(),
           english_2: '',
           persian_2: '',
           english_3: '',
           persian_3: '',
         };
+        console.log('[QuickTranslate] Persian to English result:', formattedResult);
       } else {
         // English to Persian: input is English, translation is Persian
         formattedResult = {
-          english_1: input,
-          persian_1: translation,
+          english_1: input.trim(),
+          persian_1: finalTranslation,
           english_2: '',
           persian_2: '',
           english_3: '',
           persian_3: '',
         };
+        console.log('[QuickTranslate] English to Persian result:', formattedResult);
       }
 
       setQuickTranslateResults(formattedResult);
       setSelectedQuickTranslateResult(1);
       setResults(formattedResult); // Keep for backward compatibility
       setSelectedResult(1);
+      // Clear other results to ensure quick translate results are displayed
+      setMainResults(null);
+      setFallbackResults(null);
+      setSelectedMainResult(null);
+      setSelectedFallbackResult(null);
       setLastRequestTime(responseTime);
       setResponseSuggestionsResult(null);
       setGrammarTeachingResult(null);
@@ -588,11 +638,31 @@ export const MainPage: React.FC<MainPageProps> = ({ onOpenSettings }) => {
       const errorStack = error instanceof Error ? error.stack : undefined;
       setError(errorMessage, errorStack);
       setToast({ message: 'خطا در ترجمه', type: 'error' });
+      
+      // Ensure input fields don't contain error messages
+      // Clean input fields if they somehow contain error text
+      if (persianToEnglishInput.includes('Error:') || persianToEnglishInput.includes('at eval')) {
+        const cleaned = cleanInput(persianToEnglishInput);
+        if (cleaned !== persianToEnglishInput) {
+          setPersianToEnglishInput(cleaned);
+        }
+      }
+      if (englishToPersianInput.includes('Error:') || englishToPersianInput.includes('at eval')) {
+        const cleaned = cleanInput(englishToPersianInput);
+        if (cleaned !== englishToPersianInput) {
+          setEnglishToPersianInput(cleaned);
+        }
+      }
+      
+      // Clear error state after a delay to prevent it from being included in next input
+      setTimeout(() => {
+        setError(null);
+      }, 5000);
     } finally {
       setLoading(false);
       setStartTime(null);
     }
-  }, [persianToEnglishInput, englishToPersianInput, grammarInput, responseSuggestionsInput, settings, selectedModel, setLoading, setError, setStartTime, setResults, setSelectedResult, setLastRequestTime, setResponseSuggestionsResult, setGrammarTeachingResult, addEntry, setToast]);
+  }, [persianToEnglishInput, englishToPersianInput, grammarInput, responseSuggestionsInput, settings, selectedModel, setLoading, setError, setStartTime, setResults, setSelectedResult, setLastRequestTime, setResponseSuggestionsResult, setGrammarTeachingResult, addEntry, setToast, cleanInput, setMainResults, setFallbackResults, setQuickTranslateResults, setSelectedQuickTranslateResult]);
 
 
   const canTranslate =
@@ -721,19 +791,20 @@ export const MainPage: React.FC<MainPageProps> = ({ onOpenSettings }) => {
     };
   }, [handleKeyDown]);
 
-  // Get the most recent translation result (fallback > quick > main > results)
-  const displayResult = fallbackResults || quickTranslateResults || mainResults || results;
-  const displaySelected = fallbackResults 
-    ? selectedFallbackResult 
-    : quickTranslateResults 
+  // Get the most recent translation result (quick > fallback > main > results)
+  // Quick translate should have highest priority when it exists
+  const displayResult = quickTranslateResults || fallbackResults || mainResults || results;
+  const displaySelected = quickTranslateResults 
     ? selectedQuickTranslateResult 
+    : fallbackResults 
+    ? selectedFallbackResult 
     : mainResults 
     ? selectedMainResult 
     : selectedResult;
-  const displaySetSelected = fallbackResults 
-    ? setSelectedFallbackResult 
-    : quickTranslateResults 
+  const displaySetSelected = quickTranslateResults 
     ? setSelectedQuickTranslateResult 
+    : fallbackResults 
+    ? setSelectedFallbackResult 
     : mainResults 
     ? setSelectedMainResult 
     : setSelectedResult;
