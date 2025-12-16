@@ -71,7 +71,6 @@ export const MainPage: React.FC<MainPageProps> = ({ onOpenSettings }) => {
   const [showHistory, setShowHistory] = useState(false);
   const [showDictionaryModal, setShowDictionaryModal] = useState(false);
   const [dictionaryWord, setDictionaryWord] = useState<string>('');
-  const [hideAds, setHideAds] = useState<boolean>(true);
   const [startTime, setStartTime] = useState<number | null>(null);
   const [lastRequestTime, setLastRequestTime] = useState<number | null>(null);
   const [grammarTeachingMode, setGrammarTeachingMode] = useState(false);
@@ -1127,66 +1126,12 @@ export const MainPage: React.FC<MainPageProps> = ({ onOpenSettings }) => {
           title={`دیکشنری: ${dictionaryWord}`}
           className="max-w-6xl"
         >
-          <div className="relative w-full">
-            {/* Ad Block Toggle Button */}
-            <div className="flex items-center justify-end mb-2 gap-2">
-              <button
-                onClick={() => setHideAds(!hideAds)}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300 flex items-center gap-2 ${
-                  hideAds
-                    ? 'bg-green-500/20 hover:bg-green-500/30 text-green-300 border border-green-500/50'
-                    : 'bg-red-500/20 hover:bg-red-500/30 text-red-300 border border-red-500/50'
-                }`}
-              >
-                {hideAds ? (
-                  <>
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
-                    </svg>
-                    تبلیغات مخفی است
-                  </>
-                ) : (
-                  <>
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                    </svg>
-                    نمایش تبلیغات
-                  </>
-                )}
-              </button>
-            </div>
-            
-            {/* Iframe Container */}
-            <div className="relative w-full h-[80vh] rounded-lg overflow-hidden">
-              <iframe
-                src={`https://fastdic.com/word/${encodeURIComponent(dictionaryWord)}`}
-                className="w-full h-full border-0 rounded-lg"
-                allow="fullscreen"
-                title={`Dictionary for ${dictionaryWord}`}
-              />
-              
-              {/* Ad Block Overlay - Covers common ad positions */}
-              {hideAds && (
-                <>
-                  {/* Top banner ad */}
-                  <div className="absolute top-0 left-0 right-0 h-20 bg-gradient-to-b from-gray-900/95 to-transparent pointer-events-none z-10" />
-                  
-                  {/* Right sidebar ad */}
-                  <div className="absolute top-0 right-0 bottom-0 w-64 bg-gradient-to-l from-gray-900/95 to-transparent pointer-events-none z-10" />
-                  
-                  {/* Bottom banner ad */}
-                  <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-gray-900/95 to-transparent pointer-events-none z-10" />
-                  
-                  {/* Left sidebar ad (if exists) */}
-                  <div className="absolute top-0 left-0 bottom-0 w-48 bg-gradient-to-r from-gray-900/95 to-transparent pointer-events-none z-10" />
-                  
-                  {/* Center overlay for popup ads */}
-                  <div className="absolute inset-0 bg-gray-900/80 pointer-events-auto z-20 hidden" id="ad-popup-overlay" />
-                </>
-              )}
-            </div>
-          </div>
+          <iframe
+            src={`https://fastdic.com/word/${encodeURIComponent(dictionaryWord)}`}
+            className="w-full h-[80vh] border-0 rounded-lg"
+            allow="fullscreen"
+            title={`Dictionary for ${dictionaryWord}`}
+          />
         </Modal>
 
         {/* History Panel - Modal */}
