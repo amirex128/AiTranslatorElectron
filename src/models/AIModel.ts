@@ -16,6 +16,8 @@ export enum AIModel {
   QWEN3_235B_A22B_OPENROUTER2 = 'qwen/qwen3-235b-a22b:free',
   GLM_4_5_AIR_OPENROUTER1 = 'z-ai/glm-4.5-air:free',
   GLM_4_5_AIR_OPENROUTER2 = 'z-ai/glm-4.5-air:free',
+  // Google Translate
+  GOOGLE_TRANSLATE = 'google-translate',
 }
 
 export const AI_MODELS = [
@@ -34,6 +36,7 @@ export const AI_MODELS = [
   { key: 'QWEN3_235B_A22B_OPENROUTER2', value: AIModel.QWEN3_235B_A22B_OPENROUTER2, label: 'Qwen3 235B A22B (OpenRouter 2)' },
   { key: 'GLM_4_5_AIR_OPENROUTER1', value: AIModel.GLM_4_5_AIR_OPENROUTER1, label: 'GLM 4.5 Air (OpenRouter 1)' },
   { key: 'GLM_4_5_AIR_OPENROUTER2', value: AIModel.GLM_4_5_AIR_OPENROUTER2, label: 'GLM 4.5 Air (OpenRouter 2)' },
+  { key: 'GOOGLE_TRANSLATE', value: AIModel.GOOGLE_TRANSLATE, label: 'Google Translate' },
 ] as const;
 
 export const isOpenRouterModel = (model: AIModel): boolean => {

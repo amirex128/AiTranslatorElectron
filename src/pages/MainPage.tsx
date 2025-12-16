@@ -623,11 +623,11 @@ export const MainPage: React.FC<MainPageProps> = ({ onOpenSettings }) => {
       setResponseSuggestionsResult(null);
       setGrammarTeachingResult(null);
 
-      // Add to history (using a placeholder model since we're not using AI)
+      // Add to history (using Google Translate model)
       await addEntry({
         input,
         type,
-        model: selectedModel || settings.selectedModel, // Use selected model for history entry
+        model: AIModel.GOOGLE_TRANSLATE, // Use Google Translate model for quick translate results
         result: formattedResult,
         responseTime,
       });
