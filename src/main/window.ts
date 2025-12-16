@@ -121,7 +121,8 @@ export const createWindow = async (): Promise<void> => {
         "script-src 'self' 'unsafe-inline' 'unsafe-eval'; " +
         "style-src 'self' 'unsafe-inline'; " +
         "img-src 'self' data: https:; " +
-        "font-src 'self' data:;"
+        "font-src 'self' data:; " +
+        "frame-src 'self' https://fastdic.com;"
       : // Production CSP (more restrictive, no unsafe-eval)
         "default-src 'self' 'unsafe-inline' data:; " +
         "media-src 'self' blob: data: https:; " +
@@ -129,7 +130,8 @@ export const createWindow = async (): Promise<void> => {
         "script-src 'self' 'unsafe-inline'; " +
         "style-src 'self' 'unsafe-inline'; " +
         "img-src 'self' data: https:; " +
-        "font-src 'self' data:;";
+        "font-src 'self' data:; " +
+        "frame-src 'self' https://fastdic.com;";
 
     const responseHeaders: Record<string, string | string[]> = {
       ...details.responseHeaders,

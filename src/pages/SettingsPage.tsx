@@ -351,6 +351,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onBack }) => {
                 { key: 'processMain' as const, label: 'پردازش (مدل اصلی)' },
                 { key: 'processFallback' as const, label: 'پردازش (مدل جایگزین)' },
                 { key: 'processQuickTranslate' as const, label: 'ترجمه سریع' },
+                { key: 'processDictionary' as const, label: 'دیکشنری' },
                 { key: 'addBookmark' as const, label: 'افزودن به علاقه‌مندی‌ها' },
               ].map(({ key, label }) => (
                 <div key={key} className="backdrop-blur-md bg-white/5 dark:bg-gray-900/10 rounded-xl p-4 border border-white/10 dark:border-gray-700/20 transition-all duration-300 hover:shadow-lg">

@@ -33,6 +33,7 @@ export async function getDefaultSettings(): Promise<AppSettings> {
         processMain: APP_CONFIG.shortcuts.processMain,
         processFallback: APP_CONFIG.shortcuts.processFallback,
         processQuickTranslate: APP_CONFIG.shortcuts.processQuickTranslate,
+        processDictionary: APP_CONFIG.shortcuts.processDictionary,
         addBookmark: APP_CONFIG.shortcuts.addBookmark,
       },
       quickTranslateEnabled: APP_CONFIG.quickTranslateEnabled,

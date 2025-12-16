@@ -24,6 +24,7 @@ export interface AppSettings {
     processMain: string;
     processFallback: string;
     processQuickTranslate: string;
+    processDictionary: string;
     addBookmark: string;
   };
   quickTranslateEnabled: boolean;
