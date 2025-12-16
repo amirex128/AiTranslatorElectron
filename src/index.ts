@@ -233,7 +233,7 @@ app.on('ready', async () => {
 
   // Remove default menu bar
   Menu.setApplicationMenu(null);
-
+  
   // Set app user model ID for Windows (helps with taskbar icon)
   // This is Windows-specific and should be set before creating windows
   if (process.platform === 'win32') {
@@ -251,10 +251,10 @@ app.on('ready', async () => {
 
   // Register translation handlers now that service is available
   registerTranslationIPCHandlers(aiService);
-
+  
   await createWindow();
   createTray();
-
+  
   // Get mainWindow after it's created
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   const windowModule = require('./main/window');
