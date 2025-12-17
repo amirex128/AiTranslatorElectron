@@ -117,8 +117,17 @@ export const TranslationResult: React.FC<TranslationResultProps> = ({
   const availableResults = [1, 2, 3].filter((index) => {
     const englishText = getResultText(index, 'english');
     const persianText = getResultText(index, 'persian');
-    return englishText || persianText;
+    return (englishText && englishText.trim().length > 0) || (persianText && persianText.trim().length > 0);
   });
+
+  // If no results exist, show a friendly message instead of an empty area
+  if (availableResults.length === 0) {
+    return (
+      <div className="p-4 backdrop-blur-md bg-white/10 dark:bg-gray-800/30 rounded-xl border border-white/20 dark:border-gray-700/30 text-white dark:text-gray-100 text-center">
+        هیچ ترجمه‌ای از مدل دریافت نشد. لطفاً دوباره تلاش کنید یا مدل دیگری را انتخاب کنید.
+      </div>
+    );
+  }
 
   // If only one result exists, display it directly without tabs
   if (availableResults.length === 1) {

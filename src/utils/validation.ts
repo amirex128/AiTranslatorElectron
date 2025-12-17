@@ -14,7 +14,20 @@ export type TranslationResult = z.infer<typeof TranslationResultSchema>;
 
 export const validateTranslationResult = (data: unknown): TranslationResult | null => {
   try {
-    return TranslationResultSchema.parse(data);
+    const parsed = TranslationResultSchema.parse(data);
+
+    // Ensure at least one field has non-empty content so that
+    // completely empty JSON objects are not treated as valid translations.
+    const hasContent = Object.values(parsed).some(
+      (value) => typeof value === 'string' && value.trim().length > 0
+    );
+
+    if (!hasContent) {
+      console.error('Validation error for TranslationResult: all fields are empty');
+      return null;
+    }
+
+    return parsed;
   } catch (error) {
     return null;
   }

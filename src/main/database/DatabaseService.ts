@@ -411,11 +411,15 @@ export class DatabaseService {
       // Skip header
       for (let i = 1; i < lines.length; i++) {
         const fields = this.parseCsvLine(lines[i]);
-        if (fields.length >= 7) {
+          if (fields.length >= 7) {
           const type = fields[3] as 'persian-to-english' | 'english-to-persian' | 'grammar' | 'grammar-teaching' | 'response-suggestions';
           const grammarTeachingResultStr = fields.length >= 8 && fields[7] ? fields[7] : '';
           const responseSuggestionsResultStr = fields.length >= 9 && fields[8] ? fields[8] : '';
-          
+
+          // Parse and validate timestamp to avoid NaN/invalid dates
+          const rawTimestamp = parseInt(fields[1], 10);
+          const timestamp = Number.isNaN(rawTimestamp) ? Date.now() : rawTimestamp;
+
           let result: TranslationResult | null = null;
           let grammarTeachingResult: GrammarTeachingResult | undefined = undefined;
           let responseSuggestionsResult: ResponseSuggestionsResult | undefined = undefined;
@@ -511,7 +515,7 @@ export class DatabaseService {
           
           entries.push({
             id: fields[0],
-            timestamp: parseInt(fields[1], 10),
+            timestamp,
             input: fields[2],
             type,
             model: fields[4] as AIModel,

@@ -250,10 +250,13 @@ export const MainPage: React.FC<MainPageProps> = ({ onOpenSettings }) => {
     // Check cache first
     const cachedEntry = findCachedEntry(input, type, selectedModel);
     if (cachedEntry && cachedEntry.result) {
+      // نمایش نتیجه مدل اصلی و پاک کردن نتیجه ترجمه سریع قبلی
       setMainResults(cachedEntry.result);
       setSelectedMainResult(1);
       setResults(cachedEntry.result); // Keep for backward compatibility
       setSelectedResult(1);
+      setQuickTranslateResults(null);
+      setSelectedQuickTranslateResult(null);
       setLastRequestTime(cachedEntry.responseTime);
       setGrammarTeachingResult(null);
       setResponseSuggestionsResult(null);
@@ -271,10 +274,13 @@ export const MainPage: React.FC<MainPageProps> = ({ onOpenSettings }) => {
       const endTime = Date.now();
       const responseTime = Math.floor((endTime - requestStartTime) / 1000);
 
+      // نمایش نتیجه مدل اصلی و پاک کردن نتیجه ترجمه سریع قبلی
       setMainResults(response.result);
       setSelectedMainResult(1);
       setResults(response.result); // Keep for backward compatibility
       setSelectedResult(1);
+      setQuickTranslateResults(null);
+      setSelectedQuickTranslateResult(null);
       setLastRequestTime(responseTime);
       setResponseSuggestionsResult(null);
 
@@ -436,10 +442,13 @@ export const MainPage: React.FC<MainPageProps> = ({ onOpenSettings }) => {
     // Check cache first
     const cachedEntry = findCachedEntry(input, type, fallbackSelectedModel);
     if (cachedEntry && cachedEntry.result) {
+      // نمایش نتیجه مدل جایگزین و پاک کردن نتیجه ترجمه سریع قبلی
       setFallbackResults(cachedEntry.result);
       setSelectedFallbackResult(1);
       setResults(cachedEntry.result); // Keep for backward compatibility
       setSelectedResult(1);
+      setQuickTranslateResults(null);
+      setSelectedQuickTranslateResult(null);
       setLastRequestTime(cachedEntry.responseTime);
       setGrammarTeachingResult(null);
       setResponseSuggestionsResult(null);
@@ -457,10 +466,13 @@ export const MainPage: React.FC<MainPageProps> = ({ onOpenSettings }) => {
       const endTime = Date.now();
       const responseTime = Math.floor((endTime - requestStartTime) / 1000);
 
+      // نمایش نتیجه مدل جایگزین و پاک کردن نتیجه ترجمه سریع قبلی
       setFallbackResults(response.result);
       setSelectedFallbackResult(1);
       setResults(response.result); // Keep for backward compatibility
       setSelectedResult(1);
+      setQuickTranslateResults(null);
+      setSelectedQuickTranslateResult(null);
       setLastRequestTime(responseTime);
       setResponseSuggestionsResult(null);
 
